@@ -572,7 +572,7 @@
         // Load data from Google Sheets
         async function loadPetData() {
             try {
-                const response = await fetch(GOOGLE_SHEET_CSV_URL);
+                const response = await fetch(GOOGLE_SHEET_CSV_URL + "&t=" + Date.now());
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
                 
@@ -840,3 +840,4 @@
     </script>
 </body>
 </html>
+
