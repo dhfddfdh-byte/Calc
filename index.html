@@ -33,417 +33,183 @@
         }
 
         .loading-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 9999;
         }
 
         .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
+            width: 60px; height: 60px; border: 4px solid var(--border);
+            border-top-color: var(--accent); border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .loading-text {
-            margin-top: 20px;
-            font-size: 1.2em;
-            color: var(--subtext);
-        }
+        .loading-text { margin-top: 20px; font-size: 1.2em; color: var(--subtext); }
 
         .container {
-            width: 100%;
-            max-width: 1150px;
-            display: flex;
-            gap: 25px;
-            flex-wrap: wrap;
-            margin-top: 40px;
+            width: 100%; max-width: 1150px; display: flex; gap: 25px;
+            flex-wrap: wrap; margin-top: 40px;
         }
 
         .trade-panel {
-            flex: 1;
-            background: var(--panel);
-            border-radius: 24px;
-            border: 1.5px solid var(--border);
-            min-width: 340px;
-            min-height: 520px;
+            flex: 1; background: var(--panel); border-radius: 24px;
+            border: 1.5px solid var(--border); min-width: 340px; min-height: 520px;
         }
 
         .p-header {
-            padding: 20px 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 20px 25px; display: flex; justify-content: space-between;
+            align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.05);
         }
 
-        .p-title {
-            font-weight: 800;
-            font-size: 1.25em;
-            color: white;
-        }
-
-        .p-dem {
-            color: var(--subtext);
-            font-size: 0.85em;
-            font-weight: 600;
-            margin-top: 4px;
-            display: block;
-        }
-
-        .p-total {
-            font-size: 1.6em;
-            font-weight: 900;
-            color: white;
-        }
+        .p-title { font-weight: 800; font-size: 1.25em; color: white; }
+        .p-dem { color: var(--subtext); font-size: 0.85em; font-weight: 600; margin-top: 4px; display: block; }
+        .p-total { font-size: 1.6em; font-weight: 900; color: white; }
 
         .grid {
-            padding: 20px;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+            padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
             gap: 15px;
         }
 
         .card {
-            background: var(--card);
-            border-radius: 14px;
-            padding: 12px 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            border: 1.5px solid transparent;
-            transition: all 0.2s;
+            background: var(--card); border-radius: 14px; padding: 12px 8px;
+            display: flex; flex-direction: column; align-items: center; position: relative;
+            border: 1.5px solid transparent; transition: all 0.2s;
         }
 
-        .card:hover {
-            border-color: var(--accent);
-            transform: translateY(-2px);
-        }
+        .card:hover { border-color: var(--accent); transform: translateY(-2px); }
 
         .card-img-container {
-            width: 65px;
-            height: 65px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 5px;
+            width: 65px; height: 65px; display: flex; align-items: center;
+            justify-content: center; margin-bottom: 5px;
         }
-
-        .card-img-container img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
+        .card-img-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
         .card-name {
-            font-size: 0.7em;
-            font-weight: 800;
-            text-align: center;
-            height: 2.4em;
-            line-height: 1.2;
-            color: #cbd5e1;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 0.7em; font-weight: 800; text-align: center; height: 2.4em;
+            line-height: 1.2; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis;
         }
 
-        .card-val {
-            font-size: 0.95em;
-            font-weight: 950;
-            color: var(--frost);
-            margin: 6px 0;
-        }
+        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost); margin: 6px 0; }
 
         .del {
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            width: 22px;
-            height: 22px;
-            background: #ef4444;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            cursor: pointer;
-            z-index: 10;
-            border: 2px solid var(--panel);
+            position: absolute; top: -6px; right: -6px; width: 22px; height: 22px;
+            background: #ef4444; color: white; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 12px;
+            cursor: pointer; z-index: 10; border: 2px solid var(--panel);
         }
+        .del:hover { background: #dc2626; }
 
-        .del:hover {
-            background: #dc2626;
-        }
-
-        .toggles {
-            display: flex;
-            gap: 3px;
-        }
+        .toggles { display: flex; gap: 3px; }
 
         .t-btn {
-            width: 20px;
-            height: 20px;
-            background: #0f172a;
-            border-radius: 4px;
-            font-size: 0.65em;
-            font-weight: 900;
-            color: #475569;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
+            width: 20px; height: 20px; background: #0f172a; border-radius: 4px;
+            font-size: 0.65em; font-weight: 900; color: #475569; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
         }
-
-        .t-btn.active {
-            background: #3b82f6;
-            color: white;
-        }
+        .t-btn.active { background: #3b82f6; color: white; }
 
         .plus {
-            border: 2px dashed var(--border);
-            border-radius: 14px;
-            height: 150px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5em;
-            color: var(--border);
-            cursor: pointer;
-            transition: all 0.2s;
+            border: 2px dashed var(--border); border-radius: 14px; height: 150px;
+            display: flex; align-items: center; justify-content: center; font-size: 2.5em;
+            color: var(--border); cursor: pointer; transition: all 0.2s;
         }
-
-        .plus:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
+        .plus:hover { border-color: var(--accent); color: var(--accent); }
 
         .search-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(2, 6, 23, 0.95);
-            backdrop-filter: blur(12px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
-
-        .search-overlay.open {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        .search-overlay.open { opacity: 1; pointer-events: auto; }
 
         .search-container {
-            width: 95%;
-            max-width: 850px;
-            background: #1a2333;
-            border-radius: 28px;
-            border: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            max-height: 85vh;
-            box-shadow: 0 25px 60px rgba(0,0,0,0.6);
-            overflow: hidden;
-            transform: scale(0.9);
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 95%; max-width: 850px; background: #1a2333; border-radius: 28px;
+            border: 1px solid var(--border); display: flex; flex-direction: column;
+            max-height: 85vh; box-shadow: 0 25px 60px rgba(0,0,0,0.6); overflow: hidden;
+            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        .search-overlay.open .search-container {
-            transform: scale(1);
-        }
+        .search-overlay.open .search-container { transform: scale(1); }
 
         .search-header {
-            padding: 20px 25px;
-            display: flex;
-            gap: 15px;
-            align-items: center;
-            background: #111827;
-            border-bottom: 1px solid var(--border);
+            padding: 20px 25px; display: flex; gap: 15px; align-items: center;
+            background: #111827; border-bottom: 1px solid var(--border);
         }
 
-        .search-input-wrapper {
-            flex: 1;
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
+        .search-input-wrapper { flex: 1; position: relative; display: flex; align-items: center; }
 
         #mainSearch {
-            width: 100%;
-            padding: 14px 15px 14px 45px;
-            background: #262c3d;
-            border: 1px solid #334155;
-            border-radius: 35px;
-            color: white;
-            font-size: 1.1em;
-            outline: none;
+            width: 100%; padding: 14px 15px 14px 45px; background: #262c3d;
+            border: 1px solid #334155; border-radius: 35px; color: white;
+            font-size: 1.1em; outline: none;
         }
 
-        .search-icon-fixed {
-            position: absolute;
-            left: 18px;
-            font-size: 1.2em;
-        }
-
+        .search-icon-fixed { position: absolute; left: 18px; font-size: 1.2em; }
         .close-modal-btn {
-            width: 45px;
-            height: 45px;
-            background: #262c3d;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: #94a3b8;
-            font-size: 1.4em;
+            width: 45px; height: 45px; background: #262c3d; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            color: #94a3b8; font-size: 1.4em;
         }
-
-        .close-modal-btn:hover {
-            background: #ef4444;
-            color: white;
-        }
+        .close-modal-btn:hover { background: #ef4444; color: white; }
 
         .results-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px;
-            padding: 25px;
-            overflow-y: auto;
-            background: #161e2e;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px; padding: 25px; overflow-y: auto; background: #161e2e;
         }
 
         .search-item-card {
-            background: #262c3d;
-            border-radius: 18px;
-            padding: 15px 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1.5px solid transparent;
+            background: #262c3d; border-radius: 18px; padding: 15px 10px;
+            display: flex; flex-direction: column; align-items: center; cursor: pointer;
+            transition: all 0.2s; border: 1.5px solid transparent;
         }
-
         .search-item-card:hover {
-            background: #334155;
-            transform: translateY(-4px);
-            border-color: var(--accent);
+            background: #334155; transform: translateY(-4px); border-color: var(--accent);
         }
 
         .search-item-name {
-            font-size: 0.75em;
-            font-weight: 800;
-            color: #94a3b8;
-            text-align: center;
-            margin-bottom: 10px;
-            height: 2.5em;
-            overflow: hidden;
+            font-size: 0.75em; font-weight: 800; color: #94a3b8; text-align: center;
+            margin-bottom: 10px; height: 2.5em; overflow: hidden;
         }
 
         .search-item-img {
-            width: 85px;
-            height: 85px;
-            object-fit: contain;
-            margin-bottom: 10px;
+            width: 85px; height: 85px; object-fit: contain; margin-bottom: 10px;
         }
+        .search-item-val { font-weight: 900; font-size: 1.2em; color: white; }
 
-        .search-item-val {
-            font-weight: 900;
-            font-size: 1.2em;
-            color: white;
-        }
-
-        .results-grid::-webkit-scrollbar {
-            width: 10px;
-        }
-
+        .results-grid::-webkit-scrollbar { width: 10px; }
         .results-grid::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 10px;
-            border: 2px solid #161e2e;
+            background: #334155; border-radius: 10px; border: 2px solid #161e2e;
         }
 
         .verdict-box {
-            position: fixed;
-            bottom: 30px;
-            background: var(--panel);
-            width: 90%;
-            max-width: 520px;
-            padding: 25px;
-            border-radius: 30px;
-            border: 1px solid var(--border);
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
-            z-index: 1000;
+            position: fixed; bottom: 30px; background: var(--panel); width: 90%;
+            max-width: 520px; padding: 25px; border-radius: 30px;
+            border: 1px solid var(--border); text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7); z-index: 1000;
         }
 
         .v-text {
-            font-size: 3.5em;
-            font-weight: 950;
-            line-height: 1;
-            margin-bottom: 8px;
+            font-size: 3.5em; font-weight: 950; line-height: 1; margin-bottom: 8px;
             letter-spacing: -2px;
         }
 
-        .v-diff {
-            font-weight: 800;
-            font-size: 1.2em;
-            margin-bottom: 5px;
-            color: white;
-        }
-
+        .v-diff { font-weight: 800; font-size: 1.2em; margin-bottom: 5px; color: white; }
         .v-sub {
-            color: var(--subtext);
-            font-style: italic;
-            font-size: 0.95em;
-            margin-bottom: 18px;
-            line-height: 1.4;
-            padding: 0 10px;
+            color: var(--subtext); font-style: italic; font-size: 0.95em;
+            margin-bottom: 18px; line-height: 1.4; padding: 0 10px;
         }
 
         .switches {
-            display: inline-flex;
-            background: #0f172a;
-            padding: 5px;
-            border-radius: 25px;
+            display: inline-flex; background: #0f172a; padding: 5px; border-radius: 25px;
         }
 
         .sw-btn {
-            background: transparent;
-            border: none;
-            color: var(--subtext);
-            padding: 8px 24px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: 800;
+            background: transparent; border: none; color: var(--subtext);
+            padding: 8px 24px; border-radius: 20px; cursor: pointer; font-weight: 800;
         }
-
-        .sw-btn.active {
-            background: var(--accent);
-            color: white;
-        }
+        .sw-btn.active { background: var(--accent); color: white; }
 
         .win-c { color: var(--win); }
         .lose-c { color: var(--lose); }
@@ -512,12 +278,11 @@
 
     <script>
         // ==========================================
-        // CONFIGURATION - PASTE YOUR GOOGLE SHEETS CSV URL HERE
+        // CONFIGURATION
+        // I have kept your CSV link here. If you changed your sheet, paste the new link!
         // ==========================================
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=697881438&single=true&output=csv';
         
-        // Example: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT.../pub?output=csv'
-
         let ALL_PETS = [];
         let state = { mode: 'frost', A: [], B: [], target: 'A' };
 
@@ -545,20 +310,19 @@
             }
         }
 
-        // Parse CSV from Google Sheets
+        // CSV Parser
         function parseCSV(text) {
             const lines = text.trim().split('\n');
             const headers = lines[0].split(',').map(h => h.trim());
             
             return lines.slice(1).map(line => {
-                const values = line.split(',');
+                // Handle comma splitting carefully
+                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 const obj = {};
                 
                 headers.forEach((header, i) => {
-                    const val = values[i] ? values[i].trim() : '';
-                    
-                    // Convert numbers
-                    if (!isNaN(val) && val !== '') {
+                    let val = values[i] ? values[i].trim().replace(/^"|"$/g, '') : '';
+                    if (!isNaN(parseFloat(val)) && isFinite(val) && val !== '') {
                         obj[header] = parseFloat(val);
                     } else {
                         obj[header] = val;
@@ -572,38 +336,48 @@
         // Load data from Google Sheets
         async function loadPetData() {
             try {
+                // Added cache buster (&t=...)
                 const response = await fetch(GOOGLE_SHEET_CSV_URL + "&t=" + Date.now());
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
                 
-                // Map the data to your format (adjust column names as needed)
+                // MAP DATA: Looks for your new specific columns
                 ALL_PETS = data.map(row => ({
-                    n: row.n || row.name || '',  // pet name
-                    d: row.d || 0,                // demand
-                    f: row.f || 0,                // frost value
-                    v: row.v || 0,                // regular value
-                    fr_f: row.fr_f || 0,          // fly/ride frost
-                    fr_v: row.fr_v || 0,          // fly/ride value
-                    n_f: row.n_f || 0,            // neon frost
-                    n_v: row.n_v || 0,            // neon value
-                    nfr_f: row.nfr_f || 0,        // neon FR frost
-                    nfr_v: row.nfr_v || 0,        // neon FR value
-                    m_f: row.m_f || 0,            // mega frost
-                    m_v: row.m_v || 0,            // mega value
-                    mfr_f: row.mfr_f || 0,        // mega FR frost
-                    mfr_v: row.mfr_v || 0         // mega FR value
-                })).filter(p => p.n && p.n.length > 0); // Filter out empty rows
+                    n: row.n || row.name || '',
+                    d: row.d || 0,
+                    f: row.f || 0,
+                    
+                    // Specific Value Columns from "Auto-Fix" Script
+                    v: row.v || 0,         // Normal NoPot
+                    f_v: row.f_v || 0,     // Normal Fly
+                    r_v: row.r_v || 0,     // Normal Ride
+                    fr_v: row.fr_v || 0,   // Normal FR
+                    
+                    n_v: row.n_v || 0,     // Neon NoPot
+                    n_f_v: row.n_f_v || 0, // Neon Fly (Optional)
+                    n_r_v: row.n_r_v || 0, // Neon Ride (Optional)
+                    nfr_v: row.nfr_v || 0, // Neon FR
+                    
+                    m_v: row.m_v || 0,     // Mega NoPot
+                    m_f_v: row.m_f_v || 0, // Mega Fly (Optional)
+                    m_r_v: row.m_r_v || 0, // Mega Ride (Optional)
+                    mfr_v: row.mfr_v || 0, // Mega FR
+
+                    // Original Frost Refs (Just in case)
+                    nfr_f: row.nfr_f || 0,
+                    mfr_f: row.mfr_f || 0
+                })).filter(p => p.n && p.n.length > 0);
                 
                 document.getElementById('loadingScreen').style.display = 'none';
                 render();
             } catch (error) {
                 console.error('Error loading data:', error);
                 document.querySelector('.loading-text').textContent = 
-                    'Error loading data. Please check your Google Sheets URL.';
+                    'Error loading data. Check console for details.';
             }
         }
 
-        // Modal functions
+        // --- SEARCH & UI LOGIC ---
         const overlay = document.getElementById('searchOverlay');
         const searchInput = document.getElementById('mainSearch');
         const resultsBox = document.getElementById('searchResults');
@@ -616,9 +390,7 @@
             setTimeout(() => searchInput.focus(), 50);
         }
 
-        function closeSearch() {
-            overlay.classList.remove('open');
-        }
+        function closeSearch() { overlay.classList.remove('open'); }
 
         searchInput.addEventListener('input', (e) => renderSearchResults(e.target.value.toLowerCase()));
 
@@ -627,14 +399,14 @@
             
             resultsBox.innerHTML = matches.slice(0, 100).map(p => {
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
-                const val = state.mode === 'frost' ? p.f : p.v;
+                const val = state.mode === 'frost' ? p.f : p.v; // Show base value in search
                 
                 return `
                 <div class="search-item-card" onclick="addItem('${p.n.replace(/'/g, "\\'")}')">
                     <div class="search-item-name">${p.n}</div>
                     <img src="${imgUrl}" class="search-item-img" 
                          onerror="this.src='https://amvgg.com/items/theme-color.webp'">
-                    <div class="search-item-val">${val.toFixed(3)}</div>
+                    <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
                 </div>`;
             }).join('');
         }
@@ -664,32 +436,47 @@
             let totalV = 0, totalD = 0;
 
             list.forEach(p => {
-                let isFR = p.f_st || p.r_st;
-                let val;
+                let val = 0;
                 
+                // === CALCULATOR LOGIC ===
                 if (state.mode === 'frost') {
+                    // Standard Frost Logic
+                    let isFR = p.f_st || p.r_st;
+                    if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
+                    else if (p.type === 'mega') val = p.mfr_f || (p.f * 12);
+                    else val = p.f;
+                    
+                    // Small adjustments for potions on frost values if raw data missing
+                    if (!p.nfr_f && !p.mfr_f) {
+                         if (!p.fr_f && p.d < 9) {
+                            if (p.f_st) val += 0.015;
+                            if (p.r_st) val += 0.008;
+                        }
+                    }
+                } 
+                else {
+                    // === UPDATED VALUE MODE (Uses your new columns) ===
+                    
                     if (p.type === 'neon') {
-                        val = p.nfr_f || p.n_f || (p.f * 3);
-                    } else if (p.type === 'mega') {
-                        val = p.mfr_f || p.m_f || (p.f * 12);
-                    } else {
-                        val = (isFR && p.fr_f) ? p.fr_f : p.f;
-                    }
-                    if (!p.fr_f && p.d < 9) {
-                        if (p.f_st) val += 0.015;
-                        if (p.r_st) val += 0.008;
-                    }
-                } else {
-                    if (p.type === 'neon') {
-                        val = p.nfr_v || p.n_v || (p.v * 3);
-                    } else if (p.type === 'mega') {
-                        val = p.mfr_v || p.m_v || (p.v * 12);
-                    } else {
-                        val = (isFR && p.fr_v) ? p.fr_v : p.v;
-                    }
-                    if (!p.fr_v && p.d < 9) {
-                        if (p.f_st) val += 1.5;
-                        if (p.r_st) val += 0.8;
+                        // Neon Logic
+                        if (p.f_st && p.r_st) val = p.nfr_v;
+                        else if (p.f_st) val = p.n_f_v || p.nfr_v; // Try Neon Fly, else Neon FR
+                        else if (p.r_st) val = p.n_r_v || p.nfr_v; // Try Neon Ride, else Neon FR
+                        else val = p.n_v || p.nfr_v; // Neon NoPot (fallback to FR if missing)
+                    } 
+                    else if (p.type === 'mega') {
+                        // Mega Logic
+                        if (p.f_st && p.r_st) val = p.mfr_v;
+                        else if (p.f_st) val = p.m_f_v || p.mfr_v;
+                        else if (p.r_st) val = p.m_r_v || p.mfr_v;
+                        else val = p.m_v || p.mfr_v;
+                    } 
+                    else {
+                        // Regular Logic
+                        if (p.f_st && p.r_st) val = p.fr_v;
+                        else if (p.f_st) val = p.f_v || p.v; // Fly (fallback to reg)
+                        else if (p.r_st) val = p.r_v || p.v; // Ride (fallback to reg)
+                        else val = p.v; // No Pot
                     }
                 }
                 
@@ -705,139 +492,11 @@
                             <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                         </div>
                         <div class="card-name">${p.n}</div>
-                        <div class="card-val">${val.toFixed(3)}</div>
+                        <div class="card-val">${val ? val.toFixed(2) : '0.00'}</div>
                         <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" 
                                  onclick="tog('${s}',${p.uid},'n')">N</div>
                             <div class="t-btn ${p.type==='mega'?'active':''}" 
                                  onclick="tog('${s}',${p.uid},'m')">M</div>
                             <div class="t-btn ${p.f_st?'active':''}" 
-                                 onclick="tog('${s}',${p.uid},'f')">F</div>
-                            <div class="t-btn ${p.r_st?'active':''}" 
-                                 onclick="tog('${s}',${p.uid},'r')">R</div>
-                        </div>
-                    </div>`;
-            });
-            
-            grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
-            
-            document.getElementById(`tot${s}`).innerText = totalV.toFixed(3);
-            document.getElementById(`cnt${s}`).innerText = list.length;
-            document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
-        }
-
-        function calculate() {
-            const vA = parseFloat(document.getElementById('totA').innerText);
-            const vB = parseFloat(document.getElementById('totB').innerText);
-            const demA = parseFloat(document.getElementById('demA').innerText);
-            const demB = parseFloat(document.getElementById('demB').innerText);
-            
-            const verdict = document.getElementById('verdict');
-            const vDiff = document.getElementById('vDiff');
-            const vSub = document.getElementById('vSub');
-
-            if (vA === 0 && vB === 0) {
-                verdict.innerText = "--";
-                verdict.className = "v-text";
-                vDiff.innerText = "Difference: 0.000 (0.0%)";
-                vSub.innerText = "Add pets to calculate trade results";
-                return;
-            }
-
-            const diff = vB - vA;
-            let pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
-            let demandGap = demA - demB;
-            let proMessage = "";
-
-            // Verdict logic
-            if (vA === vB) {
-                verdict.innerText = "FAIR";
-                verdict.className = "v-text fair-c";
-                proMessage = "Perfectly balanced. No value gained or lost.";
-            } else if (diff > 0) {
-                if (demandGap >= 3 && pDiff < 0.35) {
-                    verdict.innerText = "TRAP";
-                    verdict.className = "v-text trap-c";
-                    proMessage = "Demand Trap! You gain points but those pets are very hard to trade.";
-                } else {
-                    if (pDiff >= 0.15) {
-                        verdict.innerText = "BIG WIN";
-                        proMessage = "Massive Overpay! Take this trade immediately.";
-                    } else if (pDiff >= 0.03) {
-                        verdict.innerText = "WIN";
-                        proMessage = "Nice profit! This is a good trade for you.";
-                    } else {
-                        verdict.innerText = "SLIGHT WIN";
-                        proMessage = "Small gain. It's a win, but values are close.";
-                    }
-                    verdict.className = "v-text win-c";
-                    playSfx('win');
-                }
-            } else {
-                let isNoPotCollectorTrap = state.A.some(pA => {
-                    return state.B.some(pB => {
-                        return pA.n === pB.n && !pA.f_st && !pA.r_st && 
-                               (pB.f_st || pB.r_st) && pB.fr_f < pA.f;
-                    });
-                });
-
-                if (isNoPotCollectorTrap) {
-                    verdict.innerText = "TRAP";
-                    verdict.className = "v-text trap-c";
-                    proMessage = "Collector Trap! You are trading a rare Clean pet for a lower-value FR version.";
-                } else {
-                    if (pDiff <= -0.15) {
-                        verdict.innerText = "BIG LOSE";
-                        proMessage = "Huge overpay! You are losing too much value.";
-                    } else if (pDiff <= -0.03) {
-                        verdict.innerText = "LOSE";
-                        proMessage = "You are overpaying. Ask them to add something.";
-                    } else {
-                        verdict.innerText = "SLIGHT LOSE";
-                        proMessage = "Small loss. It's an overpay, but very close.";
-                    }
-                    verdict.className = "v-text lose-c";
-                }
-            }
-
-            const prefix = diff > 0 ? "+" : "";
-            vDiff.innerText = `Difference: ${prefix}${diff.toFixed(3)} (${(pDiff * 100).toFixed(1)}%)`;
-            vSub.innerText = proMessage;
-        }
-
-        function render() {
-            renderSide('A');
-            renderSide('B');
-            calculate();
-        }
-
-        function remove(s, uid) {
-            state[s] = state[s].filter(x => x.uid !== uid);
-            render();
-        }
-
-        function setMode(m) {
-            state.mode = m;
-            document.getElementById('btnFrost').classList.toggle('active', m === 'frost');
-            document.getElementById('btnValue').classList.toggle('active', m === 'value');
-            render();
-        }
-
-        function tog(s, uid, type) {
-            const p = state[s].find(x => x.uid === uid);
-            if (!p) return;
-            
-            if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
-            if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
-            if (type === 'f') p.f_st = !p.f_st;
-            if (type === 'r') p.r_st = !p.r_st;
-            
-            render();
-        }
-
-        // Initialize
-        loadPetData();
-    </script>
-</body>
-</html>
-
+                                 onclick="tog
