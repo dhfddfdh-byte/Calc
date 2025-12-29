@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adopt Me Trade Calculator</title>
+    <style>
+        :root {
+            --bg: #0b1120;
+            --panel: #161e2e;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #f1f5f9;
+            --subtext: #94a3b8;
+            --accent: #6366f1;
+            --frost: #38bdf8;
+            --win: #10b981;
+            --lose: #ef4444;
+            --trap: #f59e0b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: var(--subtext);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1150px;
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            margin-top: 40px;
+        }
+
+        .trade-panel {
+            flex: 1;
+            background: var(--panel);
+            border-radius: 24px;
+            border: 1.5px solid var(--border);
+            min-width: 340px;
+            min-height: 520px;
+        }
+
+        .p-header {
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .p-title {
+            font-weight: 800;
+            font-size: 1.25em;
+            color: white;
+        }
+
+        .p-dem {
+            color: var(--subtext);
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 4px;
+            display: block;
+        }
+
+        .p-total {
+            font-size: 1.6em;
+            font-weight: 900;
+            color: white;
+        }
+
+        .grid {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 12px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            border: 1.5px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .card-img-container {
+            width: 65px;
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+
+        .card-img-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .card-name {
+            font-size: 0.7em;
+            font-weight: 800;
+            text-align: center;
+            height: 2.4em;
+            line-height: 1.2;
+            color: #cbd5e1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-val {
+            font-size: 0.95em;
+            font-weight: 950;
+            color: var(--frost);
+            margin: 6px 0;
+        }
+
+        .del {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 22px;
+            height: 22px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 10;
+            border: 2px solid var(--panel);
+        }
+
+        .del:hover {
+            background: #dc2626;
+        }
+
+        .toggles {
+            display: flex;
+            gap: 3px;
+        }
+
+        .t-btn {
+            width: 20px;
+            height: 20px;
+            background: #0f172a;
+            border-radius: 4px;
+            font-size: 0.65em;
+            font-weight: 900;
+            color: #475569;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .t-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .plus {
+            border: 2px dashed var(--border);
+            border-radius: 14px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            color: var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .plus:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .search-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .search-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .search-container {
+            width: 95%;
+            max-width: 850px;
+            background: #1a2333;
+            border-radius: 28px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            max-height: 85vh;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+            overflow: hidden;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .search-overlay.open .search-container {
+            transform: scale(1);
+        }
+
+        .search-header {
+            padding: 20px 25px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: #111827;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-input-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        #mainSearch {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            background: #262c3d;
+            border: 1px solid #334155;
+            border-radius: 35px;
+            color: white;
+            font-size: 1.1em;
+            outline: none;
+        }
+
+        .search-icon-fixed {
+            position: absolute;
+            left: 18px;
+            font-size: 1.2em;
+        }
+
+        .close-modal-btn {
+            width: 45px;
+            height: 45px;
+            background: #262c3d;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 1.4em;
+        }
+
+        .close-modal-btn:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            padding: 25px;
+            overflow-y: auto;
+            background: #161e2e;
+        }
+
+        .search-item-card {
+            background: #262c3d;
+            border-radius: 18px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1.5px solid transparent;
+        }
+
+        .search-item-card:hover {
+            background: #334155;
+            transform: translateY(-4px);
+            border-color: var(--accent);
+        }
+
+        .search-item-name {
+            font-size: 0.75em;
+            font-weight: 800;
+            color: #94a3b8;
+            text-align: center;
+            margin-bottom: 10px;
+            height: 2.5em;
+            overflow: hidden;
+        }
+
+        .search-item-img {
+            width: 85px;
+            height: 85px;
+            object-fit: contain;
+            margin-bottom: 10px;
+        }
+
+        .search-item-val {
+            font-weight: 900;
+            font-size: 1.2em;
+            color: white;
+        }
+
+        .results-grid::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .results-grid::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+            border: 2px solid #161e2e;
+        }
+
+        .verdict-box {
+            position: fixed;
+            bottom: 30px;
+            background: var(--panel);
+            width: 90%;
+            max-width: 520px;
+            padding: 25px;
+            border-radius: 30px;
+            border: 1px solid var(--border);
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            z-index: 1000;
+        }
+
+        .v-text {
+            font-size: 3.5em;
+            font-weight: 950;
+            line-height: 1;
+            margin-bottom: 8px;
+            letter-spacing: -2px;
+        }
+
+        .v-diff {
+            font-weight: 800;
+            font-size: 1.2em;
+            margin-bottom: 5px;
+            color: white;
+        }
+
+        .v-sub {
+            color: var(--subtext);
+            font-style: italic;
+            font-size: 0.95em;
+            margin-bottom: 18px;
+            line-height: 1.4;
+            padding: 0 10px;
+        }
+
+        .switches {
+            display: inline-flex;
+            background: #0f172a;
+            padding: 5px;
+            border-radius: 25px;
+        }
+
+        .sw-btn {
+            background: transparent;
+            border: none;
+            color: var(--subtext);
+            padding: 8px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 800;
+        }
+
+        .sw-btn.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .win-c { color: var(--win); }
+        .lose-c { color: var(--lose); }
+        .trap-c { color: var(--trap); }
+        .fair-c { color: white; }
+
+        @media (max-width: 768px) {
+            .v-text { font-size: 2.5em; }
+            .verdict-box { bottom: 15px; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading pet data from Google Sheets...</div>
+    </div>
+
+    <div class="search-overlay" id="searchOverlay" onclick="closeSearch()">
+        <div class="search-container" onclick="event.stopPropagation()">
+            <div class="search-header">
+                <div class="search-input-wrapper">
+                    <span class="search-icon-fixed">🔍</span>
+                    <input type="text" id="mainSearch" placeholder="Search for a pet..." autocomplete="off">
+                </div>
+                <div class="close-modal-btn" onclick="closeSearch()">✕</div>
+            </div>
+            <div class="results-grid" id="searchResults"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="trade-panel" id="panelA">
+            <div class="p-header">
+                <div>
+                    <span class="p-title">You Give (<span id="cntA">0</span>)</span>
+                    <span class="p-dem">Avg Demand: <span id="demA">0.0</span></span>
+                </div>
+                <span class="p-total" id="totA">0.000</span>
+            </div>
+            <div class="grid" id="gridA"></div>
+        </div>
+
+        <div class="trade-panel" id="panelB">
+            <div class="p-header">
+                <div>
+                    <span class="p-title">They Give (<span id="cntB">0</span>)</span>
+                    <span class="p-dem">Avg Demand: <span id="demB">0.0</span></span>
+                </div>
+                <span class="p-total" id="totB">0.000</span>
+            </div>
+            <div class="grid" id="gridB"></div>
+        </div>
+    </div>
+
+    <div class="verdict-box">
+        <div id="verdict" class="v-text">--</div>
+        <div id="vDiff" class="v-diff">Difference: 0.000 (0.0%)</div>
+        <div id="vSub" class="v-sub">Add pets to calculate trade results</div>
+        <div class="switches">
+            <button class="sw-btn active" id="btnFrost" onclick="setMode('frost')">Frost</button>
+            <button class="sw-btn" id="btnValue" onclick="setMode('value')">Value</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURATION - PASTE YOUR GOOGLE SHEETS CSV URL HERE
+        // ==========================================
+        const GOOGLE_SHEET_CSV_URL = 'YOUR_PUBLISHED_CSV_LINK_HERE';
+        
+        // Example: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT.../pub?output=csv'
+
+        let ALL_PETS = [];
+        let state = { mode: 'frost', A: [], B: [], target: 'A' };
+
+        // Sound effects
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSfx(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            if (type === 'pop') {
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'win') {
+                osc.type = 'triangle';
+                [523, 659, 783].forEach((f, i) => osc.frequency.setValueAtTime(f, audioCtx.currentTime + (i * 0.1)));
+                gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            }
+        }
+
+        // Parse CSV from Google Sheets
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            return lines.slice(1).map(line => {
+                const values = line.split(',');
+                const obj = {};
+                
+                headers.forEach((header, i) => {
+                    const val = values[i] ? values[i].trim() : '';
+                    
+                    // Convert numbers
+                    if (!isNaN(val) && val !== '') {
+                        obj[header] = parseFloat(val);
+                    } else {
+                        obj[header] = val;
+                    }
+                });
+                
+                return obj;
+            });
+        }
+
+        // Load data from Google Sheets
+        async function loadPetData() {
+            try {
+                const response = await fetch(GOOGLE_SHEET_CSV_URL);
+                const csvText = await response.text();
+                const data = parseCSV(csvText);
+                
+                // Map the data to your format (adjust column names as needed)
+                ALL_PETS = data.map(row => ({
+                    n: row.n || row.name || '',  // pet name
+                    d: row.d || 0,                // demand
+                    f: row.f || 0,                // frost value
+                    v: row.v || 0,                // regular value
+                    fr_f: row.fr_f || 0,          // fly/ride frost
+                    fr_v: row.fr_v || 0,          // fly/ride value
+                    n_f: row.n_f || 0,            // neon frost
+                    n_v: row.n_v || 0,            // neon value
+                    nfr_f: row.nfr_f || 0,        // neon FR frost
+                    nfr_v: row.nfr_v || 0,        // neon FR value
+                    m_f: row.m_f || 0,            // mega frost
+                    m_v: row.m_v || 0,            // mega value
+                    mfr_f: row.mfr_f || 0,        // mega FR frost
+                    mfr_v: row.mfr_v || 0         // mega FR value
+                })).filter(p => p.n && p.n.length > 0); // Filter out empty rows
+                
+                document.getElementById('loadingScreen').style.display = 'none';
+                render();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.querySelector('.loading-text').textContent = 
+                    'Error loading data. Please check your Google Sheets URL.';
+            }
+        }
+
+        // Modal functions
+        const overlay = document.getElementById('searchOverlay');
+        const searchInput = document.getElementById('mainSearch');
+        const resultsBox = document.getElementById('searchResults');
+
+        function openSearch(side) {
+            state.target = side;
+            overlay.classList.add('open');
+            searchInput.value = '';
+            renderSearchResults("");
+            setTimeout(() => searchInput.focus(), 50);
+        }
+
+        function closeSearch() {
+            overlay.classList.remove('open');
+        }
+
+        searchInput.addEventListener('input', (e) => renderSearchResults(e.target.value.toLowerCase()));
+
+        function renderSearchResults(query) {
+            const matches = query === "" ? ALL_PETS : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
+            
+            resultsBox.innerHTML = matches.slice(0, 100).map(p => {
+                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
+                const val = state.mode === 'frost' ? p.f : p.v;
+                
+                return `
+                <div class="search-item-card" onclick="addItem('${p.n.replace(/'/g, "\\'")}')">
+                    <div class="search-item-name">${p.n}</div>
+                    <img src="${imgUrl}" class="search-item-img" 
+                         onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    <div class="search-item-val">${val.toFixed(3)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function addItem(name) {
+            const pet = ALL_PETS.find(x => x.n === name);
+            if (!pet) return;
+            
+            state[state.target].push({
+                ...pet,
+                uid: Math.random(),
+                type: 'reg',
+                f_st: false,
+                r_st: false
+            });
+            
+            playSfx('pop');
+            closeSearch();
+            render();
+        }
+
+        function renderSide(s) {
+            const list = state[s];
+            const grid = document.getElementById(`grid${s}`);
+            grid.innerHTML = '';
+            
+            let totalV = 0, totalD = 0;
+
+            list.forEach(p => {
+                let isFR = p.f_st || p.r_st;
+                let val;
+                
+                if (state.mode === 'frost') {
+                    if (p.type === 'neon') {
+                        val = p.nfr_f || p.n_f || (p.f * 3);
+                    } else if (p.type === 'mega') {
+                        val = p.mfr_f || p.m_f || (p.f * 12);
+                    } else {
+                        val = (isFR && p.fr_f) ? p.fr_f : p.f;
+                    }
+                    if (!p.fr_f && p.d < 9) {
+                        if (p.f_st) val += 0.015;
+                        if (p.r_st) val += 0.008;
+                    }
+                } else {
+                    if (p.type === 'neon') {
+                        val = p.nfr_v || p.n_v || (p.v * 3);
+                    } else if (p.type === 'mega') {
+                        val = p.mfr_v || p.m_v || (p.v * 12);
+                    } else {
+                        val = (isFR && p.fr_v) ? p.fr_v : p.v;
+                    }
+                    if (!p.fr_v && p.d < 9) {
+                        if (p.f_st) val += 1.5;
+                        if (p.r_st) val += 0.8;
+                    }
+                }
+                
+                totalV += val;
+                totalD += p.d;
+                
+                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
+
+                grid.innerHTML += `
+                    <div class="card">
+                        <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
+                        <div class="card-img-container">
+                            <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                        </div>
+                        <div class="card-name">${p.n}</div>
+                        <div class="card-val">${val.toFixed(3)}</div>
+                        <div class="toggles">
+                            <div class="t-btn ${p.type==='neon'?'active':''}" 
+                                 onclick="tog('${s}',${p.uid},'n')">N</div>
+                            <div class="t-btn ${p.type==='mega'?'active':''}" 
+                                 onclick="tog('${s}',${p.uid},'m')">M</div>
+                            <div class="t-btn ${p.f_st?'active':''}" 
+                                 onclick="tog('${s}',${p.uid},'f')">F</div>
+                            <div class="t-btn ${p.r_st?'active':''}" 
+                                 onclick="tog('${s}',${p.uid},'r')">R</div>
+                        </div>
+                    </div>`;
+            });
+            
+            grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
+            
+            document.getElementById(`tot${s}`).innerText = totalV.toFixed(3);
+            document.getElementById(`cnt${s}`).innerText = list.length;
+            document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
+        }
+
+        function calculate() {
+            const vA = parseFloat(document.getElementById('totA').innerText);
+            const vB = parseFloat(document.getElementById('totB').innerText);
+            const demA = parseFloat(document.getElementById('demA').innerText);
+            const demB = parseFloat(document.getElementById('demB').innerText);
+            
+            const verdict = document.getElementById('verdict');
+            const vDiff = document.getElementById('vDiff');
+            const vSub = document.getElementById('vSub');
+
+            if (vA === 0 && vB === 0) {
+                verdict.innerText = "--";
+                verdict.className = "v-text";
+                vDiff.innerText = "Difference: 0.000 (0.0%)";
+                vSub.innerText = "Add pets to calculate trade results";
+                return;
+            }
+
+            const diff = vB - vA;
+            let pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
+            let demandGap = demA - demB;
+            let proMessage = "";
+
+            // Verdict logic
+            if (vA === vB) {
+                verdict.innerText = "FAIR";
+                verdict.className = "v-text fair-c";
+                proMessage = "Perfectly balanced. No value gained or lost.";
+            } else if (diff > 0) {
+                if (demandGap >= 3 && pDiff < 0.35) {
+                    verdict.innerText = "TRAP";
+                    verdict.className = "v-text trap-c";
+                    proMessage = "Demand Trap! You gain points but those pets are very hard to trade.";
+                } else {
+                    if (pDiff >= 0.15) {
+                        verdict.innerText = "BIG WIN";
+                        proMessage = "Massive Overpay! Take this trade immediately.";
+                    } else if (pDiff >= 0.03) {
+                        verdict.innerText = "WIN";
+                        proMessage = "Nice profit! This is a good trade for you.";
+                    } else {
+                        verdict.innerText = "SLIGHT WIN";
+                        proMessage = "Small gain. It's a win, but values are close.";
+                    }
+                    verdict.className = "v-text win-c";
+                    playSfx('win');
+                }
+            } else {
+                let isNoPotCollectorTrap = state.A.some(pA => {
+                    return state.B.some(pB => {
+                        return pA.n === pB.n && !pA.f_st && !pA.r_st && 
+                               (pB.f_st || pB.r_st) && pB.fr_f < pA.f;
+                    });
+                });
+
+                if (isNoPotCollectorTrap) {
+                    verdict.innerText = "TRAP";
+                    verdict.className = "v-text trap-c";
+                    proMessage = "Collector Trap! You are trading a rare Clean pet for a lower-value FR version.";
+                } else {
+                    if (pDiff <= -0.15) {
+                        verdict.innerText = "BIG LOSE";
+                        proMessage = "Huge overpay! You are losing too much value.";
+                    } else if (pDiff <= -0.03) {
+                        verdict.innerText = "LOSE";
+                        proMessage = "You are overpaying. Ask them to add something.";
+                    } else {
+                        verdict.innerText = "SLIGHT LOSE";
+                        proMessage = "Small loss. It's an overpay, but very close.";
+                    }
+                    verdict.className = "v-text lose-c";
+                }
+            }
+
+            const prefix = diff > 0 ? "+" : "";
+            vDiff.innerText = `Difference: ${prefix}${diff.toFixed(3)} (${(pDiff * 100).toFixed(1)}%)`;
+            vSub.innerText = proMessage;
+        }
+
+        function render() {
+            renderSide('A');
+            renderSide('B');
+            calculate();
+        }
+
+        function remove(s, uid) {
+            state[s] = state[s].filter(x => x.uid !== uid);
+            render();
+        }
+
+        function setMode(m) {
+            state.mode = m;
+            document.getElementById('btnFrost').classList.toggle('active', m === 'frost');
+            document.getElementById('btnValue').classList.toggle('active', m === 'value');
+            render();
+        }
+
+        function tog(s, uid, type) {
+            const p = state[s].find(x => x.uid === uid);
+            if (!p) return;
+            
+            if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
+            if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
+            if (type === 'f') p.f_st = !p.f_st;
+            if (type === 'r') p.r_st = !p.r_st;
+            
+            render();
+        }
+
+        // Initialize
+        loadPetData();
+    </script>
+</body>
+</html>
