@@ -412,7 +412,10 @@
                 
                 ALL_PETS = data.map(row => ({
                     n: row.n || row.name || '',
+                    // UPDATED TO LOAD nd AND md COLUMNS
                     d: row.d || 0,
+                    nd: row.nd || 0,
+                    md: row.md || 0,
                     f: row.f || 0,
                     v: row.v || 0,
                     f_v: row.f_v || 0,
@@ -428,7 +431,6 @@
                     mfr_v: row.mfr_v || 0,
                     nfr_f: row.nfr_f || 0,
                     mfr_f: row.mfr_f || 0,
-                    // LOAD THE NEW CATEGORIES COLUMN
                     cat: row.categories || row.rarity || ''
                 })).filter(p => p.n && p.n.length > 0);
                 
@@ -479,15 +481,10 @@
         });
 
         function filterAndRender(query) {
-            // 1. Name Filter
             let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
-
-            // 2. Rarity Filter
             if (searchState.rarityFilter !== 'none') {
                 matches = matches.filter(p => p.cat.toLowerCase().includes(searchState.rarityFilter));
             }
-
-            // 3. Sorting
             const mode = searchState.sortMode;
             if (mode !== 'default') {
                 matches.sort((a, b) => {
@@ -498,7 +495,6 @@
                     return 0;
                 });
             }
-
             searchState.currentMatches = matches;
             renderDOM();
         }
@@ -540,6 +536,11 @@
             let totalV = 0, totalD = 0;
             list.forEach(p => {
                 let val = 0;
+                // LOGIC TO DETERMINE WHICH DEMAND COLUMN TO USE
+                let currentDemand = p.d;
+                if (p.type === 'neon') currentDemand = p.nd || p.d;
+                else if (p.type === 'mega') currentDemand = p.md || p.d;
+
                 if (state.mode === 'frost') {
                     if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
                     else if (p.type === 'mega') val = p.mfr_f || (p.f * 12);
@@ -562,7 +563,8 @@
                         else val = p.v;                      
                     }
                 }
-                totalV += val; totalD += p.d;
+                totalV += val; 
+                totalD += currentDemand; // ADD DYNAMIC DEMAND TO TOTAL
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 grid.innerHTML += `
                     <div class="card">
@@ -572,8 +574,7 @@
                         </div>
                         <div class="card-name">${p.n}</div>
                         <div class="card-val">${val ? val.toFixed(2) : '0.00'}</div>
-                        <div class="card-demand">Dem: ${p.d}</div>
-                        <div class="toggles">
+                        <div class="card-demand">Dem: ${currentDemand}</div> <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
                             <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('${s}',${p.uid},'m')">M</div>
                             <div class="t-btn ${p.f_st?'active':''}" onclick="tog('${s}',${p.uid},'f')">F</div>
@@ -584,6 +585,7 @@
             grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
             document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
             document.getElementById(`cnt${s}`).innerText = list.length;
+            // AVG DEMAND NOW UPDATES AUTOMATICALLY
             document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
         }
 
