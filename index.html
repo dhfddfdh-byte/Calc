@@ -155,12 +155,11 @@
         }
         .plus:hover { border-color: var(--accent); color: var(--accent); }
 
-        /* INVENTORY POPUP */
         .inv-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
             display: none; align-items: center; justify-content: center;
-            z-index: 3000; /* FIXED: Search needs to be higher than this */
+            z-index: 3000;
         }
         .inv-container {
             width: 95%; max-width: 1100px; background: #1a2333; border-radius: 28px;
@@ -184,12 +183,11 @@
         .ai-suggestion { background: #161e2e; padding: 15px; border-radius: 12px; border-left: 4px solid var(--accent); margin-bottom: 12px; font-size: 0.95em; line-height: 1.4; }
         .ai-item-tag { display: inline-block; background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.85em; margin: 2px; }
 
-        /* SEARCH OVERLAY - MUST BE HIGHER THAN INVENTORY */
         .search-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
             display: flex; align-items: center; justify-content: center;
-            z-index: 4000; /* FIXED: Now higher than inventory popup */
+            z-index: 4000;
             opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
         .search-overlay.open { opacity: 1; pointer-events: auto; }
@@ -387,7 +385,7 @@
             <div class="p-header">
                 <div>
                     <span class="p-title">You Give (<span id="cntA">0</span>)</span>
-                    <span class="p-dem">Avg Demand: <span id="demA">0.0</span></span>
+                    <span class="p-dem" id="demA">Avg Demand: 0.0</span>
                 </div>
                 <span class="p-total" id="totA">0.000</span>
             </div>
@@ -398,7 +396,7 @@
             <div class="p-header">
                 <div>
                     <span class="p-title">They Give (<span id="cntB">0</span>)</span>
-                    <span class="p-dem">Avg Demand: <span id="demB">0.0</span></span>
+                    <span class="p-dem" id="demB">Avg Demand: 0.0</span>
                 </div>
                 <span class="p-total" id="totB">0.000</span>
             </div>
@@ -699,46 +697,73 @@
             updateAISuggestions(list);
         }
 
+        // --- SMARTER AI STRATEGIST (10 EXAMPLES) ---
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
             if (inventory.length === 0) {
                 box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>`;
                 return;
             }
+
+            // 1. Sort inventory by value High to Low for smart grouping
             const sorted = [...inventory].sort((a, b) => b.v - a.v);
-            let suggestions = "";
-            const shadowValue = 155.0; 
-            const topPet = sorted[0];
-            if (topPet.v > 40) {
-                const target = ALL_PETS.find(x => x.v > topPet.v && x.v < topPet.v + 30);
-                if (target) {
-                    suggestions += `
-                    <div class="ai-suggestion">
-                        <b>🔥 Upgrade Strategy:</b><br>
-                        Offer <span class="ai-item-tag">${topPet.n}</span> + 2-3 mid-tier adds for a <span class="ai-item-tag">${target.n}</span>.<br>
-                        <i>Reasoning: Consolidating value into higher tiers increases inventory liquidity.</i>
-                    </div>`;
+            let results = [];
+
+            // AI Ruleset: 
+            // - Bundle max 4 pets
+            // - Target items 5-15% higher than current bundle value
+            // - Prioritize Preppies for liquid filler
+
+            // Function to find a target in the master database based on a value range
+            const findTarget = (val) => {
+                return ALL_PETS.filter(p => p.v > val * 1.02 && p.v < val * 1.15)
+                               .sort((a,b) => b.d - a.d)[0];
+            };
+
+            // Strategy Loop: Generate up to 10 distinct offers
+            for(let i = 0; i < 10; i++) {
+                let bundle = [];
+                let bundleVal = 0;
+                
+                // Logic varies by index to ensure 10 different types of trades
+                if (i < 3 && sorted.length >= 1) {
+                    // Major Upgrade Attempts (Top Pet + Filler)
+                    bundle = [sorted[0]];
+                    if (sorted.length > 1) bundle.push(sorted[Math.min(i+1, sorted.length-1)]);
+                    bundleVal = bundle.reduce((s, p) => s + p.v, 0);
+                    let target = findTarget(bundleVal);
+                    if (target) results.push({offer: bundle, target: target, type: "🔥 High-Tier Upgrade"});
+                } 
+                else if (i < 6 && sorted.length >= 2) {
+                    // Preppy Consolidation (Bundle mid-tiers for a Cow/Turtle)
+                    bundle = sorted.slice(Math.max(0, sorted.length-4));
+                    bundleVal = bundle.reduce((s, p) => s + p.v, 0);
+                    let target = ALL_PETS.find(x => x.v < bundleVal && x.cat.toLowerCase().includes('preppy') && x.d >= 9);
+                    if (target) results.push({offer: bundle, target: target, type: "💅 Preppy Consolidation"});
+                }
+                else {
+                    // Random Smart Swaps (Bundle pets with low demand for one with high demand)
+                    bundle = sorted.filter(p => p.d < 5).slice(0, 3);
+                    if (bundle.length > 0) {
+                        bundleVal = bundle.reduce((s, p) => s + p.v, 0);
+                        let target = ALL_PETS.find(x => x.v < bundleVal && x.d > 7);
+                        if (target) results.push({offer: bundle, target: target, type: "♻️ Demand Cleaning"});
+                    }
                 }
             }
-            const preppies = inventory.filter(p => p.cat.toLowerCase().includes('preppy'));
-            if (preppies.length > 0) {
-                suggestions += `
-                <div class="ai-suggestion">
-                    <b>💅 Preppy Profit:</b><br>
-                    Offer <span class="ai-item-tag">${preppies[0].n}</span> for an overpay in mid-tier legendaries.<br>
-                    <i>Reasoning: Preppy pets have 10/10 velocity. You can easily get a 10-15% win in value here.</i>
-                </div>`;
+
+            // Render Results
+            if (results.length === 0) {
+                box.innerHTML = `<div class="ai-suggestion">Collect more pets to see specific trade bundles.</div>`;
+            } else {
+                box.innerHTML = results.map(r => `
+                    <div class="ai-suggestion">
+                        <small style="color:var(--accent); font-weight:900;">${r.type}</small><br>
+                        Offer: ${r.offer.map(p => `<span class="ai-item-tag">${p.n}</span>`).join(' + ')}<br>
+                        Target: <span class="ai-item-tag" style="background:var(--win)">${r.target.n}</span>
+                    </div>
+                `).join('');
             }
-            const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
-            if (totalInvVal < shadowValue) {
-                const remaining = (shadowValue - totalInvVal).toFixed(1);
-                suggestions += `
-                <div class="ai-suggestion">
-                    <b>🌑 Shadow Path:</b><br>
-                    You are <span class="ai-item-tag">${remaining} Value</span> away from a Shadow Dragon. Offer your top 4 pets for a high-tier Mega.
-                </div>`;
-            }
-            box.innerHTML = suggestions || `<div class="ai-suggestion">Collecting more pets will reveal higher-tier strategies.</div>`;
         }
 
         function renderSide(s) {
