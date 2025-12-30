@@ -17,6 +17,7 @@
             --win: #10b981;
             --lose: #ef4444;
             --trap: #f59e0b;
+            --demand-color: #fbbf24; /* Neon Amber */
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -64,7 +65,17 @@
         }
 
         .p-title { font-weight: 800; font-size: 1.25em; color: white; }
-        .p-dem { color: var(--subtext); font-size: 0.85em; font-weight: 600; margin-top: 4px; display: block; }
+        
+        /* UPDATED HEADER DEMAND STYLE */
+        .p-dem { 
+            color: var(--demand-color); 
+            font-size: 0.95em; 
+            font-weight: 800; 
+            margin-top: 4px; 
+            display: block; 
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
+        }
+
         .p-total { font-size: 1.6em; font-weight: 900; color: white; }
 
         .grid {
@@ -82,7 +93,7 @@
 
         .card-img-container {
             width: 65px; height: 65px; display: flex; align-items: center;
-            justify-content: center; margin-bottom: 5px;
+            justify-content: center; margin-bottom: 5px; cursor: copy; /* Visual cue for duplication */
         }
         .card-img-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
@@ -91,7 +102,15 @@
             line-height: 1.2; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis;
         }
 
-        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost); margin: 6px 0; }
+        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost); margin: 6px 0 2px 0; }
+
+        /* NEW CARD DEMAND STYLE */
+        .card-demand {
+            font-size: 0.8em;
+            font-weight: 800;
+            color: var(--demand-color);
+            margin-bottom: 4px;
+        }
 
         .del {
             position: absolute; top: -6px; right: -6px; width: 22px; height: 22px;
@@ -177,6 +196,15 @@
             width: 85px; height: 85px; object-fit: contain; margin-bottom: 10px;
         }
         .search-item-val { font-weight: 900; font-size: 1.2em; color: white; }
+
+        /* NEW SEARCH RESULT DEMAND STYLE */
+        .search-item-demand {
+            font-size: 0.9em;
+            font-weight: 800;
+            color: var(--demand-color);
+            margin-top: 2px;
+            text-shadow: 0 0 5px rgba(251, 191, 36, 0.3);
+        }
 
         .results-grid::-webkit-scrollbar { width: 10px; }
         .results-grid::-webkit-scrollbar-thumb {
@@ -309,10 +337,9 @@
             }
         }
 
-        // CSV Parser - UPDATED TO BE CASE INSENSITIVE
+        // CSV Parser - Case Insensitive
         function parseCSV(text) {
             const lines = text.trim().split('\n');
-            // Force headers to lowercase and trim spaces
             const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
             
             return lines.slice(1).map(line => {
@@ -339,13 +366,11 @@
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
                 
-                // MAP DATA - USES LOWERCASE KEYS NOW TO MATCH PARSER
                 ALL_PETS = data.map(row => ({
                     n: row.n || row.name || '',
                     d: row.d || 0,
                     f: row.f || 0,
                     
-                    // Specific Value Columns (Lowercase keys match standard headers)
                     v: row.v || 0,
                     f_v: row.f_v || 0,
                     r_v: row.r_v || 0,
@@ -361,7 +386,6 @@
                     m_r_v: row.m_r_v || 0, 
                     mfr_v: row.mfr_v || 0,
 
-                    // Original Frost Refs
                     nfr_f: row.nfr_f || 0,
                     mfr_f: row.mfr_f || 0
                 })).filter(p => p.n && p.n.length > 0);
@@ -375,7 +399,7 @@
             }
         }
 
-        // --- UI LOGIC ---
+        // --- SEARCH & UI LOGIC ---
         const overlay = document.getElementById('searchOverlay');
         const searchInput = document.getElementById('mainSearch');
         const resultsBox = document.getElementById('searchResults');
@@ -383,8 +407,8 @@
         function openSearch(side) {
             state.target = side;
             overlay.classList.add('open');
-            searchInput.value = '';
-            renderSearchResults("");
+            // Kept existing text in search bar
+            renderSearchResults(searchInput.value.toLowerCase());
             setTimeout(() => searchInput.focus(), 50);
         }
 
@@ -405,6 +429,7 @@
                     <img src="${imgUrl}" class="search-item-img" 
                          onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                     <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
+                    <div class="search-item-demand">Dem: ${p.d}</div>
                 </div>`;
             }).join('');
         }
@@ -426,6 +451,21 @@
             render();
         }
 
+        // --- DUPLICATE FUNCTION ---
+        function duplicate(s, uid) {
+            const original = state[s].find(x => x.uid === uid);
+            if (!original) return;
+
+            const copy = { 
+                ...original, 
+                uid: Math.random() 
+            };
+
+            state[s].push(copy);
+            playSfx('pop');
+            render();
+        }
+
         function renderSide(s) {
             const list = state[s];
             const grid = document.getElementById(`grid${s}`);
@@ -437,7 +477,6 @@
                 let val = 0;
                 
                 if (state.mode === 'frost') {
-                    // Frost Mode (Unchanged)
                     let isFR = p.f_st || p.r_st;
                     if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
                     else if (p.type === 'mega') val = p.mfr_f || (p.f * 12);
@@ -451,7 +490,6 @@
                     }
                 } 
                 else {
-                    // === STRICT VALUE MODE ===
                     if (p.type === 'neon') {
                         if (p.f_st && p.r_st) val = p.nfr_v; 
                         else if (p.f_st) val = p.n_f_v;      
@@ -460,7 +498,7 @@
                     } 
                     else if (p.type === 'mega') {
                         if (p.f_st && p.r_st) val = p.mfr_v; 
-                        else if (p.f_st) val = p.m_f_v;     // Uses m_f_v here
+                        else if (p.f_st) val = p.m_f_v;     
                         else if (p.r_st) val = p.m_r_v;      
                         else val = p.m_v;                    
                     } 
@@ -480,11 +518,12 @@
                 grid.innerHTML += `
                     <div class="card">
                         <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
-                        <div class="card-img-container">
+                        <div class="card-img-container" ondblclick="duplicate('${s}', ${p.uid})" title="Double click to duplicate">
                             <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                         </div>
                         <div class="card-name">${p.n}</div>
                         <div class="card-val">${val ? val.toFixed(2) : '0.00'}</div>
+                        <div class="card-demand">Dem: ${p.d}</div>
                         <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" 
                                  onclick="tog('${s}',${p.uid},'n')">N</div>
