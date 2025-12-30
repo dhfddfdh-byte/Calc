@@ -155,11 +155,12 @@
         }
         .plus:hover { border-color: var(--accent); color: var(--accent); }
 
+        /* INVENTORY POPUP */
         .inv-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
             display: none; align-items: center; justify-content: center;
-            z-index: 3000;
+            z-index: 3000; /* FIXED: Search needs to be higher than this */
         }
         .inv-container {
             width: 95%; max-width: 1100px; background: #1a2333; border-radius: 28px;
@@ -183,11 +184,13 @@
         .ai-suggestion { background: #161e2e; padding: 15px; border-radius: 12px; border-left: 4px solid var(--accent); margin-bottom: 12px; font-size: 0.95em; line-height: 1.4; }
         .ai-item-tag { display: inline-block; background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.85em; margin: 2px; }
 
+        /* SEARCH OVERLAY - MUST BE HIGHER THAN INVENTORY */
         .search-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
             display: flex; align-items: center; justify-content: center;
-            z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            z-index: 4000; /* FIXED: Now higher than inventory popup */
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
         .search-overlay.open { opacity: 1; pointer-events: auto; }
 
@@ -244,7 +247,6 @@
         .search-item-card:hover {
             background: #334155; transform: translateY(-4px); border-color: var(--accent);
         }
-        /* ADDED SUCCESS FEEDBACK */
         .search-item-card.added { border-color: var(--win) !important; background: rgba(16, 185, 129, 0.1); }
 
         .search-item-name {
@@ -337,7 +339,6 @@
                         <div class="stat-label">Average Demand</div>
                         <div class="stat-value" id="invAvgDemand">0.0</div>
                     </div>
-                    
                     <div class="ai-box">
                         <div class="ai-title">🤖 AI Trade Strategist</div>
                         <div id="aiSuggestions">
@@ -459,9 +460,9 @@
         function undo() {
             if (history.length === 0) return;
             const last = JSON.parse(history.pop());
-            state.A = last.A;
-            state.B = last.B;
-            state.inv = last.inv;
+            state.A = (last.A || []);
+            state.B = (last.B || []);
+            state.inv = (last.inv || []);
             render();
             renderInventory();
             saveTrade();
@@ -629,7 +630,6 @@
             }).join('');
         }
 
-        // QOL UPDATE: PERSISTENT SEARCH FOR INVENTORY
         function addItem(element, name) {
             pushState();
             const pet = ALL_PETS.find(x => x.n === name);
@@ -639,13 +639,12 @@
             if (state.target === 'inv') {
                 state.inv.push(newPet);
                 renderInventory();
-                // Visual feedback that it was added
                 element.classList.add('added');
                 setTimeout(() => element.classList.remove('added'), 500);
             } else {
                 state[state.target].push(newPet);
                 render();
-                closeSearch(); // Close only for trade panels
+                closeSearch(); 
             }
             playSfx('pop'); saveTrade(); 
         }
@@ -667,7 +666,6 @@
             saveTrade(); 
         }
 
-        // --- INVENTORY MANAGER FUNCTIONS ---
         function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
         function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
@@ -698,24 +696,19 @@
             });
             document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
             document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
-            
             updateAISuggestions(list);
         }
 
-        // --- AI TRADE STRATEGIST LOGIC ---
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
             if (inventory.length === 0) {
                 box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>`;
                 return;
             }
-
             const sorted = [...inventory].sort((a, b) => b.v - a.v);
             let suggestions = "";
-
             const shadowValue = 155.0; 
             const topPet = sorted[0];
-            
             if (topPet.v > 40) {
                 const target = ALL_PETS.find(x => x.v > topPet.v && x.v < topPet.v + 30);
                 if (target) {
@@ -727,7 +720,6 @@
                     </div>`;
                 }
             }
-
             const preppies = inventory.filter(p => p.cat.toLowerCase().includes('preppy'));
             if (preppies.length > 0) {
                 suggestions += `
@@ -737,7 +729,6 @@
                     <i>Reasoning: Preppy pets have 10/10 velocity. You can easily get a 10-15% win in value here.</i>
                 </div>`;
             }
-
             const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
             if (totalInvVal < shadowValue) {
                 const remaining = (shadowValue - totalInvVal).toFixed(1);
@@ -747,7 +738,6 @@
                     You are <span class="ai-item-tag">${remaining} Value</span> away from a Shadow Dragon. Offer your top 4 pets for a high-tier Mega.
                 </div>`;
             }
-
             box.innerHTML = suggestions || `<div class="ai-suggestion">Collecting more pets will reveal higher-tier strategies.</div>`;
         }
 
@@ -759,7 +749,6 @@
             list.forEach(p => {
                 let val = 0;
                 let currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-
                 if (state.mode === 'frost') {
                     if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
                     else if (p.type === 'mega') val = p.mfr_f || (p.f * 12);
@@ -822,47 +811,20 @@
             const diff = vB - vA;
             const pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
             const isTargetingMega = state.B.some(p => p.type === 'mega');
-
-            if (vA === vB) { 
-                verdict.innerText = "FAIR"; 
-                verdict.className = "v-text fair-c"; 
-                vSub.innerText = "Perfectly balanced.";
-            }
+            if (vA === vB) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "Perfectly balanced."; }
             else if (diff > 0) {
-                if (isTargetingMega && pDiff < 0.02) {
-                    verdict.innerText = "FAIR / RISKY";
-                    verdict.className = "v-text fair-c";
-                    vSub.innerText = "Technically a win, but Megas are harder to trade. Be careful.";
-                } 
+                if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Technically a win, but Megas are harder to trade. Be careful."; } 
                 else {
-                    const hasHighTierOrSpecial = state.B.some(p => {
-                        const c = p.cat.toLowerCase();
-                        return c.includes('legendary') || c.includes('preppy') || c.includes('exotic');
-                    });
-
-                    if (demB > 0 && demB <= 3 && !hasHighTierOrSpecial && pDiff < 1.5) {
-                        verdict.innerText = "TRAP"; 
-                        verdict.className = "v-text trap-c"; 
-                        vSub.innerText = "Low demand items! Common to Ultra-Rare trash requires at least 400% overpay.";
-                    } else {
-                        if (pDiff >= 0.15) verdict.innerText = "BIG WIN";
-                        else if (pDiff >= 0.03) verdict.innerText = "WIN";
-                        else verdict.innerText = "SLIGHT WIN";
-                        verdict.className = "v-text win-c"; playSfx('win');
-                    }
+                    const hasHighTierOrSpecial = state.B.some(p => { const c = p.cat.toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
+                    if (demB > 0 && demB <= 3 && !hasHighTierOrSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items! Common to Ultra-Rare trash requires at least 400% overpay."; } 
+                    else { if (pDiff >= 0.15) verdict.innerText = "BIG WIN"; else if (pDiff >= 0.03) verdict.innerText = "WIN"; else verdict.innerText = "SLIGHT WIN"; verdict.className = "v-text win-c"; playSfx('win'); }
                 }
-            } else {
-                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : (pDiff <= -0.03 ? "LOSE" : "SLIGHT LOSE");
-                verdict.className = "v-text lose-c";
-            }
+            } else { verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : (pDiff <= -0.03 ? "LOSE" : "SLIGHT LOSE"); verdict.className = "v-text lose-c"; }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); }
-        function setMode(m) { 
-            state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost');
-            document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); 
-        }
+        function setMode(m) { state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost'); document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); }
         function tog(s, uid, type) {
             pushState();
             const p = state[s].find(x => x.uid === uid);
