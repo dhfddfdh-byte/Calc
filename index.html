@@ -278,7 +278,7 @@
 
     <script>
         // ==========================================
-        // CONFIGURATION - NEW LINK
+        // CONFIGURATION
         // ==========================================
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         
@@ -338,7 +338,7 @@
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
                 
-                // MAP DATA
+                // MAP DATA STRICTLY
                 ALL_PETS = data.map(row => ({
                     n: row.n || row.name || '',
                     d: row.d || 0,
@@ -350,8 +350,12 @@
                     r_v: row.r_v || 0,
                     fr_v: row.fr_v || 0,
                     n_v: row.n_v || 0,
+                    n_f_v: row.n_f_v || 0, // NEW: Strict Neon Fly
+                    n_r_v: row.n_r_v || 0, // NEW: Strict Neon Ride
                     nfr_v: row.nfr_v || 0,
                     m_v: row.m_v || 0,
+                    m_f_v: row.m_f_v || 0, // NEW: Strict Mega Fly
+                    m_r_v: row.m_r_v || 0, // NEW: Strict Mega Ride
                     mfr_v: row.mfr_v || 0,
 
                     // Original Frost Refs
@@ -444,27 +448,29 @@
                     }
                 } 
                 else {
-                    // === UPDATED VALUE MODE ===
-                    // Safe logic: If exact match missing, try reasonable fallback
+                    // === STRICT VALUE MODE ===
+                    // If you select a mode, it ONLY checks that specific column.
                     
                     if (p.type === 'neon') {
-                        if (p.f_st && p.r_st) val = p.nfr_v || (p.n_v || p.v * 3);
-                        else if (p.f_st) val = p.n_f_v || p.nfr_v || (p.v * 3);
-                        else if (p.r_st) val = p.n_r_v || p.nfr_v || (p.v * 3);
-                        else val = p.n_v || p.nfr_v || (p.v * 3);
+                        // NEON Logic
+                        if (p.f_st && p.r_st) val = p.nfr_v;       // Neon FR
+                        else if (p.f_st) val = p.n_f_v;            // Neon Fly
+                        else if (p.r_st) val = p.n_r_v;            // Neon Ride
+                        else val = p.n_v;                          // Neon NoPot
                     } 
                     else if (p.type === 'mega') {
-                        if (p.f_st && p.r_st) val = p.mfr_v || (p.m_v || p.v * 12);
-                        else if (p.f_st) val = p.m_f_v || p.mfr_v || (p.v * 12);
-                        else if (p.r_st) val = p.m_r_v || p.mfr_v || (p.v * 12);
-                        // FIX: If m_v (Mega NoPot) is 0, try using Mega FR value.
-                        else val = (p.m_v > 0 ? p.m_v : p.mfr_v) || (p.v * 12);
+                        // MEGA Logic
+                        if (p.f_st && p.r_st) val = p.mfr_v;       // Mega FR
+                        else if (p.f_st) val = p.m_f_v;            // Mega Fly
+                        else if (p.r_st) val = p.m_r_v;            // Mega Ride
+                        else val = p.m_v;                          // Mega NoPot
                     } 
                     else {
-                        if (p.f_st && p.r_st) val = p.fr_v || p.v;
-                        else if (p.f_st) val = p.f_v || p.v;
-                        else if (p.r_st) val = p.r_v || p.v;
-                        else val = p.v;
+                        // REGULAR Logic
+                        if (p.f_st && p.r_st) val = p.fr_v;        // Regular FR
+                        else if (p.f_st) val = p.f_v;              // Regular Fly
+                        else if (p.r_st) val = p.r_v;              // Regular Ride
+                        else val = p.v;                            // Regular NoPot
                     }
                 }
                 
