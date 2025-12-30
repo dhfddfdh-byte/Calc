@@ -310,6 +310,8 @@
             color: white;
         }
 
+        .tip-item { background: rgba(99, 102, 241, 0.1); border-left: 3px solid var(--accent); padding: 12px; margin-bottom: 10px; border-radius: 4px; font-size: 0.9em; line-height: 1.4; }
+
         .search-overlay {
             position: fixed;
             top: 0;
@@ -396,7 +398,7 @@
     <div class="inv-overlay" id="invOverlay">
         <div class="inv-container">
             <div style="padding:20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                <h2 style="font-weight:900;">INVENTORY MANAGER</h2>
+                <h2 style="font-weight: 900;">INVENTORY MANAGER</h2>
                 <button class="nav-btn" onclick="closeInventory()">Close</button>
             </div>
             <div style="display:flex; flex:1; overflow:hidden;">
@@ -412,9 +414,9 @@
     <div class="search-overlay" id="searchOverlay" onclick="closeSearch()">
         <div class="search-container" onclick="event.stopPropagation()">
             <div style="padding:20px; display:flex; gap:10px; background:#111827; align-items:center;">
-                <input type="text" id="mainSearch" placeholder="Search for a pet..." style="flex:1; padding:12px; border-radius:30px; background:#262c3d; border:1px solid var(--border); color:white;">
-                <select id="rarityFilter" onchange="updateFilter()" style="padding:10px; border-radius:15px; background:#262c3d; color:white; border:1px solid var(--border);">
-                    <option value="none">None</option>
+                <input type="text" id="mainSearch" oninput="updateSearch()" placeholder="Search for a pet..." style="flex:1; padding:12px; border-radius:30px; background:#262c3d; border:1px solid var(--border); color:white; outline:none;">
+                <select id="rarityFilter" onchange="updateSearch()" style="padding:10px; border-radius:15px; background:#262c3d; color:white; border:1px solid var(--border); cursor:pointer;">
+                    <option value="none">Rarity: None</option>
                     <option value="preppy">Preppy</option>
                     <option value="exotic">Exotic</option>
                     <option value="legendary">Legendary</option>
@@ -464,21 +466,19 @@
 
     <script>
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
+        const SHADOW_GOAL = 155.0;
+
         let ALL_PETS = [], history = [];
         let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A' };
 
         async function loadData() {
-            try {
-                const resp = await fetch(CSV_URL);
-                const text = await resp.text();
-                ALL_PETS = parseCSV(text);
-                document.getElementById('loadingScreen').style.display = 'none';
-                const saved = localStorage.getItem('trade_inv');
-                if (saved) state.inv = JSON.parse(saved);
-                render();
-            } catch (e) {
-                console.error("Failed to load database", e);
-            }
+            const resp = await fetch(CSV_URL);
+            const text = await resp.text();
+            ALL_PETS = parseCSV(text);
+            document.getElementById('loadingScreen').style.display = 'none';
+            const saved = localStorage.getItem('trade_inv');
+            if (saved) state.inv = JSON.parse(saved);
+            render();
         }
 
         function parseCSV(text) {
@@ -561,7 +561,8 @@
             const sub = document.getElementById('vSub');
             const diffBox = document.getElementById('vDiff');
 
-            if (!vA && !vB) return;
+            if (!vA && !vB) { verdict.innerText = "--"; verdict.className = "v-text"; return; }
+            
             const diff = vB - vA, pDiff = vA ? (diff/vA) : 1;
             const isMega = state.B.some(p => p.type === 'mega'), dGap = dA - dB;
 
@@ -574,14 +575,14 @@
                     verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; sub.innerText = "Demand Trap! Losing too much velocity.";
                 } else {
                     const hasSpecial = state.B.some(p => { 
-                        const c = (p.cat || "").toLowerCase();
+                        const c = (p.cat || p.categories || "").toLowerCase();
                         return c.includes('leg') || c.includes('preppy') || c.includes('exotic');
                     });
                     if (dB <= 3 && !hasSpecial && pDiff < 1.5) {
                         verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; sub.innerText = "Trash Trap! 150% overpay required.";
                     } else {
                         verdict.innerText = pDiff > 0.15 ? "BIG WIN" : "WIN";
-                        verdict.className = "v-text win-c"; sub.innerText = "Take the trade.";
+                        verdict.className = "v-text win-c"; sub.innerText = "Solid growth.";
                     }
                 }
             } else {
@@ -596,45 +597,52 @@
             grid.innerHTML = ''; let totV = 0, badDem = [];
             state.inv.forEach(p => {
                 totV += p.v; if(p.d < 4) badDem.push(p.n);
-                grid.innerHTML += `
-                    <div class="card">
-                        <div class="del" onclick="remInv(${p.uid})">✕</div>
-                        <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width:60px;">
-                        <div class="card-name">${p.n}</div>
-                        <div class="card-val">${p.v.toFixed(1)}</div>
-                    </div>`;
+                grid.innerHTML += `<div class="card"><div class="del" onclick="remInv(${p.uid})">✕</div><img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width:60px;"><div class="card-name">${p.n}</div><div class="card-val">${p.v.toFixed(1)}</div></div>`;
             });
             stats.innerHTML = `
-                <div class="stat-card"><div class="stat-title">Total Normal Value</div><div class="stat-val">${totV.toFixed(2)}</div></div>
-                <div class="stat-card"><div class="stat-title">Progress to Shadow</div><div class="stat-val">${(totV/155*100).toFixed(1)}%</div></div>
+                <div class="stat-card"><div class="stat-title">Total Value</div><div class="stat-val">${totV.toFixed(2)}</div></div>
+                <div class="stat-card"><div class="stat-title">Goal: Shadow</div><div class="stat-val">${(totV/SHADOW_GOAL*100).toFixed(1)}%</div></div>
                 <div class="tip-box">
-                    <h3 style="margin-bottom:10px;">Strategic Tips</h3>
-                    ${badDem.length ? `<div class="tip-item">Your ${badDem[0]} has low demand. Swap it for Preppies.</div>` : ''}
+                    <h3 style="margin-bottom:10px;">Smart Tips</h3>
+                    ${badDem.length ? `<div class="tip-item">Trade ${badDem[0]} away ASAP.</div>` : ''}
                     <div class="tip-item">Focus on bundling small items for High-Tier targets.</div>
                 </div>`;
         }
 
-        function openSearch(side) { state.target = side; document.getElementById('searchOverlay').classList.add('open'); filterResults(''); }
+        function openSearch(side) { 
+            state.target = side; 
+            document.getElementById('searchOverlay').classList.add('open'); 
+            document.getElementById('mainSearch').value = '';
+            filterResults(''); 
+        }
+
         function closeSearch() { document.getElementById('searchOverlay').classList.remove('open'); }
-        function updateFilter() { filterResults(document.getElementById('mainSearch').value); }
+
+        function updateSearch() {
+            filterResults(document.getElementById('mainSearch').value);
+        }
 
         function filterResults(q) {
             const r = document.getElementById('searchResults'), rf = document.getElementById('rarityFilter').value.toLowerCase();
             let matches = ALL_PETS.filter(p => p.n.toLowerCase().includes(q.toLowerCase()));
-            if(rf !== 'none') matches = matches.filter(p => (p.cat || "").toLowerCase().includes(rf));
+            if(rf !== 'none') matches = matches.filter(p => (p.cat || p.categories || "").toLowerCase().includes(rf));
+            
             r.innerHTML = matches.slice(0, 40).map(p => `
-                <div style="background:var(--card); padding:10px; border-radius:12px; text-align:center; cursor:pointer; border:1.5px solid transparent;" 
-                     onclick="addPet('${p.n.replace(/'/g, "\\'")}')" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='transparent'">
-                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width:60px; height:60px; object-fit:contain;">
-                    <div style="font-size:0.75em; font-weight:800; margin-top:5px;">${p.n}</div>
+                <div style="background:var(--card); padding:15px; border-radius:12px; text-align:center; cursor:pointer; border:1.5px solid transparent; transition: 0.2s;" 
+                     onclick="addPet('${p.n.replace(/'/g, "\\'")}')" 
+                     onmouseover="this.style.borderColor='var(--accent)'; this.style.transform='translateY(-3px)'" 
+                     onmouseout="this.style.borderColor='transparent'; this.style.transform='none'">
+                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width:65px; height:65px; object-fit:contain; margin-bottom:8px;">
+                    <div style="font-size:0.75em; font-weight:800; color:var(--text);">${p.n}</div>
                 </div>`).join('');
         }
 
         function addPet(n) {
             pushState();
-            const p = { ...ALL_PETS.find(x => x.n === n), uid: Math.random(), type: 'reg', f_st: false, r_st: false };
-            if (state.target === 'inv') { state.inv.push(p); localStorage.setItem('trade_inv', JSON.stringify(state.inv)); renderInventory(); }
-            else { state[state.target].push(p); render(); }
+            const pData = ALL_PETS.find(x => x.n === n);
+            const pet = { ...pData, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
+            if (state.target === 'inv') { state.inv.push(pet); localStorage.setItem('trade_inv', JSON.stringify(state.inv)); renderInventory(); }
+            else { state[state.target].push(pet); render(); }
             closeSearch();
         }
 
@@ -663,7 +671,6 @@
         function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
         function render() { renderSide('A'); renderSide('B'); calculate(); }
 
-        document.getElementById('mainSearch').addEventListener('input', e => filterResults(e.target.value));
         loadData();
     </script>
 </body>
