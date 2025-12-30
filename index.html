@@ -693,6 +693,19 @@
             return val;
         }
 
+        function getFullName(p) {
+            let prefix = "";
+            if (p.type === 'neon') prefix = "Neon ";
+            else if (p.type === 'mega') prefix = "Mega ";
+            
+            let suffix = "";
+            if (p.f_st && p.r_st) suffix = " (FR)";
+            else if (p.f_st) suffix = " (F)";
+            else if (p.r_st) suffix = " (R)";
+            
+            return `${prefix}${p.n}${suffix}`;
+        }
+
         function renderInventory() {
             const list = state.inv;
             const grid = document.getElementById('invGrid');
@@ -700,7 +713,7 @@
             let totalV = 0, totalD = 0;
             list.forEach(p => {
                 let currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-                let val = calculatePetVal(p, 'value'); // Inventory displays sum in Normal Value
+                let val = calculatePetVal(p, 'value');
                 totalV += val; totalD += currentDemand;
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 grid.innerHTML += `
@@ -791,8 +804,8 @@
             box.innerHTML = suggestions + results.map(r => `
                 <div class="ai-suggestion">
                     <small style="color:var(--accent); font-weight:900;">${r.type}</small><br>
-                    Offer: ${r.offer.map(p => `<span class="ai-item-tag">${p.n}</span>`).join(' + ')}<br>
-                    Target: <span class="ai-item-tag" style="background:var(--win)">${r.target.n}</span>
+                    Offer: ${r.offer.map(p => `<span class="ai-item-tag">${getFullName(p)}</span>`).join(' + ')}<br>
+                    Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span>
                     <div class="ai-stats-row">
                         <span class="ai-stat-pill pill-win">Profit: +${r.vDiff} (${r.winPct}%)</span>
                         <span class="ai-stat-pill pill-dem">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span>
