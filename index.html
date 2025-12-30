@@ -49,6 +49,31 @@
 
         .loading-text { margin-top: 20px; font-size: 1.2em; color: var(--subtext); }
 
+        /* HEADER & NAVIGATION */
+        .nav-bar {
+            width: 100%;
+            max-width: 1150px;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+
+        .nav-btn {
+            background: var(--panel);
+            border: 1.5px solid var(--border);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 14px;
+            cursor: pointer;
+            font-weight: 800;
+            transition: 0.2s;
+        }
+
+        .nav-btn:hover {
+            border-color: var(--accent);
+            background: var(--card);
+        }
+
         .container {
             width: 100%; max-width: 1150px; display: flex; gap: 25px;
             flex-wrap: wrap; margin-top: 40px;
@@ -130,6 +155,39 @@
             color: var(--border); cursor: pointer; transition: all 0.2s;
         }
         .plus:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* INVENTORY MODAL OVERLAY */
+        .inv-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
+            display: none; align-items: center; justify-content: center;
+            z-index: 3000;
+        }
+        .inv-container {
+            width: 95%; max-width: 1000px; background: #1a2333; border-radius: 28px;
+            border: 1px solid var(--border); display: flex; flex-direction: column;
+            max-height: 85vh; overflow: hidden;
+        }
+        .inv-header {
+            padding: 25px; border-bottom: 1.5px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+            background: #111827;
+        }
+        .inv-body {
+            display: flex; flex: 1; overflow: hidden;
+        }
+        .inv-list {
+            flex: 1.8; padding: 25px; overflow-y: auto; border-right: 1.5px solid var(--border);
+        }
+        .inv-stats {
+            flex: 1; padding: 30px; background: #0f172a; overflow-y: auto;
+        }
+        .stat-card {
+            background: var(--panel); padding: 20px; border-radius: 18px;
+            border: 1px solid var(--border); margin-bottom: 20px;
+        }
+        .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+        .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
 
         .search-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -259,6 +317,38 @@
         <div class="loading-text">Loading pet data from Google Sheets...</div>
     </div>
 
+    <div class="nav-bar">
+        <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
+    </div>
+
+    <div class="inv-overlay" id="invOverlay">
+        <div class="inv-container">
+            <div class="inv-header">
+                <h2 style="font-weight: 900;">YOUR INVENTORY</h2>
+                <button class="nav-btn" onclick="closeInventory()">Close</button>
+            </div>
+            <div class="inv-body">
+                <div class="inv-list">
+                    <button class="nav-btn" style="width: 100%; margin-bottom: 20px;" onclick="openSearch('inv')">+ Add Item to Inventory</button>
+                    <div class="grid" id="invGrid"></div>
+                </div>
+                <div class="inv-stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Normal Value</div>
+                        <div class="stat-value" id="invTotalValue">0.00</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Average Demand</div>
+                        <div class="stat-value" id="invAvgDemand">0.0</div>
+                    </div>
+                    <p style="color: var(--subtext); font-size: 0.9em; line-height: 1.5; font-style: italic;">
+                        *Inventory values are calculated using Normal Base Values. Toggle state demand is applied to average demand.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="search-overlay" id="searchOverlay" onclick="closeSearch()">
         <div class="search-container" onclick="event.stopPropagation()">
             <div class="search-header">
@@ -329,8 +419,8 @@
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         
         let ALL_PETS = [];
-        let state = { mode: 'frost', A: [], B: [], target: 'A' };
-        let history = []; // Undo history
+        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A' };
+        let history = []; 
 
         let searchState = {
             currentMatches: [], 
@@ -361,10 +451,9 @@
             }
         }
 
-        // --- UNDO SYSTEM ---
         function pushState() {
             if (history.length > 50) history.shift();
-            history.push(JSON.stringify({ A: state.A, B: state.B }));
+            history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
         }
 
         function undo() {
@@ -372,7 +461,9 @@
             const last = JSON.parse(history.pop());
             state.A = last.A;
             state.B = last.B;
+            state.inv = last.inv;
             render();
+            renderInventory();
             saveTrade();
         }
 
@@ -404,7 +495,8 @@
         function saveTrade() {
             const simplifiedState = {
                 A: state.A.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
-                B: state.B.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid }))
+                B: state.B.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
+                inv: state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid }))
             };
             localStorage.setItem('tradeData', JSON.stringify(simplifiedState));
         }
@@ -419,8 +511,9 @@
                     if (!freshData) return null; 
                     return { ...freshData, ...item };
                 };
-                state.A = parsed.A.map(hydrate).filter(x => x);
-                state.B = parsed.B.map(hydrate).filter(x => x);
+                state.A = (parsed.A || []).map(hydrate).filter(x => x);
+                state.B = (parsed.B || []).map(hydrate).filter(x => x);
+                state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
                 render();
             } catch (e) {
                 console.error("Failed to restore trade", e);
@@ -540,8 +633,15 @@
             pushState();
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
-            state[state.target].push({ ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false });
-            playSfx('pop'); saveTrade(); closeSearch(); render();
+            const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
+            if (state.target === 'inv') {
+                state.inv.push(newPet);
+                renderInventory();
+            } else {
+                state[state.target].push(newPet);
+                render();
+            }
+            playSfx('pop'); saveTrade(); closeSearch(); 
         }
 
         function duplicate(s, uid) {
@@ -550,7 +650,48 @@
             if (!original) return;
             const copy = { ...original, uid: Math.random() };
             state[s].push(copy);
-            playSfx('pop'); saveTrade(); render();
+            if (s === 'inv') renderInventory(); else render();
+            playSfx('pop'); saveTrade(); 
+        }
+
+        function remove(s, uid) { 
+            pushState();
+            state[s] = state[s].filter(x => x.uid !== uid); 
+            if (s === 'inv') renderInventory(); else render();
+            saveTrade(); 
+        }
+
+        // --- INVENTORY FUNCTIONS ---
+        function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
+        function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
+
+        function renderInventory() {
+            const list = state.inv;
+            const grid = document.getElementById('invGrid');
+            grid.innerHTML = '';
+            let totalV = 0, totalD = 0;
+            list.forEach(p => {
+                let currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
+                let val = p.v; // Inventory uses Normal value sum
+                totalV += val; totalD += currentDemand;
+                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
+                grid.innerHTML += `
+                    <div class="card">
+                        <div class="del" onclick="remove('inv', ${p.uid})">✕</div>
+                        <div class="card-img-container" ondblclick="duplicate('inv', ${p.uid})">
+                            <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                        </div>
+                        <div class="card-name">${p.n}</div>
+                        <div class="card-val">${val.toFixed(2)}</div>
+                        <div class="card-demand">Dem: ${currentDemand}</div>
+                        <div class="toggles">
+                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('inv',${p.uid},'n')">N</div>
+                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('inv',${p.uid},'m')">M</div>
+                        </div>
+                    </div>`;
+            });
+            document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
+            document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
         }
 
         function renderSide(s) {
@@ -560,9 +701,7 @@
             let totalV = 0, totalD = 0;
             list.forEach(p => {
                 let val = 0;
-                let currentDemand = p.d;
-                if (p.type === 'neon') currentDemand = p.nd || p.d;
-                else if (p.type === 'mega') currentDemand = p.md || p.d;
+                let currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
 
                 if (state.mode === 'frost') {
                     if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
@@ -586,8 +725,7 @@
                         else val = p.v;                      
                     }
                 }
-                totalV += val; 
-                totalD += currentDemand;
+                totalV += val; totalD += currentDemand;
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 grid.innerHTML += `
                     <div class="card">
@@ -621,7 +759,7 @@
             const vSub = document.getElementById('vSub');
             if (vA === 0 && vB === 0) {
                 verdict.innerText = "--"; verdict.className = "v-text";
-                vDiff.innerText = "Difference: 0.00 (0.0%)";
+                vDiff.innerText = "Difference: 0.000 (0.0%)";
                 vSub.innerText = "Add pets to calculate trade results"; return;
             }
             const diff = vB - vA;
@@ -634,14 +772,12 @@
                 vSub.innerText = "Perfectly balanced.";
             }
             else if (diff > 0) {
-                // Trap Logic for High-Tier Liquidity Buffer
                 if (isTargetingMega && pDiff < 0.02) {
                     verdict.innerText = "FAIR / RISKY";
                     verdict.className = "v-text fair-c";
                     vSub.innerText = "Technically a win, but Megas are harder to trade. Be careful.";
                 } 
                 else {
-                    // Optimized 400% Trap Logic
                     const hasHighTierOrSpecial = state.B.some(p => {
                         const c = p.cat.toLowerCase();
                         return c.includes('legendary') || c.includes('preppy') || c.includes('exotic');
@@ -650,7 +786,7 @@
                     if (demB > 0 && demB <= 3 && !hasHighTierOrSpecial && pDiff < 1.5) {
                         verdict.innerText = "TRAP"; 
                         verdict.className = "v-text trap-c"; 
-                        vSub.innerText = "Low demand items! Common to Ultra-Rare trash requires at least 400% overpay.";
+                        vSub.innerText = "Low demand items! Common to Ultra-Rare trash requires at least 150% overpay.";
                     } else {
                         if (pDiff >= 0.15) verdict.innerText = "BIG WIN";
                         else if (pDiff >= 0.03) verdict.innerText = "WIN";
@@ -666,11 +802,6 @@
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); }
-        function remove(s, uid) { 
-            pushState();
-            state[s] = state[s].filter(x => x.uid !== uid); 
-            saveTrade(); render(); 
-        }
         function setMode(m) { 
             state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost');
             document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); 
@@ -682,7 +813,7 @@
             if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
             if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
             if (type === 'f') p.f_st = !p.f_st; if (type === 'r') p.r_st = !p.r_st;
-            saveTrade(); render();
+            saveTrade(); if (s === 'inv') renderInventory(); else render();
         }
         loadPetData();
     </script>
