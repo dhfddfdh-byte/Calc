@@ -330,7 +330,8 @@
         
         let ALL_PETS = [];
         let state = { mode: 'frost', A: [], B: [], target: 'A' };
-        
+        let history = []; // Undo history
+
         let searchState = {
             currentMatches: [], 
             renderLimit: 50,    
@@ -359,6 +360,28 @@
                 osc.stop(audioCtx.currentTime + 0.4);
             }
         }
+
+        // --- UNDO SYSTEM ---
+        function pushState() {
+            if (history.length > 50) history.shift();
+            history.push(JSON.stringify({ A: state.A, B: state.B }));
+        }
+
+        function undo() {
+            if (history.length === 0) return;
+            const last = JSON.parse(history.pop());
+            state.A = last.A;
+            state.B = last.B;
+            render();
+            saveTrade();
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
+        });
 
         function parseCSV(text) {
             const lines = text.trim().split('\n');
@@ -412,7 +435,6 @@
                 
                 ALL_PETS = data.map(row => ({
                     n: row.n || row.name || '',
-                    // UPDATED TO LOAD nd AND md COLUMNS
                     d: row.d || 0,
                     nd: row.nd || 0,
                     md: row.md || 0,
@@ -515,6 +537,7 @@
         }
 
         function addItem(name) {
+            pushState();
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
             state[state.target].push({ ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false });
@@ -522,6 +545,7 @@
         }
 
         function duplicate(s, uid) {
+            pushState();
             const original = state[s].find(x => x.uid === uid);
             if (!original) return;
             const copy = { ...original, uid: Math.random() };
@@ -536,7 +560,6 @@
             let totalV = 0, totalD = 0;
             list.forEach(p => {
                 let val = 0;
-                // LOGIC TO DETERMINE WHICH DEMAND COLUMN TO USE
                 let currentDemand = p.d;
                 if (p.type === 'neon') currentDemand = p.nd || p.d;
                 else if (p.type === 'mega') currentDemand = p.md || p.d;
@@ -564,7 +587,7 @@
                     }
                 }
                 totalV += val; 
-                totalD += currentDemand; // ADD DYNAMIC DEMAND TO TOTAL
+                totalD += currentDemand;
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 grid.innerHTML += `
                     <div class="card">
@@ -574,7 +597,8 @@
                         </div>
                         <div class="card-name">${p.n}</div>
                         <div class="card-val">${val ? val.toFixed(2) : '0.00'}</div>
-                        <div class="card-demand">Dem: ${currentDemand}</div> <div class="toggles">
+                        <div class="card-demand">Dem: ${currentDemand}</div>
+                        <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
                             <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('${s}',${p.uid},'m')">M</div>
                             <div class="t-btn ${p.f_st?'active':''}" onclick="tog('${s}',${p.uid},'f')">F</div>
@@ -585,7 +609,6 @@
             grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
             document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
             document.getElementById(`cnt${s}`).innerText = list.length;
-            // AVG DEMAND NOW UPDATES AUTOMATICALLY
             document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
         }
 
@@ -602,17 +625,38 @@
                 vSub.innerText = "Add pets to calculate trade results"; return;
             }
             const diff = vB - vA;
-            let pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
-            if (vA === vB) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; }
+            const pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
+            const isTargetingMega = state.B.some(p => p.type === 'mega');
+
+            if (vA === vB) { 
+                verdict.innerText = "FAIR"; 
+                verdict.className = "v-text fair-c"; 
+                vSub.innerText = "Perfectly balanced.";
+            }
             else if (diff > 0) {
-                if (demB > 0 && demB <= 3 && pDiff < 4.0) {
-                    verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; 
-                    vSub.innerText = "Low demand items! You need at least 400% overpay.";
-                } else {
-                    if (pDiff >= 0.15) verdict.innerText = "BIG WIN";
-                    else if (pDiff >= 0.03) verdict.innerText = "WIN";
-                    else verdict.innerText = "SLIGHT WIN";
-                    verdict.className = "v-text win-c"; playSfx('win');
+                // Trap Logic for High-Tier Liquidity Buffer
+                if (isTargetingMega && pDiff < 0.02) {
+                    verdict.innerText = "FAIR / RISKY";
+                    verdict.className = "v-text fair-c";
+                    vSub.innerText = "Technically a win, but Megas are harder to trade. Be careful.";
+                } 
+                else {
+                    // Optimized 400% Trap Logic
+                    const hasHighTierOrSpecial = state.B.some(p => {
+                        const c = p.cat.toLowerCase();
+                        return c.includes('legendary') || c.includes('preppy') || c.includes('exotic');
+                    });
+
+                    if (demB > 0 && demB <= 3 && !hasHighTierOrSpecial && pDiff < 4.0) {
+                        verdict.innerText = "TRAP"; 
+                        verdict.className = "v-text trap-c"; 
+                        vSub.innerText = "Low demand items! Common to Ultra-Rare trash requires at least 400% overpay.";
+                    } else {
+                        if (pDiff >= 0.15) verdict.innerText = "BIG WIN";
+                        else if (pDiff >= 0.03) verdict.innerText = "WIN";
+                        else verdict.innerText = "SLIGHT WIN";
+                        verdict.className = "v-text win-c"; playSfx('win');
+                    }
                 }
             } else {
                 verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : (pDiff <= -0.03 ? "LOSE" : "SLIGHT LOSE");
@@ -622,12 +666,17 @@
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); }
-        function remove(s, uid) { state[s] = state[s].filter(x => x.uid !== uid); saveTrade(); render(); }
+        function remove(s, uid) { 
+            pushState();
+            state[s] = state[s].filter(x => x.uid !== uid); 
+            saveTrade(); render(); 
+        }
         function setMode(m) { 
             state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost');
             document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); 
         }
         function tog(s, uid, type) {
+            pushState();
             const p = state[s].find(x => x.uid === uid);
             if (!p) return;
             if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
