@@ -309,10 +309,11 @@
             }
         }
 
-        // CSV Parser
+        // CSV Parser - UPDATED TO BE CASE INSENSITIVE
         function parseCSV(text) {
             const lines = text.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim());
+            // Force headers to lowercase and trim spaces
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
             
             return lines.slice(1).map(line => {
                 const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
@@ -331,31 +332,33 @@
             });
         }
 
-        // Load data from Google Sheets
+        // Load data
         async function loadPetData() {
             try {
                 const response = await fetch(GOOGLE_SHEET_CSV_URL + "&t=" + Date.now());
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
                 
-                // MAP DATA STRICTLY
+                // MAP DATA - USES LOWERCASE KEYS NOW TO MATCH PARSER
                 ALL_PETS = data.map(row => ({
                     n: row.n || row.name || '',
                     d: row.d || 0,
                     f: row.f || 0,
                     
-                    // Specific Value Columns
+                    // Specific Value Columns (Lowercase keys match standard headers)
                     v: row.v || 0,
                     f_v: row.f_v || 0,
                     r_v: row.r_v || 0,
                     fr_v: row.fr_v || 0,
+                    
                     n_v: row.n_v || 0,
-                    n_f_v: row.n_f_v || 0, // NEW: Strict Neon Fly
-                    n_r_v: row.n_r_v || 0, // NEW: Strict Neon Ride
+                    n_f_v: row.n_f_v || 0, 
+                    n_r_v: row.n_r_v || 0, 
                     nfr_v: row.nfr_v || 0,
+                    
                     m_v: row.m_v || 0,
-                    m_f_v: row.m_f_v || 0, // NEW: Strict Mega Fly
-                    m_r_v: row.m_r_v || 0, // NEW: Strict Mega Ride
+                    m_f_v: row.m_f_v || 0, 
+                    m_r_v: row.m_r_v || 0, 
                     mfr_v: row.mfr_v || 0,
 
                     // Original Frost Refs
@@ -372,7 +375,7 @@
             }
         }
 
-        // --- SEARCH & UI LOGIC ---
+        // --- UI LOGIC ---
         const overlay = document.getElementById('searchOverlay');
         const searchInput = document.getElementById('mainSearch');
         const resultsBox = document.getElementById('searchResults');
@@ -433,8 +436,8 @@
             list.forEach(p => {
                 let val = 0;
                 
-                // === CALCULATOR LOGIC ===
                 if (state.mode === 'frost') {
+                    // Frost Mode (Unchanged)
                     let isFR = p.f_st || p.r_st;
                     if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
                     else if (p.type === 'mega') val = p.mfr_f || (p.f * 12);
@@ -449,28 +452,23 @@
                 } 
                 else {
                     // === STRICT VALUE MODE ===
-                    // If you select a mode, it ONLY checks that specific column.
-                    
                     if (p.type === 'neon') {
-                        // NEON Logic
-                        if (p.f_st && p.r_st) val = p.nfr_v;       // Neon FR
-                        else if (p.f_st) val = p.n_f_v;            // Neon Fly
-                        else if (p.r_st) val = p.n_r_v;            // Neon Ride
-                        else val = p.n_v;                          // Neon NoPot
+                        if (p.f_st && p.r_st) val = p.nfr_v; 
+                        else if (p.f_st) val = p.n_f_v;      
+                        else if (p.r_st) val = p.n_r_v;      
+                        else val = p.n_v;                    
                     } 
                     else if (p.type === 'mega') {
-                        // MEGA Logic
-                        if (p.f_st && p.r_st) val = p.mfr_v;       // Mega FR
-                        else if (p.f_st) val = p.m_f_v;            // Mega Fly
-                        else if (p.r_st) val = p.m_r_v;            // Mega Ride
-                        else val = p.m_v;                          // Mega NoPot
+                        if (p.f_st && p.r_st) val = p.mfr_v; 
+                        else if (p.f_st) val = p.m_f_v;     // Uses m_f_v here
+                        else if (p.r_st) val = p.m_r_v;      
+                        else val = p.m_v;                    
                     } 
                     else {
-                        // REGULAR Logic
-                        if (p.f_st && p.r_st) val = p.fr_v;        // Regular FR
-                        else if (p.f_st) val = p.f_v;              // Regular Fly
-                        else if (p.r_st) val = p.r_v;              // Regular Ride
-                        else val = p.v;                            // Regular NoPot
+                        if (p.f_st && p.r_st) val = p.fr_v;  
+                        else if (p.f_st) val = p.f_v;        
+                        else if (p.r_st) val = p.r_v;        
+                        else val = p.v;                      
                     }
                 }
                 
@@ -518,8 +516,7 @@
             const vSub = document.getElementById('vSub');
 
             if (vA === 0 && vB === 0) {
-                verdict.innerText = "--";
-                verdict.className = "v-text";
+                verdict.innerText = "--"; verdict.className = "v-text";
                 vDiff.innerText = "Difference: 0.00 (0.0%)";
                 vSub.innerText = "Add pets to calculate trade results";
                 return;
@@ -531,51 +528,24 @@
             let proMessage = "";
 
             if (vA === vB) {
-                verdict.innerText = "FAIR";
-                verdict.className = "v-text fair-c";
-                proMessage = "Perfectly balanced.";
+                verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; proMessage = "Perfectly balanced.";
             } else if (diff > 0) {
                 if (demandGap >= 3 && pDiff < 0.35) {
-                    verdict.innerText = "TRAP";
-                    verdict.className = "v-text trap-c";
-                    proMessage = "Demand Trap! You gain value but lose demand.";
+                    verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; proMessage = "Demand Trap! You gain value but lose demand.";
                 } else {
-                    if (pDiff >= 0.15) {
-                        verdict.innerText = "BIG WIN";
-                        proMessage = "Massive Overpay! Take this trade.";
-                    } else if (pDiff >= 0.03) {
-                        verdict.innerText = "WIN";
-                        proMessage = "Nice profit!";
-                    } else {
-                        verdict.innerText = "SLIGHT WIN";
-                        proMessage = "Small gain.";
-                    }
-                    verdict.className = "v-text win-c";
-                    playSfx('win');
+                    if (pDiff >= 0.15) { verdict.innerText = "BIG WIN"; proMessage = "Massive Overpay! Take this trade."; }
+                    else if (pDiff >= 0.03) { verdict.innerText = "WIN"; proMessage = "Nice profit!"; }
+                    else { verdict.innerText = "SLIGHT WIN"; proMessage = "Small gain."; }
+                    verdict.className = "v-text win-c"; playSfx('win');
                 }
             } else {
-                let isCollectorTrap = state.A.some(pA => {
-                    return state.B.some(pB => {
-                        return pA.n === pB.n && !pA.f_st && !pA.r_st && 
-                               (pB.f_st || pB.r_st) && pB.fr_f < pA.f;
-                    });
-                });
-
+                let isCollectorTrap = state.A.some(pA => state.B.some(pB => pA.n === pB.n && !pA.f_st && !pA.r_st && (pB.f_st || pB.r_st) && pB.fr_f < pA.f));
                 if (isCollectorTrap) {
-                    verdict.innerText = "TRAP";
-                    verdict.className = "v-text trap-c";
-                    proMessage = "Collector Trap! Trading Clean for FR.";
+                    verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; proMessage = "Collector Trap! Trading Clean for FR.";
                 } else {
-                    if (pDiff <= -0.15) {
-                        verdict.innerText = "BIG LOSE";
-                        proMessage = "Huge overpay! Don't do it.";
-                    } else if (pDiff <= -0.03) {
-                        verdict.innerText = "LOSE";
-                        proMessage = "You are overpaying.";
-                    } else {
-                        verdict.innerText = "SLIGHT LOSE";
-                        proMessage = "Small loss.";
-                    }
+                    if (pDiff <= -0.15) { verdict.innerText = "BIG LOSE"; proMessage = "Huge overpay! Don't do it."; }
+                    else if (pDiff <= -0.03) { verdict.innerText = "LOSE"; proMessage = "You are overpaying."; }
+                    else { verdict.innerText = "SLIGHT LOSE"; proMessage = "Small loss."; }
                     verdict.className = "v-text lose-c";
                 }
             }
@@ -585,33 +555,21 @@
             vSub.innerText = proMessage;
         }
 
-        function render() {
-            renderSide('A');
-            renderSide('B');
-            calculate();
-        }
-
-        function remove(s, uid) {
-            state[s] = state[s].filter(x => x.uid !== uid);
-            render();
-        }
-
-        function setMode(m) {
-            state.mode = m;
+        function render() { renderSide('A'); renderSide('B'); calculate(); }
+        function remove(s, uid) { state[s] = state[s].filter(x => x.uid !== uid); render(); }
+        function setMode(m) { 
+            state.mode = m; 
             document.getElementById('btnFrost').classList.toggle('active', m === 'frost');
             document.getElementById('btnValue').classList.toggle('active', m === 'value');
-            render();
+            render(); 
         }
-
         function tog(s, uid, type) {
             const p = state[s].find(x => x.uid === uid);
             if (!p) return;
-            
             if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
             if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
             if (type === 'f') p.f_st = !p.f_st;
             if (type === 'r') p.r_st = !p.r_st;
-            
             render();
         }
 
