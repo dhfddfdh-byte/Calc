@@ -173,7 +173,7 @@
         }
         .inv-body { display: flex; flex: 1; overflow: hidden; }
         .inv-list { flex: 1.5; padding: 25px; overflow-y: auto; border-right: 1.5px solid var(--border); }
-        .inv-stats { flex: 1; padding: 30px; background: #0f172a; overflow-y: auto; }
+        .inv-stats { flex: 1.2; padding: 30px; background: #0f172a; overflow-y: auto; }
         .stat-card { background: var(--panel); padding: 20px; border-radius: 18px; border: 1px solid var(--border); margin-bottom: 20px; }
         .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
         .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
@@ -182,6 +182,12 @@
         .ai-title { display: flex; align-items: center; gap: 8px; color: var(--accent); font-weight: 900; font-size: 1.1em; margin-bottom: 15px; }
         .ai-suggestion { background: #161e2e; padding: 15px; border-radius: 12px; border-left: 4px solid var(--accent); margin-bottom: 12px; font-size: 0.95em; line-height: 1.4; }
         .ai-item-tag { display: inline-block; background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.85em; margin: 2px; }
+        
+        /* DATA ANALYTICS UI */
+        .ai-stats-row { display: flex; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155; }
+        .ai-stat-pill { font-size: 0.75em; font-weight: 900; padding: 3px 8px; border-radius: 5px; }
+        .pill-win { background: rgba(16, 185, 129, 0.15); color: var(--win); }
+        .pill-dem { background: rgba(251, 191, 36, 0.15); color: var(--demand-color); }
 
         .search-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -385,7 +391,7 @@
             <div class="p-header">
                 <div>
                     <span class="p-title">You Give (<span id="cntA">0</span>)</span>
-                    <span class="p-dem" id="demA">Avg Demand: 0.0</span>
+                    <span class="p-dem">Avg Demand: <span id="demA">0.0</span></span>
                 </div>
                 <span class="p-total" id="totA">0.000</span>
             </div>
@@ -396,7 +402,7 @@
             <div class="p-header">
                 <div>
                     <span class="p-title">They Give (<span id="cntB">0</span>)</span>
-                    <span class="p-dem" id="demB">Avg Demand: 0.0</span>
+                    <span class="p-dem">Avg Demand: <span id="demB">0.0</span></span>
                 </div>
                 <span class="p-total" id="totB">0.000</span>
             </div>
@@ -697,7 +703,6 @@
             updateAISuggestions(list);
         }
 
-        // --- SMARTER AI STRATEGIST (10 EXAMPLES) ---
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
             if (inventory.length === 0) {
@@ -705,65 +710,66 @@
                 return;
             }
 
-            // 1. Sort inventory by value High to Low for smart grouping
             const sorted = [...inventory].sort((a, b) => b.v - a.v);
             let results = [];
-
-            // AI Ruleset: 
-            // - Bundle max 4 pets
-            // - Target items 5-15% higher than current bundle value
-            // - Prioritize Preppies for liquid filler
-
-            // Function to find a target in the master database based on a value range
             const findTarget = (val) => {
                 return ALL_PETS.filter(p => p.v > val * 1.02 && p.v < val * 1.15)
                                .sort((a,b) => b.d - a.d)[0];
             };
 
-            // Strategy Loop: Generate up to 10 distinct offers
             for(let i = 0; i < 10; i++) {
                 let bundle = [];
                 let bundleVal = 0;
+                let bundleDem = 0;
+                let type = "";
                 
-                // Logic varies by index to ensure 10 different types of trades
                 if (i < 3 && sorted.length >= 1) {
-                    // Major Upgrade Attempts (Top Pet + Filler)
                     bundle = [sorted[0]];
                     if (sorted.length > 1) bundle.push(sorted[Math.min(i+1, sorted.length-1)]);
-                    bundleVal = bundle.reduce((s, p) => s + p.v, 0);
-                    let target = findTarget(bundleVal);
-                    if (target) results.push({offer: bundle, target: target, type: "🔥 High-Tier Upgrade"});
+                    type = "🔥 High-Tier Upgrade";
                 } 
                 else if (i < 6 && sorted.length >= 2) {
-                    // Preppy Consolidation (Bundle mid-tiers for a Cow/Turtle)
                     bundle = sorted.slice(Math.max(0, sorted.length-4));
-                    bundleVal = bundle.reduce((s, p) => s + p.v, 0);
-                    let target = ALL_PETS.find(x => x.v < bundleVal && x.cat.toLowerCase().includes('preppy') && x.d >= 9);
-                    if (target) results.push({offer: bundle, target: target, type: "💅 Preppy Consolidation"});
+                    type = "💅 Preppy Consolidation";
                 }
                 else {
-                    // Random Smart Swaps (Bundle pets with low demand for one with high demand)
                     bundle = sorted.filter(p => p.d < 5).slice(0, 3);
-                    if (bundle.length > 0) {
-                        bundleVal = bundle.reduce((s, p) => s + p.v, 0);
-                        let target = ALL_PETS.find(x => x.v < bundleVal && x.d > 7);
-                        if (target) results.push({offer: bundle, target: target, type: "♻️ Demand Cleaning"});
+                    type = "♻️ Demand Cleaning";
+                }
+
+                if (bundle.length > 0) {
+                    bundleVal = bundle.reduce((s, p) => s + p.v, 0);
+                    bundleDem = (bundle.reduce((s, p) => s + p.d, 0) / bundle.length);
+                    let target = (type === "🔥 High-Tier Upgrade") ? findTarget(bundleVal) : ALL_PETS.find(x => x.v < bundleVal && x.d > 7);
+                    
+                    if (target) {
+                        let vDiff = target.v - bundleVal;
+                        let dDiff = target.d - bundleDem;
+                        let winPct = ((target.v / bundleVal) - 1) * 100;
+
+                        results.push({
+                            offer: bundle, 
+                            target: target, 
+                            type: type,
+                            vDiff: vDiff.toFixed(2),
+                            dDiff: dDiff.toFixed(1),
+                            winPct: winPct.toFixed(1)
+                        });
                     }
                 }
             }
 
-            // Render Results
-            if (results.length === 0) {
-                box.innerHTML = `<div class="ai-suggestion">Collect more pets to see specific trade bundles.</div>`;
-            } else {
-                box.innerHTML = results.map(r => `
-                    <div class="ai-suggestion">
-                        <small style="color:var(--accent); font-weight:900;">${r.type}</small><br>
-                        Offer: ${r.offer.map(p => `<span class="ai-item-tag">${p.n}</span>`).join(' + ')}<br>
-                        Target: <span class="ai-item-tag" style="background:var(--win)">${r.target.n}</span>
+            box.innerHTML = results.map(r => `
+                <div class="ai-suggestion">
+                    <small style="color:var(--accent); font-weight:900;">${r.type}</small><br>
+                    Offer: ${r.offer.map(p => `<span class="ai-item-tag">${p.n}</span>`).join(' + ')}<br>
+                    Target: <span class="ai-item-tag" style="background:var(--win)">${r.target.n}</span>
+                    <div class="ai-stats-row">
+                        <span class="ai-stat-pill pill-win">Profit: +${r.vDiff} (${r.winPct}%)</span>
+                        <span class="ai-stat-pill pill-dem">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span>
                     </div>
-                `).join('');
-            }
+                </div>
+            `).join('');
         }
 
         function renderSide(s) {
@@ -824,6 +830,7 @@
         function calculate() {
             const vA = parseFloat(document.getElementById('totA').innerText);
             const vB = parseFloat(document.getElementById('totB').innerText);
+            const demA = parseFloat(document.getElementById('demA').innerText);
             const demB = parseFloat(document.getElementById('demB').innerText);
             const verdict = document.getElementById('verdict');
             const vDiff = document.getElementById('vDiff');
@@ -836,12 +843,26 @@
             const diff = vB - vA;
             const pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
             const isTargetingMega = state.B.some(p => p.type === 'mega');
+            const demGap = demA - demB;
+
             if (vA === vB) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "Perfectly balanced."; }
             else if (diff > 0) {
-                if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Technically a win, but Megas are harder to trade. Be careful."; } 
+                // FIXED TRAP SYSTEM: Global Velocity Check
+                if (demGap >= 3 && pDiff < 0.4) {
+                    verdict.innerText = "TRAP";
+                    verdict.className = "v-text trap-c";
+                    vSub.innerText = "Demand Gap Trap! You are losing too much trading velocity.";
+                }
+                else if (isTargetingMega && pDiff < 0.02) {
+                    verdict.innerText = "FAIR / RISKY";
+                    verdict.className = "v-text fair-c";
+                    vSub.innerText = "Technically a win, but Megas are harder to trade. Be careful.";
+                } 
                 else {
                     const hasHighTierOrSpecial = state.B.some(p => { const c = p.cat.toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
-                    if (demB > 0 && demB <= 3 && !hasHighTierOrSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items! Common to Ultra-Rare trash requires at least 400% overpay."; } 
+                    if (demB > 0 && demB <= 3 && !hasHighTierOrSpecial && pDiff < 1.5) { 
+                        verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Trash Trap! Low demand requires higher overpay."; 
+                    } 
                     else { if (pDiff >= 0.15) verdict.innerText = "BIG WIN"; else if (pDiff >= 0.03) verdict.innerText = "WIN"; else verdict.innerText = "SLIGHT WIN"; verdict.className = "v-text win-c"; playSfx('win'); }
                 }
             } else { verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : (pDiff <= -0.03 ? "LOSE" : "SLIGHT LOSE"); verdict.className = "v-text lose-c"; }
