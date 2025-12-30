@@ -147,7 +147,6 @@
         }
         .t-btn.active { background: #3b82f6; color: white; }
 
-        /* BADGE FOR STACKING */
         .card-stack-badge {
             position: absolute; top: 5px; left: 5px; background: var(--accent);
             color: white; font-size: 0.75em; font-weight: 900; padding: 2px 8px;
@@ -185,7 +184,7 @@
         .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
 
         .ai-box { background: rgba(99, 102, 241, 0.05); border: 1.5px solid var(--accent); border-radius: 20px; padding: 20px; margin-top: 10px; }
-        .ai-title { display: flex; align-items: center; gap: 8px; color: var(--accent); font-weight: 900; font-size: 1.1em; margin-bottom: 15px; }
+        .ai-title { display: flex; align-items: center; justify-content: space-between; color: var(--accent); font-weight: 900; font-size: 1.1em; margin-bottom: 15px; }
         .ai-summary { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px dashed var(--accent); font-size: 0.9em; line-height: 1.4; color: white; }
         .ai-suggestion { background: #161e2e; padding: 15px; border-radius: 12px; border-left: 4px solid var(--accent); margin-bottom: 12px; font-size: 0.95em; line-height: 1.4; }
         .ai-item-tag { display: inline-block; background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.85em; margin: 2px; }
@@ -194,6 +193,13 @@
         .ai-stat-pill { font-size: 0.75em; font-weight: 900; padding: 3px 8px; border-radius: 5px; }
         .pill-win { background: rgba(16, 185, 129, 0.15); color: var(--win); }
         .pill-dem { background: rgba(251, 191, 36, 0.15); color: var(--demand-color); }
+
+        .ai-refresh-btn { background: var(--accent); color: white; border: none; padding: 5px 12px; border-radius: 8px; font-size: 0.7em; font-weight: 900; cursor: pointer; transition: 0.2s; }
+        .ai-refresh-btn:hover { opacity: 0.8; transform: rotate(15deg); }
+
+        .ai-toggle-group { display: flex; background: #0f172a; padding: 4px; border-radius: 10px; margin-bottom: 15px; gap: 4px; }
+        .ai-tog { flex: 1; text-align: center; font-size: 0.7em; font-weight: 900; padding: 8px; border-radius: 7px; cursor: pointer; color: var(--subtext); transition: 0.2s; }
+        .ai-tog.active { background: var(--accent); color: white; }
 
         .search-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -348,8 +354,18 @@
                         <div class="stat-label">Average Demand</div>
                         <div class="stat-value" id="invAvgDemand">0.0</div>
                     </div>
+                    
                     <div class="ai-box">
-                        <div class="ai-title">🤖 AI Trade Strategist</div>
+                        <div class="ai-title">
+                            🤖 AI Strategist
+                            <button class="ai-refresh-btn" onclick="renderInventory()">Refresh ↻</button>
+                        </div>
+                        
+                        <div class="ai-toggle-group">
+                            <div class="ai-tog active" id="aiTogNormal" onclick="setAiStrategy('normal')">Normal Mode</div>
+                            <div class="ai-tog" id="aiTogVelocity" onclick="setAiStrategy('velocity')">Velocity Mode</div>
+                        </div>
+
                         <div id="aiSuggestions">
                             <div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>
                         </div>
@@ -429,7 +445,7 @@
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         
         let ALL_PETS = [];
-        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A' };
+        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal' };
         let history = []; 
 
         let searchState = {
@@ -704,52 +720,37 @@
             let prefix = "";
             if (p.type === 'neon') prefix = "Neon ";
             else if (p.type === 'mega') prefix = "Mega ";
-            
             let suffix = "";
             if (p.f_st && p.r_st) suffix = " (FR)";
             else if (p.f_st) suffix = " (F)";
             else if (p.r_st) suffix = " (R)";
-            
             return `${prefix}${p.n}${suffix}`;
         }
 
-        // --- UPDATED INVENTORY RENDERING (FIXED STACKING DISPLAY) ---
         function renderInventory() {
             const list = state.inv;
             const grid = document.getElementById('invGrid');
             grid.innerHTML = '';
-            
             let totalV = 0, totalD = 0;
             const groups = {};
-
-            // Group pets by exact match: Name + Type + F + R
             list.forEach(p => {
                 const key = `${p.n}|${p.type}|${p.f_st}|${p.r_st}`;
                 if (!groups[key]) groups[key] = [];
                 groups[key].push(p);
-                
-                // Track overall totals
                 totalV += calculatePetVal(p, 'value');
                 totalD += p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
             });
-
             Object.entries(groups).forEach(([key, stack]) => {
-                const p = stack[0];
-                const count = stack.length;
+                const p = stack[0], count = stack.length;
                 const currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-                const valSingle = calculatePetVal(p, 'value');
-                const valTotal = valSingle * count;
-                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
-                
-                // Collect UIDs to handle toggles for the whole stack
+                const valTotal = calculatePetVal(p, 'value') * count;
                 const stackUidsString = JSON.stringify(stack.map(item => item.uid));
-
                 grid.innerHTML += `
                     <div class="card">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
                         <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
                         <div class="card-img-container" ondblclick="duplicate('inv', ${p.uid})">
-                            <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                            <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
                         </div>
                         <div class="card-name">${p.n}</div>
                         <div class="card-val">${valTotal.toFixed(2)}</div>
@@ -762,25 +763,14 @@
                         </div>
                     </div>`;
             });
-
             document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
             document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
             updateAISuggestions(list);
         }
 
-        // Helper to remove 1 from a stack
-        function removeStack(s, uids) {
-            pushState();
-            const targetUid = uids[0];
-            state[s] = state[s].filter(x => x.uid !== targetUid);
-            if (s === 'inv') renderInventory(); else render();
-            saveTrade();
-        }
-
-        // Helper to toggle whole stack
+        function removeStack(s, uids) { pushState(); state[s] = state[s].filter(x => x.uid !== uids[0]); renderInventory(); saveTrade(); }
         function togStack(s, uids, type) {
-            pushState();
-            uids.forEach(uid => {
+            pushState(); uids.forEach(uid => {
                 const p = state[s].find(x => x.uid === uid);
                 if (!p) return;
                 if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
@@ -788,8 +778,15 @@
                 else if (type === 'f') p.f_st = !p.f_st;
                 else if (type === 'r') p.r_st = !p.r_st;
             });
-            saveTrade();
-            if (s === 'inv') renderInventory(); else render();
+            saveTrade(); renderInventory();
+        }
+
+        // --- NEW STRATEGY FUNCTIONS ---
+        function setAiStrategy(mode) {
+            state.aiMode = mode;
+            document.getElementById('aiTogNormal').classList.toggle('active', mode === 'normal');
+            document.getElementById('aiTogVelocity').classList.toggle('active', mode === 'velocity');
+            renderInventory();
         }
 
         function updateAISuggestions(inventory) {
@@ -799,50 +796,46 @@
                 return;
             }
 
-            const sorted = [...inventory].sort((a, b) => calculatePetVal(b, 'value') - calculatePetVal(a, 'value'));
+            // Shuffle inventory to get fresh results each time
+            const shuffled = [...inventory].sort(() => Math.random() - 0.5);
             const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
             const shadowValue = 155.0;
             const remaining = (shadowValue - totalInvVal).toFixed(1);
 
-            let suggestions = `
-                <div class="ai-summary">
-                    <b>Goal Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon. 
-                    Target high-tier legendaries to consolidate your wealth.
-                </div>
-            `;
-
+            let suggestions = `<div class="ai-summary"><b>Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon. Consolidation is key.</div>`;
             let results = [];
             let usedTargets = new Set();
             let usedPetUids = new Set();
 
             const findTarget = (val, typeFilter) => {
-                let pool = ALL_PETS.filter(p => p.v > val * 1.01 && p.v < val * 1.15 && !usedTargets.has(p.n));
+                // In Velocity mode, we allow targets with LOWER value if they have HIGHER demand (Velocity Strategy)
+                let marginMin = state.aiMode === 'velocity' ? 0.85 : 1.01;
+                let marginMax = state.aiMode === 'velocity' ? 1.05 : 1.20;
+
+                let pool = ALL_PETS.filter(p => p.v > val * marginMin && p.v < val * marginMax && !usedTargets.has(p.n));
                 if (typeFilter === 'preppy') pool = pool.filter(p => (p.cat || "").toLowerCase().includes('preppy'));
                 return pool.sort((a,b) => b.d - a.d)[0];
             };
 
-            for(let i = 0; i < 15 && results.length < 10; i++) {
+            for(let i = 0; i < 30 && results.length < 10; i++) {
                 let bundle = [];
                 let type = "";
-                if (results.length < 3) {
-                    type = "🔥 High-Tier Upgrade";
-                    const available = sorted.filter(p => !usedPetUids.has(p.uid));
-                    if (available.length > 0) { bundle = [available[0]]; if (available.length > 1) bundle.push(available[1]); }
-                } 
-                else if (results.length < 6) {
-                    type = "💅 Preppy Consolidation";
-                    const available = sorted.filter(p => !usedPetUids.has(p.uid)).reverse();
-                    bundle = available.slice(0, 4);
-                }
-                else {
-                    type = "♻️ Demand Cleaning";
-                    bundle = sorted.filter(p => !usedPetUids.has(p.uid) && p.d < 6).slice(0, 3);
+                let available = shuffled.filter(p => !usedPetUids.has(p.uid));
+                if (available.length < 1) break;
+
+                if (state.aiMode === 'velocity' || results.length > 5) {
+                    type = "💅 Preppy Velocity";
+                    bundle = available.slice(0, Math.min(available.length, 3));
+                } else {
+                    type = "🔥 Strategic Upgrade";
+                    bundle = [available[0]];
+                    if (available.length > 1) bundle.push(available[1]);
                 }
 
                 if (bundle.length > 0) {
                     let bundleVal = bundle.reduce((s, p) => s + calculatePetVal(p, 'value'), 0);
                     let bundleDem = (bundle.reduce((s, p) => s + p.d, 0) / bundle.length);
-                    let target = (type === "💅 Preppy Consolidation") ? findTarget(bundleVal, 'preppy') : findTarget(bundleVal);
+                    let target = findTarget(bundleVal, (state.aiMode === 'velocity' ? 'preppy' : ''));
                     
                     if (target) {
                         usedTargets.add(target.n);
@@ -861,7 +854,7 @@
                     Offer: ${r.offer.map(p => `<span class="ai-item-tag">${getFullName(p)}</span>`).join(' + ')}<br>
                     Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span>
                     <div class="ai-stats-row">
-                        <span class="ai-stat-pill pill-win">Profit: +${r.vDiff} (${r.winPct}%)</span>
+                        <span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">Profit: ${r.vDiff > 0 ? '+' : ''}${r.vDiff} (${r.winPct}%)</span>
                         <span class="ai-stat-pill pill-dem">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span>
                     </div>
                 </div>
@@ -906,9 +899,7 @@
             const vB = parseFloat(document.getElementById('totB').innerText);
             const demA = parseFloat(document.getElementById('demA').innerText);
             const demB = parseFloat(document.getElementById('demB').innerText);
-            const verdict = document.getElementById('verdict');
-            const vDiff = document.getElementById('vDiff');
-            const vSub = document.getElementById('vSub');
+            const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub');
             if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; return; }
             const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
             const isTargetingMega = state.B.some(p => p.type === 'mega'), demGap = demA - demB;
@@ -917,7 +908,7 @@
                 if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Demand Gap Trap!"; }
                 else if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Mega liquidity risk."; } 
                 else {
-                    const hasSpecial = state.B.some(p => { const c = (p.cat || "").toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
+                    const hasSpecial = state.B.some(p => { const c = p.cat.toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
                     if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items require overpay."; } 
                     else { if (pDiff >= 0.15) verdict.innerText = "BIG WIN"; else if (pDiff >= 0.03) verdict.innerText = "WIN"; else verdict.innerText = "SLIGHT WIN"; verdict.className = "v-text win-c"; playSfx('win'); }
                 }
@@ -928,8 +919,7 @@
         function render() { renderSide('A'); renderSide('B'); calculate(); }
         function setMode(m) { state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost'); document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); }
         function tog(s, uid, type) {
-            pushState();
-            const p = state[s].find(x => x.uid === uid);
+            pushState(); const p = state[s].find(x => x.uid === uid);
             if (!p) return;
             if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
             else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
