@@ -156,7 +156,7 @@
         }
         .plus:hover { border-color: var(--accent); color: var(--accent); }
 
-        /* INVENTORY MODAL OVERLAY */
+        /* INVENTORY POPUP STYLING */
         .inv-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
@@ -164,7 +164,7 @@
             z-index: 3000;
         }
         .inv-container {
-            width: 95%; max-width: 1000px; background: #1a2333; border-radius: 28px;
+            width: 95%; max-width: 1100px; background: #1a2333; border-radius: 28px;
             border: 1px solid var(--border); display: flex; flex-direction: column;
             max-height: 85vh; overflow: hidden;
         }
@@ -173,21 +173,18 @@
             display: flex; justify-content: space-between; align-items: center;
             background: #111827;
         }
-        .inv-body {
-            display: flex; flex: 1; overflow: hidden;
-        }
-        .inv-list {
-            flex: 1.8; padding: 25px; overflow-y: auto; border-right: 1.5px solid var(--border);
-        }
-        .inv-stats {
-            flex: 1; padding: 30px; background: #0f172a; overflow-y: auto;
-        }
-        .stat-card {
-            background: var(--panel); padding: 20px; border-radius: 18px;
-            border: 1px solid var(--border); margin-bottom: 20px;
-        }
+        .inv-body { display: flex; flex: 1; overflow: hidden; }
+        .inv-list { flex: 1.5; padding: 25px; overflow-y: auto; border-right: 1.5px solid var(--border); }
+        .inv-stats { flex: 1; padding: 30px; background: #0f172a; overflow-y: auto; }
+        .stat-card { background: var(--panel); padding: 20px; border-radius: 18px; border: 1px solid var(--border); margin-bottom: 20px; }
         .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
         .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
+
+        /* AI STRATEGIST STYLING */
+        .ai-box { background: rgba(99, 102, 241, 0.05); border: 1.5px solid var(--accent); border-radius: 20px; padding: 20px; margin-top: 10px; }
+        .ai-title { display: flex; align-items: center; gap: 8px; color: var(--accent); font-weight: 900; font-size: 1.1em; margin-bottom: 15px; }
+        .ai-suggestion { background: #161e2e; padding: 15px; border-radius: 12px; border-left: 4px solid var(--accent); margin-bottom: 12px; font-size: 0.95em; line-height: 1.4; }
+        .ai-item-tag { display: inline-block; background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.85em; margin: 2px; }
 
         .search-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -324,7 +321,7 @@
     <div class="inv-overlay" id="invOverlay">
         <div class="inv-container">
             <div class="inv-header">
-                <h2 style="font-weight: 900;">YOUR INVENTORY</h2>
+                <h2 style="font-weight: 900;">INVENTORY MANAGER</h2>
                 <button class="nav-btn" onclick="closeInventory()">Close</button>
             </div>
             <div class="inv-body">
@@ -341,9 +338,13 @@
                         <div class="stat-label">Average Demand</div>
                         <div class="stat-value" id="invAvgDemand">0.0</div>
                     </div>
-                    <p style="color: var(--subtext); font-size: 0.9em; line-height: 1.5; font-style: italic;">
-                        *Inventory values are calculated using Normal Base Values. Toggle state demand is applied to average demand.
-                    </p>
+                    
+                    <div class="ai-box">
+                        <div class="ai-title">🤖 AI Trade Strategist</div>
+                        <div id="aiSuggestions">
+                            <div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -661,7 +662,7 @@
             saveTrade(); 
         }
 
-        // --- INVENTORY FUNCTIONS ---
+        // --- INVENTORY MANAGER FUNCTIONS ---
         function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
         function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
@@ -672,7 +673,7 @@
             let totalV = 0, totalD = 0;
             list.forEach(p => {
                 let currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-                let val = p.v; // Inventory uses Normal value sum
+                let val = p.v; 
                 totalV += val; totalD += currentDemand;
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 grid.innerHTML += `
@@ -692,6 +693,62 @@
             });
             document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
             document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
+            
+            updateAISuggestions(list);
+        }
+
+        // --- AI TRADE STRATEGIST LOGIC ---
+        function updateAISuggestions(inventory) {
+            const box = document.getElementById('aiSuggestions');
+            if (inventory.length === 0) {
+                box.innerHTML = `<div class="ai-suggestion">Add pets to generate AI trade offers.</div>`;
+                return;
+            }
+
+            // 1. Sort inventory by value High to Low
+            const sorted = [...inventory].sort((a, b) => b.v - a.v);
+            let suggestions = "";
+
+            // Strategy A: Major Upgrade (using 1-2 top pets + filler)
+            const shadowValue = 155.0; 
+            const topPet = sorted[0];
+            
+            // Suggest high-tier upgrade if they have something valuable
+            if (topPet.v > 40) {
+                const target = ALL_PETS.find(x => x.v > topPet.v && x.v < topPet.v + 30);
+                if (target) {
+                    suggestions += `
+                    <div class="ai-suggestion">
+                        <b>🔥 Upgrade Strategy:</b><br>
+                        Offer <span class="ai-item-tag">${topPet.n}</span> + 2-3 mid-tier adds for a <span class="ai-item-tag">${target.n}</span>.<br>
+                        <i>Reasoning: Consolidating value into higher tiers increases inventory liquidity.</i>
+                    </div>`;
+                }
+            }
+
+            // Strategy B: Preppy Flip (Focus on 10/10 demand items)
+            const preppies = inventory.filter(p => p.cat.toLowerCase().includes('preppy'));
+            if (preppies.length > 0) {
+                suggestions += `
+                <div class="ai-suggestion">
+                    <b>💅 Preppy Profit:</b><br>
+                    Offer <span class="ai-item-tag">${preppies[0].n}</span> for an overpay in mid-tier legendaries.<br>
+                    <i>Reasoning: Preppy pets have 10/10 velocity. You can easily get a 10-15% win in value here.</i>
+                </div>`;
+            }
+
+            // Strategy C: Progressive Progress towards Shadow
+            const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
+            if (totalInvVal < shadowValue) {
+                const remaining = (shadowValue - totalInvVal).toFixed(1);
+                suggestions += `
+                <div class="ai-suggestion">
+                    <b>🌑 Shadow Path:</b><br>
+                    You are <span class="ai-item-tag">${remaining} Value</span> away from a Shadow Dragon. Offer your top 4 pets for a high-tier Mega.
+                </div>`;
+            }
+
+            box.innerHTML = suggestions || `<div class="ai-suggestion">Collecting more pets will reveal higher-tier strategies.</div>`;
         }
 
         function renderSide(s) {
@@ -786,7 +843,7 @@
                     if (demB > 0 && demB <= 3 && !hasHighTierOrSpecial && pDiff < 1.5) {
                         verdict.innerText = "TRAP"; 
                         verdict.className = "v-text trap-c"; 
-                        vSub.innerText = "Low demand items! Common to Ultra-Rare trash requires at least 150% overpay.";
+                        vSub.innerText = "Low demand items! Common to Ultra-Rare trash requires at least 400% overpay.";
                     } else {
                         if (pDiff >= 0.15) verdict.innerText = "BIG WIN";
                         else if (pDiff >= 0.03) verdict.innerText = "WIN";
