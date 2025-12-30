@@ -147,9 +147,10 @@
         }
         .t-btn.active { background: #3b82f6; color: white; }
 
+        /* BADGE FOR STACKING */
         .card-stack-badge {
             position: absolute; top: 5px; left: 5px; background: var(--accent);
-            color: white; font-size: 0.7em; font-weight: 900; padding: 2px 6px;
+            color: white; font-size: 0.75em; font-weight: 900; padding: 2px 8px;
             border-radius: 6px; z-index: 11; border: 1px solid var(--panel);
         }
 
@@ -607,7 +608,7 @@
         function filterAndRender(query) {
             let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
             if (searchState.rarityFilter !== 'none') {
-                matches = matches.filter(p => p.cat.toLowerCase().includes(searchState.rarityFilter));
+                matches = matches.filter(p => (p.cat || "").toLowerCase().includes(searchState.rarityFilter));
             }
             const mode = searchState.sortMode;
             if (mode !== 'default') {
@@ -712,7 +713,7 @@
             return `${prefix}${p.n}${suffix}`;
         }
 
-        // --- UPDATED INVENTORY RENDERING (STACKING) ---
+        // --- UPDATED INVENTORY RENDERING (FIXED STACKING DISPLAY) ---
         function renderInventory() {
             const list = state.inv;
             const grid = document.getElementById('invGrid');
@@ -732,7 +733,7 @@
                 totalD += p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
             });
 
-            Object.values(groups).forEach(stack => {
+            Object.entries(groups).forEach(([key, stack]) => {
                 const p = stack[0];
                 const count = stack.length;
                 const currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
@@ -741,12 +742,12 @@
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 
                 // Collect UIDs to handle toggles for the whole stack
-                const stackUids = stack.map(item => item.uid);
+                const stackUidsString = JSON.stringify(stack.map(item => item.uid));
 
                 grid.innerHTML += `
                     <div class="card">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
-                        <div class="del" onclick="removeStack('inv', [${stackUids}])">✕</div>
+                        <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
                         <div class="card-img-container" ondblclick="duplicate('inv', ${p.uid})">
                             <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                         </div>
@@ -754,10 +755,10 @@
                         <div class="card-val">${valTotal.toFixed(2)}</div>
                         <div class="card-demand">Dem: ${currentDemand}</div>
                         <div class="toggles">
-                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="togStack('inv',[${stackUids}],'n')">N</div>
-                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="togStack('inv',[${stackUids}],'m')">M</div>
-                            <div class="t-btn ${p.f_st?'active':''}" onclick="togStack('inv',[${stackUids}],'f')">F</div>
-                            <div class="t-btn ${p.r_st?'active':''}" onclick="togStack('inv',[${stackUids}],'r')">R</div>
+                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="togStack('inv',${stackUidsString},'n')">N</div>
+                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="togStack('inv',${stackUidsString},'m')">M</div>
+                            <div class="t-btn ${p.f_st?'active':''}" onclick="togStack('inv',${stackUidsString},'f')">F</div>
+                            <div class="t-btn ${p.r_st?'active':''}" onclick="togStack('inv',${stackUidsString},'r')">R</div>
                         </div>
                     </div>`;
             });
@@ -783,8 +784,9 @@
                 const p = state[s].find(x => x.uid === uid);
                 if (!p) return;
                 if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
-                if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
-                if (type === 'f') p.f_st = !p.f_st; if (type === 'r') p.r_st = !p.r_st;
+                else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
+                else if (type === 'f') p.f_st = !p.f_st;
+                else if (type === 'r') p.r_st = !p.r_st;
             });
             saveTrade();
             if (s === 'inv') renderInventory(); else render();
@@ -815,7 +817,7 @@
 
             const findTarget = (val, typeFilter) => {
                 let pool = ALL_PETS.filter(p => p.v > val * 1.01 && p.v < val * 1.15 && !usedTargets.has(p.n));
-                if (typeFilter === 'preppy') pool = pool.filter(p => p.cat.toLowerCase().includes('preppy'));
+                if (typeFilter === 'preppy') pool = pool.filter(p => (p.cat || "").toLowerCase().includes('preppy'));
                 return pool.sort((a,b) => b.d - a.d)[0];
             };
 
@@ -915,7 +917,7 @@
                 if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Demand Gap Trap!"; }
                 else if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Mega liquidity risk."; } 
                 else {
-                    const hasSpecial = state.B.some(p => { const c = p.cat.toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
+                    const hasSpecial = state.B.some(p => { const c = (p.cat || "").toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
                     if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items require overpay."; } 
                     else { if (pDiff >= 0.15) verdict.innerText = "BIG WIN"; else if (pDiff >= 0.03) verdict.innerText = "WIN"; else verdict.innerText = "SLIGHT WIN"; verdict.className = "v-text win-c"; playSfx('win'); }
                 }
@@ -930,8 +932,9 @@
             const p = state[s].find(x => x.uid === uid);
             if (!p) return;
             if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
-            if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
-            if (type === 'f') p.f_st = !p.f_st; if (type === 'r') p.r_st = !p.r_st;
+            else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
+            else if (type === 'f') p.f_st = !p.f_st;
+            else if (type === 'r') p.r_st = !p.r_st;
             saveTrade(); if (s === 'inv') renderInventory(); else render();
         }
         loadPetData();
