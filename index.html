@@ -647,7 +647,7 @@
                         return c.includes('legendary') || c.includes('preppy') || c.includes('exotic');
                     });
 
-                    if (demB > 0 && demB <= 3 && !hasHighTierOrSpecial && pDiff < 4.0) {
+                    if (demB > 0 && demB <= 3 && !hasHighTierOrSpecial && pDiff < 1.5) {
                         verdict.innerText = "TRAP"; 
                         verdict.className = "v-text trap-c"; 
                         vSub.innerText = "Low demand items! Common to Ultra-Rare trash requires at least 400% overpay.";
@@ -688,3 +688,4 @@
     </script>
 </body>
 </html>
+
