@@ -278,8 +278,7 @@
 
     <script>
         // ==========================================
-        // CONFIGURATION
-        // I have kept your CSV link here. If you changed your sheet, paste the new link!
+        // CONFIGURATION - NEW LINK
         // ==========================================
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         
@@ -316,7 +315,6 @@
             const headers = lines[0].split(',').map(h => h.trim());
             
             return lines.slice(1).map(line => {
-                // Handle comma splitting carefully
                 const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 const obj = {};
                 
@@ -336,34 +334,27 @@
         // Load data from Google Sheets
         async function loadPetData() {
             try {
-                // Added cache buster (&t=...)
                 const response = await fetch(GOOGLE_SHEET_CSV_URL + "&t=" + Date.now());
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
                 
-                // MAP DATA: Looks for your new specific columns
+                // MAP DATA
                 ALL_PETS = data.map(row => ({
                     n: row.n || row.name || '',
                     d: row.d || 0,
                     f: row.f || 0,
                     
-                    // Specific Value Columns from "Auto-Fix" Script
-                    v: row.v || 0,         // Normal NoPot
-                    f_v: row.f_v || 0,     // Normal Fly
-                    r_v: row.r_v || 0,     // Normal Ride
-                    fr_v: row.fr_v || 0,   // Normal FR
-                    
-                    n_v: row.n_v || 0,     // Neon NoPot
-                    n_f_v: row.n_f_v || 0, // Neon Fly (Optional)
-                    n_r_v: row.n_r_v || 0, // Neon Ride (Optional)
-                    nfr_v: row.nfr_v || 0, // Neon FR
-                    
-                    m_v: row.m_v || 0,     // Mega NoPot
-                    m_f_v: row.m_f_v || 0, // Mega Fly (Optional)
-                    m_r_v: row.m_r_v || 0, // Mega Ride (Optional)
-                    mfr_v: row.mfr_v || 0, // Mega FR
+                    // Specific Value Columns
+                    v: row.v || 0,
+                    f_v: row.f_v || 0,
+                    r_v: row.r_v || 0,
+                    fr_v: row.fr_v || 0,
+                    n_v: row.n_v || 0,
+                    nfr_v: row.nfr_v || 0,
+                    m_v: row.m_v || 0,
+                    mfr_v: row.mfr_v || 0,
 
-                    // Original Frost Refs (Just in case)
+                    // Original Frost Refs
                     nfr_f: row.nfr_f || 0,
                     mfr_f: row.mfr_f || 0
                 })).filter(p => p.n && p.n.length > 0);
@@ -399,7 +390,7 @@
             
             resultsBox.innerHTML = matches.slice(0, 100).map(p => {
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
-                const val = state.mode === 'frost' ? p.f : p.v; // Show base value in search
+                const val = state.mode === 'frost' ? p.f : p.v; 
                 
                 return `
                 <div class="search-item-card" onclick="addItem('${p.n.replace(/'/g, "\\'")}')">
@@ -440,13 +431,11 @@
                 
                 // === CALCULATOR LOGIC ===
                 if (state.mode === 'frost') {
-                    // Standard Frost Logic
                     let isFR = p.f_st || p.r_st;
                     if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
                     else if (p.type === 'mega') val = p.mfr_f || (p.f * 12);
                     else val = p.f;
                     
-                    // Small adjustments for potions on frost values if raw data missing
                     if (!p.nfr_f && !p.mfr_f) {
                          if (!p.fr_f && p.d < 9) {
                             if (p.f_st) val += 0.015;
@@ -455,28 +444,27 @@
                     }
                 } 
                 else {
-                    // === UPDATED VALUE MODE (Uses your new columns) ===
+                    // === UPDATED VALUE MODE ===
+                    // Safe logic: If exact match missing, try reasonable fallback
                     
                     if (p.type === 'neon') {
-                        // Neon Logic
-                        if (p.f_st && p.r_st) val = p.nfr_v;
-                        else if (p.f_st) val = p.n_f_v || p.nfr_v; // Try Neon Fly, else Neon FR
-                        else if (p.r_st) val = p.n_r_v || p.nfr_v; // Try Neon Ride, else Neon FR
-                        else val = p.n_v || p.nfr_v; // Neon NoPot (fallback to FR if missing)
+                        if (p.f_st && p.r_st) val = p.nfr_v || (p.n_v || p.v * 3);
+                        else if (p.f_st) val = p.n_f_v || p.nfr_v || (p.v * 3);
+                        else if (p.r_st) val = p.n_r_v || p.nfr_v || (p.v * 3);
+                        else val = p.n_v || p.nfr_v || (p.v * 3);
                     } 
                     else if (p.type === 'mega') {
-                        // Mega Logic
-                        if (p.f_st && p.r_st) val = p.mfr_v;
-                        else if (p.f_st) val = p.m_f_v || p.mfr_v;
-                        else if (p.r_st) val = p.m_r_v || p.mfr_v;
-                        else val = p.m_v || p.mfr_v;
+                        if (p.f_st && p.r_st) val = p.mfr_v || (p.m_v || p.v * 12);
+                        else if (p.f_st) val = p.m_f_v || p.mfr_v || (p.v * 12);
+                        else if (p.r_st) val = p.m_r_v || p.mfr_v || (p.v * 12);
+                        // FIX: If m_v (Mega NoPot) is 0, try using Mega FR value.
+                        else val = (p.m_v > 0 ? p.m_v : p.mfr_v) || (p.v * 12);
                     } 
                     else {
-                        // Regular Logic
-                        if (p.f_st && p.r_st) val = p.fr_v;
-                        else if (p.f_st) val = p.f_v || p.v; // Fly (fallback to reg)
-                        else if (p.r_st) val = p.r_v || p.v; // Ride (fallback to reg)
-                        else val = p.v; // No Pot
+                        if (p.f_st && p.r_st) val = p.fr_v || p.v;
+                        else if (p.f_st) val = p.f_v || p.v;
+                        else if (p.r_st) val = p.r_v || p.v;
+                        else val = p.v;
                     }
                 }
                 
@@ -499,5 +487,130 @@
                             <div class="t-btn ${p.type==='mega'?'active':''}" 
                                  onclick="tog('${s}',${p.uid},'m')">M</div>
                             <div class="t-btn ${p.f_st?'active':''}" 
-                                 onclick="tog
+                                 onclick="tog('${s}',${p.uid},'f')">F</div>
+                            <div class="t-btn ${p.r_st?'active':''}" 
+                                 onclick="tog('${s}',${p.uid},'r')">R</div>
+                        </div>
+                    </div>`;
+            });
+            
+            grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
+            
+            document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
+            document.getElementById(`cnt${s}`).innerText = list.length;
+            document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
+        }
 
+        function calculate() {
+            const vA = parseFloat(document.getElementById('totA').innerText);
+            const vB = parseFloat(document.getElementById('totB').innerText);
+            const demA = parseFloat(document.getElementById('demA').innerText);
+            const demB = parseFloat(document.getElementById('demB').innerText);
+            
+            const verdict = document.getElementById('verdict');
+            const vDiff = document.getElementById('vDiff');
+            const vSub = document.getElementById('vSub');
+
+            if (vA === 0 && vB === 0) {
+                verdict.innerText = "--";
+                verdict.className = "v-text";
+                vDiff.innerText = "Difference: 0.00 (0.0%)";
+                vSub.innerText = "Add pets to calculate trade results";
+                return;
+            }
+
+            const diff = vB - vA;
+            let pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
+            let demandGap = demA - demB;
+            let proMessage = "";
+
+            if (vA === vB) {
+                verdict.innerText = "FAIR";
+                verdict.className = "v-text fair-c";
+                proMessage = "Perfectly balanced.";
+            } else if (diff > 0) {
+                if (demandGap >= 3 && pDiff < 0.35) {
+                    verdict.innerText = "TRAP";
+                    verdict.className = "v-text trap-c";
+                    proMessage = "Demand Trap! You gain value but lose demand.";
+                } else {
+                    if (pDiff >= 0.15) {
+                        verdict.innerText = "BIG WIN";
+                        proMessage = "Massive Overpay! Take this trade.";
+                    } else if (pDiff >= 0.03) {
+                        verdict.innerText = "WIN";
+                        proMessage = "Nice profit!";
+                    } else {
+                        verdict.innerText = "SLIGHT WIN";
+                        proMessage = "Small gain.";
+                    }
+                    verdict.className = "v-text win-c";
+                    playSfx('win');
+                }
+            } else {
+                let isCollectorTrap = state.A.some(pA => {
+                    return state.B.some(pB => {
+                        return pA.n === pB.n && !pA.f_st && !pA.r_st && 
+                               (pB.f_st || pB.r_st) && pB.fr_f < pA.f;
+                    });
+                });
+
+                if (isCollectorTrap) {
+                    verdict.innerText = "TRAP";
+                    verdict.className = "v-text trap-c";
+                    proMessage = "Collector Trap! Trading Clean for FR.";
+                } else {
+                    if (pDiff <= -0.15) {
+                        verdict.innerText = "BIG LOSE";
+                        proMessage = "Huge overpay! Don't do it.";
+                    } else if (pDiff <= -0.03) {
+                        verdict.innerText = "LOSE";
+                        proMessage = "You are overpaying.";
+                    } else {
+                        verdict.innerText = "SLIGHT LOSE";
+                        proMessage = "Small loss.";
+                    }
+                    verdict.className = "v-text lose-c";
+                }
+            }
+
+            const prefix = diff > 0 ? "+" : "";
+            vDiff.innerText = `Difference: ${prefix}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
+            vSub.innerText = proMessage;
+        }
+
+        function render() {
+            renderSide('A');
+            renderSide('B');
+            calculate();
+        }
+
+        function remove(s, uid) {
+            state[s] = state[s].filter(x => x.uid !== uid);
+            render();
+        }
+
+        function setMode(m) {
+            state.mode = m;
+            document.getElementById('btnFrost').classList.toggle('active', m === 'frost');
+            document.getElementById('btnValue').classList.toggle('active', m === 'value');
+            render();
+        }
+
+        function tog(s, uid, type) {
+            const p = state[s].find(x => x.uid === uid);
+            if (!p) return;
+            
+            if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
+            if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
+            if (type === 'f') p.f_st = !p.f_st;
+            if (type === 'r') p.r_st = !p.r_st;
+            
+            render();
+        }
+
+        // Initialize
+        loadPetData();
+    </script>
+</body>
+</html>
