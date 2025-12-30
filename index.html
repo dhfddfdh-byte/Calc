@@ -140,7 +140,7 @@
         .search-overlay.open { opacity: 1; pointer-events: auto; }
 
         .search-container {
-            width: 95%; max-width: 850px; background: #1a2333; border-radius: 28px;
+            width: 95%; max-width: 900px; background: #1a2333; border-radius: 28px;
             border: 1px solid var(--border); display: flex; flex-direction: column;
             max-height: 85vh; box-shadow: 0 25px 60px rgba(0,0,0,0.6); overflow: hidden;
             transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -148,12 +148,12 @@
         .search-overlay.open .search-container { transform: scale(1); }
 
         .search-header {
-            padding: 20px 25px; display: flex; gap: 15px; align-items: center;
+            padding: 20px 25px; display: flex; gap: 12px; align-items: center;
             background: #111827; border-bottom: 1px solid var(--border);
             flex-wrap: wrap;
         }
 
-        .search-input-wrapper { flex: 1; position: relative; display: flex; align-items: center; min-width: 200px; }
+        .search-input-wrapper { flex: 2; position: relative; display: flex; align-items: center; min-width: 200px; }
 
         #mainSearch {
             width: 100%; padding: 14px 15px 14px 45px; background: #262c3d;
@@ -161,18 +161,13 @@
             font-size: 1.1em; outline: none;
         }
 
-        #sortSelect {
-            padding: 14px 20px;
-            background: #262c3d;
-            border: 1px solid #334155;
-            border-radius: 35px;
-            color: #94a3b8;
-            font-size: 0.95em;
-            font-weight: 600;
-            outline: none;
-            cursor: pointer;
+        #sortSelect, #rarityFilter {
+            flex: 1; padding: 14px 15px; background: #262c3d;
+            border: 1px solid #334155; border-radius: 35px; color: #94a3b8;
+            font-size: 0.95em; font-weight: 600; outline: none; cursor: pointer;
+            min-width: 150px;
         }
-        #sortSelect:hover { border-color: var(--accent); color: white; }
+        #sortSelect:hover, #rarityFilter:hover { border-color: var(--accent); color: white; }
 
         .search-icon-fixed { position: absolute; left: 18px; font-size: 1.2em; }
         
@@ -271,7 +266,19 @@
                     <span class="search-icon-fixed">🔍</span>
                     <input type="text" id="mainSearch" placeholder="Search for a pet..." autocomplete="off">
                 </div>
-                <select id="sortSelect" onchange="updateSort()">
+                
+                <select id="rarityFilter" onchange="updateFilter()">
+                    <option value="none">Rarity: None</option>
+                    <option value="preppy">Preppy</option>
+                    <option value="exotic">Exotic</option>
+                    <option value="legendary">Legendary</option>
+                    <option value="ultra-rare">Ultra-Rare</option>
+                    <option value="rare">Rare</option>
+                    <option value="uncommon">Uncommon</option>
+                    <option value="common">Common</option>
+                </select>
+
+                <select id="sortSelect" onchange="updateFilter()">
                     <option value="default">Default</option>
                     <option value="valHigh">Value (High → Low)</option>
                     <option value="valLow">Value (Low → High)</option>
@@ -319,19 +326,16 @@
     </div>
 
     <script>
-        // ==========================================
-        // CONFIGURATION
-        // ==========================================
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         
         let ALL_PETS = [];
         let state = { mode: 'frost', A: [], B: [], target: 'A' };
         
-        // --- SEARCH STATE ---
         let searchState = {
             currentMatches: [], 
             renderLimit: 50,    
-            sortMode: 'default'
+            sortMode: 'default',
+            rarityFilter: 'none'
         };
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -341,7 +345,6 @@
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
-            
             if (type === 'pop') {
                 osc.frequency.setValueAtTime(600, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
@@ -375,7 +378,6 @@
             });
         }
 
-        // --- LOCAL STORAGE HANDLING ---
         function saveTrade() {
             const simplifiedState = {
                 A: state.A.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
@@ -425,25 +427,25 @@
                     m_r_v: row.m_r_v || 0, 
                     mfr_v: row.mfr_v || 0,
                     nfr_f: row.nfr_f || 0,
-                    mfr_f: row.mfr_f || 0
+                    mfr_f: row.mfr_f || 0,
+                    // LOAD THE NEW CATEGORIES COLUMN
+                    cat: row.categories || row.rarity || ''
                 })).filter(p => p.n && p.n.length > 0);
                 
                 document.getElementById('loadingScreen').style.display = 'none';
-                
                 restoreTrade();
                 render();
-                
             } catch (error) {
                 console.error('Error loading data:', error);
                 document.querySelector('.loading-text').textContent = 'Error loading data.';
             }
         }
 
-        // --- SEARCH, SORT & SCROLL ---
         const overlay = document.getElementById('searchOverlay');
         const searchInput = document.getElementById('mainSearch');
         const resultsBox = document.getElementById('searchResults');
         const sortSelect = document.getElementById('sortSelect');
+        const rarityFilter = document.getElementById('rarityFilter');
 
         function openSearch(side) {
             state.target = side;
@@ -455,8 +457,9 @@
 
         function closeSearch() { overlay.classList.remove('open'); }
 
-        function updateSort() {
+        function updateFilter() {
             searchState.sortMode = sortSelect.value;
+            searchState.rarityFilter = rarityFilter.value.toLowerCase();
             searchState.renderLimit = 50; 
             filterAndRender(searchInput.value.toLowerCase());
         }
@@ -476,8 +479,15 @@
         });
 
         function filterAndRender(query) {
+            // 1. Name Filter
             let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
 
+            // 2. Rarity Filter
+            if (searchState.rarityFilter !== 'none') {
+                matches = matches.filter(p => p.cat.toLowerCase().includes(searchState.rarityFilter));
+            }
+
+            // 3. Sorting
             const mode = searchState.sortMode;
             if (mode !== 'default') {
                 matches.sort((a, b) => {
@@ -495,16 +505,13 @@
 
         function renderDOM() {
             const chunk = searchState.currentMatches.slice(0, searchState.renderLimit);
-            
             resultsBox.innerHTML = chunk.map(p => {
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 const val = state.mode === 'frost' ? p.f : p.v; 
-                
                 return `
                 <div class="search-item-card" onclick="addItem('${p.n.replace(/'/g, "\\'")}')">
                     <div class="search-item-name">${p.n}</div>
-                    <img src="${imgUrl}" class="search-item-img" 
-                         onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    <img src="${imgUrl}" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                     <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
                     <div class="search-item-demand">Dem: ${p.d}</div>
                 </div>`;
@@ -514,19 +521,8 @@
         function addItem(name) {
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
-            
-            state[state.target].push({
-                ...pet,
-                uid: Math.random(),
-                type: 'reg',
-                f_st: false,
-                r_st: false
-            });
-            
-            playSfx('pop');
-            saveTrade(); 
-            closeSearch();
-            render();
+            state[state.target].push({ ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false });
+            playSfx('pop'); saveTrade(); closeSearch(); render();
         }
 
         function duplicate(s, uid) {
@@ -534,60 +530,40 @@
             if (!original) return;
             const copy = { ...original, uid: Math.random() };
             state[s].push(copy);
-            playSfx('pop');
-            saveTrade(); 
-            render();
+            playSfx('pop'); saveTrade(); render();
         }
 
         function renderSide(s) {
             const list = state[s];
             const grid = document.getElementById(`grid${s}`);
             grid.innerHTML = '';
-            
             let totalV = 0, totalD = 0;
-
             list.forEach(p => {
                 let val = 0;
-                
                 if (state.mode === 'frost') {
-                    let isFR = p.f_st || p.r_st;
                     if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
                     else if (p.type === 'mega') val = p.mfr_f || (p.f * 12);
                     else val = p.f;
-                    
-                    if (!p.nfr_f && !p.mfr_f) {
-                         if (!p.fr_f && p.d < 9) {
-                            if (p.f_st) val += 0.015;
-                            if (p.r_st) val += 0.008;
-                        }
-                    }
-                } 
-                else {
+                } else {
                     if (p.type === 'neon') {
                         if (p.f_st && p.r_st) val = p.nfr_v; 
                         else if (p.f_st) val = p.n_f_v;      
                         else if (p.r_st) val = p.n_r_v;      
                         else val = p.n_v;                    
-                    } 
-                    else if (p.type === 'mega') {
+                    } else if (p.type === 'mega') {
                         if (p.f_st && p.r_st) val = p.mfr_v; 
                         else if (p.f_st) val = p.m_f_v;     
                         else if (p.r_st) val = p.m_r_v;      
                         else val = p.m_v;                    
-                    } 
-                    else {
+                    } else {
                         if (p.f_st && p.r_st) val = p.fr_v;  
                         else if (p.f_st) val = p.f_v;        
                         else if (p.r_st) val = p.r_v;        
                         else val = p.v;                      
                     }
                 }
-                
-                totalV += val;
-                totalD += p.d;
-                
+                totalV += val; totalD += p.d;
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
-
                 grid.innerHTML += `
                     <div class="card">
                         <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
@@ -598,20 +574,14 @@
                         <div class="card-val">${val ? val.toFixed(2) : '0.00'}</div>
                         <div class="card-demand">Dem: ${p.d}</div>
                         <div class="toggles">
-                            <div class="t-btn ${p.type==='neon'?'active':''}" 
-                                 onclick="tog('${s}',${p.uid},'n')">N</div>
-                            <div class="t-btn ${p.type==='mega'?'active':''}" 
-                                 onclick="tog('${s}',${p.uid},'m')">M</div>
-                            <div class="t-btn ${p.f_st?'active':''}" 
-                                 onclick="tog('${s}',${p.uid},'f')">F</div>
-                            <div class="t-btn ${p.r_st?'active':''}" 
-                                 onclick="tog('${s}',${p.uid},'r')">R</div>
+                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
+                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('${s}',${p.uid},'m')">M</div>
+                            <div class="t-btn ${p.f_st?'active':''}" onclick="tog('${s}',${p.uid},'f')">F</div>
+                            <div class="t-btn ${p.r_st?'active':''}" onclick="tog('${s}',${p.uid},'r')">R</div>
                         </div>
                     </div>`;
             });
-            
             grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
-            
             document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
             document.getElementById(`cnt${s}`).innerText = list.length;
             document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
@@ -620,78 +590,49 @@
         function calculate() {
             const vA = parseFloat(document.getElementById('totA').innerText);
             const vB = parseFloat(document.getElementById('totB').innerText);
-            const demA = parseFloat(document.getElementById('demA').innerText);
             const demB = parseFloat(document.getElementById('demB').innerText);
-            
             const verdict = document.getElementById('verdict');
             const vDiff = document.getElementById('vDiff');
             const vSub = document.getElementById('vSub');
-
             if (vA === 0 && vB === 0) {
                 verdict.innerText = "--"; verdict.className = "v-text";
                 vDiff.innerText = "Difference: 0.00 (0.0%)";
-                vSub.innerText = "Add pets to calculate trade results";
-                return;
+                vSub.innerText = "Add pets to calculate trade results"; return;
             }
-
             const diff = vB - vA;
             let pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
-            let demandGap = demA - demB;
-            let proMessage = "";
-
-            if (vA === vB) {
-                verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; proMessage = "Perfectly balanced.";
-            } else if (diff > 0) {
-                // *** NEW TRAP LOGIC HERE ***
-                // If they give items with 1-3 Demand (Trash), require 400% (4.0) overpay
+            if (vA === vB) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; }
+            else if (diff > 0) {
                 if (demB > 0 && demB <= 3 && pDiff < 4.0) {
-                    verdict.innerText = "TRAP"; 
-                    verdict.className = "v-text trap-c"; 
-                    proMessage = "Low demand items! You need at least 400% overpay for these.";
-                } else if (demandGap >= 3 && pDiff < 0.35) {
-                    verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; proMessage = "Demand Trap! You gain value but lose demand.";
+                    verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; 
+                    vSub.innerText = "Low demand items! You need at least 400% overpay.";
                 } else {
-                    if (pDiff >= 0.15) { verdict.innerText = "BIG WIN"; proMessage = "Massive Overpay! Take this trade."; }
-                    else if (pDiff >= 0.03) { verdict.innerText = "WIN"; proMessage = "Nice profit!"; }
-                    else { verdict.innerText = "SLIGHT WIN"; proMessage = "Small gain."; }
+                    if (pDiff >= 0.15) verdict.innerText = "BIG WIN";
+                    else if (pDiff >= 0.03) verdict.innerText = "WIN";
+                    else verdict.innerText = "SLIGHT WIN";
                     verdict.className = "v-text win-c"; playSfx('win');
                 }
             } else {
-                let isCollectorTrap = state.A.some(pA => state.B.some(pB => pA.n === pB.n && !pA.f_st && !pA.r_st && (pB.f_st || pB.r_st) && pB.fr_f < pA.f));
-                if (isCollectorTrap) {
-                    verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; proMessage = "Collector Trap! Trading Clean for FR.";
-                } else {
-                    if (pDiff <= -0.15) { verdict.innerText = "BIG LOSE"; proMessage = "Huge overpay! Don't do it."; }
-                    else if (pDiff <= -0.03) { verdict.innerText = "LOSE"; proMessage = "You are overpaying."; }
-                    else { verdict.innerText = "SLIGHT LOSE"; proMessage = "Small loss."; }
-                    verdict.className = "v-text lose-c";
-                }
+                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : (pDiff <= -0.03 ? "LOSE" : "SLIGHT LOSE");
+                verdict.className = "v-text lose-c";
             }
-
-            const prefix = diff > 0 ? "+" : "";
-            vDiff.innerText = `Difference: ${prefix}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
-            vSub.innerText = proMessage;
+            vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); }
         function remove(s, uid) { state[s] = state[s].filter(x => x.uid !== uid); saveTrade(); render(); }
         function setMode(m) { 
-            state.mode = m; 
-            document.getElementById('btnFrost').classList.toggle('active', m === 'frost');
-            document.getElementById('btnValue').classList.toggle('active', m === 'value');
-            render(); 
+            state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost');
+            document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); 
         }
         function tog(s, uid, type) {
             const p = state[s].find(x => x.uid === uid);
             if (!p) return;
             if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
             if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
-            if (type === 'f') p.f_st = !p.f_st;
-            if (type === 'r') p.r_st = !p.r_st;
-            saveTrade();
-            render();
+            if (type === 'f') p.f_st = !p.f_st; if (type === 'r') p.r_st = !p.r_st;
+            saveTrade(); render();
         }
-
         loadPetData();
     </script>
 </body>
