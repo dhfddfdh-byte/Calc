@@ -20,7 +20,11 @@
             --demand-color: #fbbf24;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -34,20 +38,37 @@
         }
 
         .loading-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); display: flex; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 9999;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
         }
 
         .loading-spinner {
-            width: 60px; height: 60px; border: 4px solid var(--border);
-            border-top-color: var(--accent); border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
 
-        .loading-text { margin-top: 20px; font-size: 1.2em; color: var(--subtext); }
+        .loading-text {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: var(--subtext);
+        }
 
         .nav-bar {
             width: 100%;
@@ -59,13 +80,13 @@
 
         .nav-btn {
             background: var(--panel);
-            border: 1.5px solid var(--border);
+            border: 1px solid var(--border);
             color: white;
             padding: 12px 24px;
             border-radius: 14px;
             cursor: pointer;
             font-weight: 800;
-            transition: 0.2s;
+            transition: all 0.2s ease;
         }
 
         .nav-btn:hover {
@@ -74,21 +95,37 @@
         }
 
         .container {
-            width: 100%; max-width: 1150px; display: flex; gap: 25px;
-            flex-wrap: wrap; margin-top: 40px;
+            width: 100%;
+            max-width: 1150px;
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+            margin-top: 40px;
         }
 
         .trade-panel {
-            flex: 1; background: var(--panel); border-radius: 24px;
-            border: 1.5px solid var(--border); min-width: 340px; min-height: 520px;
+            flex: 1;
+            background: var(--panel);
+            border-radius: 24px;
+            border: 1.5px solid var(--border);
+            min-width: 340px;
+            min-height: 520px;
+            position: relative;
         }
 
         .p-header {
-            padding: 20px 25px; display: flex; justify-content: space-between;
-            align-items: flex-start; border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 20px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
         }
 
-        .p-title { font-weight: 800; font-size: 1.25em; color: white; }
+        .p-title {
+            font-weight: 800;
+            font-size: 1.25em;
+            color: white;
+        }
         
         .p-dem { 
             color: var(--demand-color); 
@@ -99,253 +136,511 @@
             text-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
         }
 
-        .p-total { font-size: 1.6em; font-weight: 900; color: white; }
+        .p-total {
+            font-size: 1.6em;
+            font-weight: 900;
+            color: white;
+        }
 
         .grid {
-            padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
             gap: 15px;
         }
 
         .card {
-            background: var(--card); border-radius: 14px; padding: 12px 8px;
-            display: flex; flex-direction: column; align-items: center; position: relative;
-            border: 1.5px solid transparent; transition: all 0.2s;
+            background: var(--card);
+            border-radius: 14px;
+            padding: 12px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            border: 1.5px solid transparent;
+            transition: all 0.2s;
         }
 
-        .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+        .card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
 
         .card-img-container {
-            width: 65px; height: 65px; display: flex; align-items: center;
-            justify-content: center; margin-bottom: 5px; cursor: copy;
+            width: 65px;
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 5px;
+            cursor: copy;
         }
-        .card-img-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .card-img-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
 
         .card-name {
-            font-size: 0.7em; font-weight: 800; text-align: center; height: 2.4em;
-            line-height: 1.2; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis;
+            font-size: 0.7em;
+            font-weight: 800;
+            text-align: center;
+            height: 2.4em;
+            line-height: 1.2;
+            color: #cbd5e1;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost); margin: 6px 0 2px 0; }
+        .card-val {
+            font-size: 0.95em;
+            font-weight: 950;
+            color: var(--frost);
+            margin: 6px 0 2px 0;
+        }
 
         .card-demand {
-            font-size: 0.8em; font-weight: 800; color: var(--demand-color); margin-bottom: 4px;
+            font-size: 0.8em;
+            font-weight: 800;
+            color: var(--demand-color);
+            margin-bottom: 4px;
         }
 
         .del {
-            position: absolute; top: -6px; right: -6px; width: 22px; height: 22px;
-            background: #ef4444; color: white; border-radius: 50%; display: flex;
-            align-items: center; justify-content: center; font-size: 12px;
-            cursor: pointer; z-index: 10; border: 2px solid var(--panel);
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 22px;
+            height: 22px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 10;
+            border: 2px solid var(--panel);
         }
 
-        .toggles { display: flex; gap: 3px; }
+        .toggles {
+            display: flex;
+            gap: 3px;
+        }
 
         .t-btn {
-            width: 20px; height: 20px; background: #0f172a; border-radius: 4px;
-            font-size: 0.65em; font-weight: 900; color: #475569; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+            width: 20px;
+            height: 20px;
+            background: #0f172a;
+            border-radius: 4px;
+            font-size: 0.65em;
+            font-weight: 900;
+            color: #475569;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
         }
-        .t-btn.active { background: #3b82f6; color: white; }
+
+        .t-btn.active {
+            background: #3b82f6;
+            color: white;
+        }
 
         .card-stack-badge {
-            position: absolute; top: 5px; left: 5px; background: var(--accent);
-            color: white; font-size: 0.75em; font-weight: 900; padding: 2px 8px;
-            border-radius: 6px; z-index: 11; border: 1px solid var(--panel);
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: var(--accent);
+            color: white;
+            font-size: 0.75em;
+            font-weight: 900;
+            padding: 2px 8px;
+            border-radius: 6px;
+            z-index: 11;
+            border: 1px solid var(--panel);
         }
 
         .plus {
-            border: 2px dashed var(--border); border-radius: 14px; height: 150px;
-            display: flex; align-items: center; justify-content: center; font-size: 2.5em;
-            color: var(--border); cursor: pointer; transition: all 0.2s;
+            border: 2px dashed var(--border);
+            border-radius: 14px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            color: var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .plus:hover { border-color: var(--accent); color: var(--accent); }
+
+        .plus:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
 
         .inv-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
-            display: none; align-items: center; justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
             z-index: 3000;
         }
-        .inv-container {
-            width: 95%; max-width: 1100px; background: #1a2333; border-radius: 28px;
-            border: 1px solid var(--border); display: flex; flex-direction: column;
-            max-height: 85vh; overflow: hidden;
-        }
-        .inv-header {
-            padding: 25px; border-bottom: 1.5px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
-            background: #111827;
-        }
-        .inv-body { display: flex; flex: 1; overflow: hidden; }
-        .inv-list { flex: 1.5; padding: 25px; overflow-y: auto; border-right: 1.5px solid var(--border); }
-        .inv-stats { flex: 1.2; padding: 30px; background: #0f172a; overflow-y: auto; }
-        .stat-card { background: var(--panel); padding: 20px; border-radius: 18px; border: 1px solid var(--border); margin-bottom: 20px; }
-        .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
-        .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
-
-        .ai-box { background: rgba(99, 102, 241, 0.05); border: 1.5px solid var(--accent); border-radius: 20px; padding: 20px; margin-top: 10px; }
-        .ai-title { display: flex; align-items: center; justify-content: space-between; color: var(--accent); font-weight: 900; font-size: 1.1em; margin-bottom: 15px; }
-        .ai-summary { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px dashed var(--accent); font-size: 0.9em; line-height: 1.4; color: white; }
-        .ai-suggestion { background: #161e2e; padding: 15px; border-radius: 12px; border-left: 4px solid var(--accent); margin-bottom: 12px; font-size: 0.95em; line-height: 1.4; }
-        .ai-item-tag { display: inline-block; background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.85em; margin: 2px; }
         
-        .ai-stats-row { display: flex; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155; }
-        .ai-stat-pill { font-size: 0.75em; font-weight: 900; padding: 3px 8px; border-radius: 5px; }
-        .pill-win { background: rgba(16, 185, 129, 0.15); color: var(--win); }
-        .pill-dem { background: rgba(251, 191, 36, 0.15); color: var(--demand-color); }
+        .inv-container {
+            width: 95vw;
+            max-width: 1100px;
+            background: #1a2333;
+            border-radius: 28px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+            height: auto;
+            min-height: 400px;
+            overflow: hidden;
+        }
+        
+        .inv-header {
+            padding: 25px;
+            border-bottom: 1.5px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #111827;
+            flex-shrink: 0;
+        }
 
-        .ai-refresh-btn { background: var(--accent); color: white; border: none; padding: 5px 12px; border-radius: 8px; font-size: 0.7em; font-weight: 900; cursor: pointer; transition: 0.2s; }
-        .ai-refresh-btn:hover { opacity: 0.8; transform: rotate(15deg); }
+        .inv-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            min-height: 0;
+        }
 
-        .ai-toggle-group { display: flex; background: #0f172a; padding: 4px; border-radius: 10px; margin-bottom: 15px; gap: 4px; }
-        .ai-tog { flex: 1; text-align: center; font-size: 0.7em; font-weight: 900; padding: 8px; border-radius: 7px; cursor: pointer; color: var(--subtext); transition: 0.2s; }
-        .ai-tog.active { background: var(--accent); color: white; }
+        .inv-list {
+            flex: 1.5;
+            padding: 25px;
+            overflow-y: auto;
+            border-right: 1.5px solid var(--border);
+        }
+
+        .inv-stats {
+            flex: 1.2;
+            padding: 30px;
+            background: #0f172a;
+            overflow-y: auto;
+        }
+
+        .stat-card {
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 18px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: var(--subtext);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 950;
+            color: white;
+            margin-top: 5px;
+        }
+
+        .ai-box {
+            background: rgba(99, 102, 241, 0.05);
+            border: 1.5px solid var(--accent);
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 10px;
+        }
+
+        .ai-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: var(--accent);
+            font-weight: 900;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+
+        .ai-summary {
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 1px dashed var(--accent);
+            font-size: 0.9em;
+            line-height: 1.4;
+            color: white;
+        }
+
+        .ai-suggestion {
+            background: #161e2e;
+            padding: 15px;
+            border-radius: 12px;
+            border-left: 4px solid var(--accent);
+            margin-bottom: 12px;
+            font-size: 0.95em;
+            line-height: 1.4;
+        }
+
+        .ai-item-tag {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 0.85em;
+            margin: 2px;
+        }
+        
+        .ai-stats-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #334155;
+        }
+
+        .ai-stat-pill {
+            font-size: 0.75em;
+            font-weight: 900;
+            padding: 3px 8px;
+            border-radius: 5px;
+        }
+
+        .pill-win {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--win);
+        }
+
+        .pill-dem {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--demand-color);
+        }
+
+        .ai-refresh-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 0.7em;
+            font-weight: 900;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .ai-toggle-group {
+            display: flex;
+            background: #0f172a;
+            padding: 4px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            gap: 4px;
+        }
+
+        .ai-tog {
+            flex: 1;
+            text-align: center;
+            font-size: 0.7em;
+            font-weight: 900;
+            padding: 8px;
+            border-radius: 7px;
+            cursor: pointer;
+            color: var(--subtext);
+            transition: 0.2s;
+        }
+
+        .ai-tog.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .live-counter-panel {
+            position: absolute;
+            left: calc(100% + 15px);
+            top: 0;
+            width: 280px;
+            background: var(--panel);
+            border-radius: 20px;
+            border: 1.5px solid var(--border);
+            padding: 20px;
+            display: none;
+            z-index: 100;
+        }
 
         .search-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 4000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
         }
-        .search-overlay.open { opacity: 1; pointer-events: auto; }
+
+        .search-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
 
         .search-container {
-            width: 95%; max-width: 900px; background: #1a2333; border-radius: 28px;
-            border: 1px solid var(--border); display: flex; flex-direction: column;
-            max-height: 85vh; box-shadow: 0 25px 60px rgba(0,0,0,0.6); overflow: hidden;
-            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 95%;
+            max-width: 900px;
+            background: #1a2333;
+            border-radius: 28px;
+            border: 1.5px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            max-height: 85vh;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+            overflow: hidden;
         }
-        .search-overlay.open .search-container { transform: scale(1); }
-
-        .search-header {
-            padding: 20px 25px; display: flex; gap: 12px; align-items: center;
-            background: #111827; border-bottom: 1px solid var(--border);
-            flex-wrap: wrap;
-        }
-
-        .search-input-wrapper { flex: 2; position: relative; display: flex; align-items: center; min-width: 200px; }
-
-        #mainSearch {
-            width: 100%; padding: 14px 15px 14px 45px; background: #262c3d;
-            border: 1px solid #334155; border-radius: 35px; color: white;
-            font-size: 1.1em; outline: none;
-        }
-
-        #sortSelect, #rarityFilter {
-            flex: 1; padding: 14px 15px; background: #262c3d;
-            border: 1px solid #334155; border-radius: 35px; color: #94a3b8;
-            font-size: 0.95em; font-weight: 600; outline: none; cursor: pointer;
-            min-width: 150px;
-        }
-        #sortSelect:hover, #rarityFilter:hover { border-color: var(--accent); color: white; }
-
-        .search-icon-fixed { position: absolute; left: 18px; font-size: 1.2em; }
-        
-        .close-modal-btn {
-            width: 45px; height: 45px; background: #262c3d; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
-            color: #94a3b8; font-size: 1.4em;
-        }
-        .close-modal-btn:hover { background: #ef4444; color: white; }
 
         .results-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px; padding: 25px; overflow-y: auto; background: #161e2e;
-            scroll-behavior: smooth;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+            padding: 25px;
+            overflow-y: auto;
+            background: #161e2e;
         }
 
         .search-item-card {
-            background: #262c3d; border-radius: 18px; padding: 15px 10px;
-            display: flex; flex-direction: column; align-items: center; cursor: pointer;
-            transition: all 0.2s; border: 1.5px solid transparent;
+            background: #262c3d;
+            border-radius: 18px;
+            padding: 15px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1.5px solid transparent;
         }
+
         .search-item-card:hover {
-            background: #334155; transform: translateY(-4px); border-color: var(--accent);
-        }
-        .search-item-card.added { border-color: var(--win) !important; background: rgba(16, 185, 129, 0.1); }
-
-        .search-item-name {
-            font-size: 0.75em; font-weight: 800; color: #94a3b8; text-align: center;
-            margin-bottom: 10px; height: 2.5em; overflow: hidden;
-        }
-
-        .search-item-img {
-            width: 85px; height: 85px; object-fit: contain; margin-bottom: 10px;
-        }
-        .search-item-val { font-weight: 900; font-size: 1.2em; color: white; }
-        
-        .search-item-demand {
-            font-size: 0.9em; font-weight: 800; color: var(--demand-color);
-            margin-top: 2px; text-shadow: 0 0 5px rgba(251, 191, 36, 0.3);
-        }
-
-        .results-grid::-webkit-scrollbar { width: 10px; }
-        .results-grid::-webkit-scrollbar-thumb {
-            background: #334155; border-radius: 10px; border: 2px solid #161e2e;
+            border-color: var(--accent);
         }
 
         .verdict-box {
-            position: fixed; bottom: 30px; background: var(--panel); width: 90%;
-            max-width: 520px; padding: 25px; border-radius: 30px;
-            border: 1px solid var(--border); text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.7); z-index: 1000;
+            position: fixed;
+            bottom: 30px;
+            background: var(--panel);
+            width: 90%;
+            max-width: 520px;
+            padding: 25px;
+            border-radius: 30px;
+            border: 1px solid var(--border);
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+            z-index: 1000;
         }
 
         .v-text {
-            font-size: 3.5em; font-weight: 950; line-height: 1; margin-bottom: 8px;
+            font-size: 3.5em;
+            font-weight: 950;
+            line-height: 1;
             letter-spacing: -2px;
         }
 
-        .v-diff { font-weight: 800; font-size: 1.2em; margin-bottom: 5px; color: white; }
-        .v-sub {
-            color: var(--subtext); font-style: italic; font-size: 0.95em;
-            margin-bottom: 18px; line-height: 1.4; padding: 0 10px;
-        }
-
         .switches {
-            display: inline-flex; background: #0f172a; padding: 5px; border-radius: 25px;
+            display: inline-flex;
+            background: #0f172a;
+            padding: 5px;
+            border-radius: 25px;
         }
 
         .sw-btn {
-            background: transparent; border: none; color: var(--subtext);
-            padding: 8px 24px; border-radius: 20px; cursor: pointer; font-weight: 800;
+            background: transparent;
+            border: none;
+            color: var(--subtext);
+            padding: 8px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 800;
         }
-        .sw-btn.active { background: var(--accent); color: white; }
 
-        .win-c { color: var(--win); }
-        .lose-c { color: var(--lose); }
-        .trap-c { color: var(--trap); }
-        .fair-c { color: white; }
-
-        @media (max-width: 768px) {
-            .v-text { font-size: 2.5em; }
-            .verdict-box { bottom: 15px; padding: 20px; }
+        .sw-btn.active {
+            background: var(--accent);
+            color: white;
         }
 
         .similar-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(8px);
-            display: none; align-items: center; justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.9);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
             z-index: 5000;
         }
+
         .similar-container {
-            width: 90%; max-width: 600px; background: #1a2333; border-radius: 20px;
-            border: 1px solid var(--border); padding: 20px;
-            max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column;
+            width: 90%;
+            max-width: 600px;
+            background: #1a2333;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            padding: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
         }
+
         .similar-item {
-            display: flex; align-items: center; gap: 15px; background: var(--card);
-            padding: 12px; border-radius: 12px; margin-bottom: 10px; cursor: pointer;
-            border: 1.5px solid transparent; transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: var(--card);
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border: 1.5px solid transparent;
+            transition: 0.2s;
         }
-        .similar-item:hover { border-color: var(--accent); background: #334155; }
-        .similar-item.selected { border-color: var(--win); background: rgba(16, 185, 129, 0.05); }
+
+        .similar-item.selected {
+            border-color: var(--win);
+        }
         
         .ai-count-control {
-            margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
-        .ai-count-control label { font-size: 0.75em; color: var(--subtext); font-weight: 700; }
-        .ai-count-control input { cursor: pointer; accent-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -403,7 +698,7 @@
                         </div>
 
                         <div class="ai-count-control">
-                            <label>Strategy Count: <span id="strategyCountVal">10</span></label>
+                            <label style="font-size: 11px; font-weight: 800;">Strategy Count: <span id="strategyCountVal">10</span></label>
                             <input type="range" id="strategyCountSlider" min="1" max="10" value="10" oninput="updateStrategyCount(this.value)">
                         </div>
 
@@ -418,13 +713,14 @@
 
     <div class="search-overlay" id="searchOverlay" onclick="closeSearch()">
         <div class="search-container" onclick="event.stopPropagation()">
-            <div class="search-header">
-                <div class="search-input-wrapper">
-                    <span class="search-icon-fixed">🔍</span>
-                    <input type="text" id="mainSearch" placeholder="Search for a pet..." autocomplete="off">
+            <div style="padding:20px; display:flex; gap:10px; background:#111827; align-items:center;">
+                <div class="search-input-wrapper" style="flex:2; position:relative; display:flex; align-items:center;">
+                    <span style="position:absolute; left:18px; font-size:1.2em;">🔍</span>
+                    <input type="text" id="mainSearch" placeholder="Search for a pet..." autocomplete="off" 
+                           style="width:100%; padding:14px 15px 14px 45px; background:#262c3d; border:1px solid #334155; border-radius:35px; color:white; font-size:1.1em; outline:none;">
                 </div>
-                
-                <select id="rarityFilter" onchange="updateFilter()">
+                <select id="rarityFilter" onchange="updateFilter()" 
+                        style="flex:1; padding:14px 15px; background:#262c3d; border:1px solid #334155; border-radius:35px; color:#94a3b8; font-size:0.95em; font-weight:600; outline:none; cursor:pointer;">
                     <option value="none">Rarity: None</option>
                     <option value="preppy">Preppy</option>
                     <option value="exotic">Exotic</option>
@@ -434,15 +730,7 @@
                     <option value="uncommon">Uncommon</option>
                     <option value="common">Common</option>
                 </select>
-
-                <select id="sortSelect" onchange="updateFilter()">
-                    <option value="default">Default</option>
-                    <option value="valHigh">Value (High → Low)</option>
-                    <option value="valLow">Value (Low → High)</option>
-                    <option value="demHigh">Demand (High → Low)</option>
-                    <option value="demLow">Demand (Low → High)</option>
-                </select>
-                <div class="close-modal-btn" onclick="closeSearch()">✕</div>
+                <div class="nav-btn" onclick="closeSearch()">✕</div>
             </div>
             <div class="results-grid" id="searchResults"></div>
         </div>
@@ -469,13 +757,17 @@
                 <span class="p-total" id="totB">0.000</span>
             </div>
             <div class="grid" id="gridB"></div>
+            
+            <div class="live-counter-panel" id="liveCounterOffer">
+                <h4 style="color:var(--accent); font-size: 13px; margin-bottom:10px;">🤖 AI Counter-Offer</h4>
+                <div id="liveAiTargetSuggestions"></div>
+            </div>
         </div>
     </div>
 
     <div class="verdict-box">
         <div id="verdict" class="v-text">--</div>
-        <div id="vDiff" class="v-diff">Difference: 0.000 (0.0%)</div>
-        <div id="vSub" class="v-sub">Add pets to calculate trade results</div>
+        <div id="vDiff" style="font-weight:800; margin:5px 0;">Difference: 0.000 (0.0%)</div>
         <div class="switches">
             <button class="sw-btn active" id="btnFrost" onclick="setMode('frost')">Frost</button>
             <button class="sw-btn" id="btnValue" onclick="setMode('value')">Value</button>
@@ -484,256 +776,76 @@
 
     <script>
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
-        
-        let ALL_PETS = [];
-        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [] };
-        let history = []; 
-
-        let searchState = {
-            currentMatches: [], 
-            renderLimit: 50,    
-            sortMode: 'default',
-            rarityFilter: 'none'
+        let ALL_PETS = [], history = [];
+        let state = { 
+            mode: 'frost', 
+            A: [], 
+            B: [], 
+            inv: [], 
+            target: 'A', 
+            aiMode: 'normal', 
+            strategyLimit: 10, 
+            aiTargetPets: [] 
         };
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSfx(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            if (type === 'pop') {
-                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === 'win') {
-                osc.type = 'triangle';
-                [523, 659, 783].forEach((f, i) => osc.frequency.setValueAtTime(f, audioCtx.currentTime + (i * 0.1)));
-                gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.4);
-            }
-        }
-
-        function pushState() {
-            if (history.length > 50) history.shift();
-            history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
-        }
-
-        function undo() {
-            if (history.length === 0) return;
-            const last = JSON.parse(history.pop());
-            state.A = (last.A || []);
-            state.B = (last.B || []);
-            state.inv = (last.inv || []);
-            render();
-            renderInventory();
-            saveTrade();
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'z') {
-                e.preventDefault();
-                undo();
-            }
-        });
-
-        function parseCSV(text) {
-            const lines = text.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-            return lines.slice(1).map(line => {
-                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                const obj = {};
-                headers.forEach((header, i) => {
-                    let val = values[i] ? values[i].trim().replace(/^"|"$/g, '') : '';
-                    if (!isNaN(parseFloat(val)) && isFinite(val) && val !== '') {
-                        obj[header] = parseFloat(val);
-                    } else {
-                        obj[header] = val;
-                    }
-                });
-                return obj;
-            });
-        }
-
-        function saveTrade() {
-            const simplifiedState = {
-                A: state.A.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
-                B: state.B.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
-                inv: state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid }))
-            };
-            localStorage.setItem('tradeData', JSON.stringify(simplifiedState));
-        }
-
-        function restoreTrade() {
-            const saved = localStorage.getItem('tradeData');
-            if (!saved) return;
-            try {
-                const parsed = JSON.parse(saved);
-                const hydrate = (item) => {
-                    const freshData = ALL_PETS.find(p => p.n === item.n);
-                    if (!freshData) return null; 
-                    return { ...freshData, ...item };
-                };
-                state.A = (parsed.A || []).map(hydrate).filter(x => x);
-                state.B = (parsed.B || []).map(hydrate).filter(x => x);
-                state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
-                render();
-            } catch (e) {
-                console.error("Failed to restore trade", e);
-            }
-        }
 
         async function loadPetData() {
             try {
                 const response = await fetch(GOOGLE_SHEET_CSV_URL + "&t=" + Date.now());
                 const csvText = await response.text();
-                const data = parseCSV(csvText);
-                
-                ALL_PETS = data.map(row => ({
-                    n: row.n || row.name || '',
-                    d: row.d || 0,
-                    nd: row.nd || 0,
+                ALL_PETS = parseCSV(csvText).map(row => ({
+                    n: row.n || row.name || '', 
+                    d: row.d || 0, 
+                    nd: row.nd || 0, 
                     md: row.md || 0,
-                    f: row.f || 0,
-                    v: row.v || 0,
-                    f_v: row.f_v || 0,
+                    f: row.f || 0, 
+                    v: row.v || 0, 
+                    f_v: row.f_v || 0, 
                     r_v: row.r_v || 0,
-                    fr_v: row.fr_v || 0,
-                    n_v: row.n_v || 0,
-                    n_f_v: row.n_f_v || 0, 
-                    n_r_v: row.n_r_v || 0, 
-                    nfr_v: row.nfr_v || 0,
-                    m_v: row.m_v || 0,
-                    m_f_v: row.m_f_v || 0, 
-                    m_r_v: row.m_r_v || 0, 
+                    fr_v: row.fr_v || 0, 
+                    n_v: row.n_v || 0, 
+                    nfr_v: row.nfr_v || 0, 
                     mfr_v: row.mfr_v || 0,
-                    nfr_f: row.nfr_f || 0,
-                    mfr_f: row.mfr_f || 0,
                     cat: row.categories || row.rarity || ''
-                })).filter(p => p.n && p.n.length > 0);
-                
+                })).filter(p => p.n);
                 document.getElementById('loadingScreen').style.display = 'none';
                 restoreTrade();
                 render();
-            } catch (error) {
-                console.error('Error loading data:', error);
-                document.querySelector('.loading-text').textContent = 'Error loading data.';
+            } catch (e) { 
+                console.error(e); 
             }
         }
 
-        const overlay = document.getElementById('searchOverlay');
-        const searchInput = document.getElementById('mainSearch');
-        const resultsBox = document.getElementById('searchResults');
-        const sortSelect = document.getElementById('sortSelect');
-        const rarityFilter = document.getElementById('rarityFilter');
-
-        function openSearch(side) {
-            state.target = side;
-            overlay.classList.add('open');
-            searchState.renderLimit = 50;
-            filterAndRender(searchInput.value.toLowerCase());
-            setTimeout(() => searchInput.focus(), 50);
-        }
-
-        function closeSearch() { overlay.classList.remove('open'); }
-
-        function updateFilter() {
-            searchState.sortMode = sortSelect.value;
-            searchState.rarityFilter = rarityFilter.value.toLowerCase();
-            searchState.renderLimit = 50; 
-            filterAndRender(searchInput.value.toLowerCase());
-        }
-
-        searchInput.addEventListener('input', (e) => {
-            searchState.renderLimit = 50; 
-            filterAndRender(e.target.value.toLowerCase());
-        });
-
-        resultsBox.addEventListener('scroll', () => {
-            if (resultsBox.scrollTop + resultsBox.clientHeight >= resultsBox.scrollHeight - 50) {
-                if (searchState.renderLimit < searchState.currentMatches.length) {
-                    searchState.renderLimit += 50;
-                    renderDOM(); 
-                }
-            }
-        });
-
-        function filterAndRender(query) {
-            let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
-            if (searchState.rarityFilter !== 'none') {
-                matches = matches.filter(p => (p.cat || "").toLowerCase().includes(searchState.rarityFilter));
-            }
-            const mode = searchState.sortMode;
-            if (mode !== 'default') {
-                matches.sort((a, b) => {
-                    if (mode === 'valHigh') return (state.mode === 'frost' ? b.f : b.v) - (state.mode === 'frost' ? a.f : a.v);
-                    if (mode === 'valLow') return (state.mode === 'frost' ? a.f : a.v) - (state.mode === 'frost' ? b.f : b.v);
-                    if (mode === 'demHigh') return b.d - a.d;
-                    if (mode === 'demLow') return a.d - b.d;
-                    return 0;
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            return lines.slice(1).map(line => {
+                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+                let obj = {};
+                headers.forEach((h, i) => { 
+                    let v = values[i] ? values[i].trim().replace(/^"|"$/g, '') : ''; 
+                    obj[h] = isNaN(parseFloat(v)) ? v : parseFloat(v); 
                 });
-            }
-            searchState.currentMatches = matches;
-            renderDOM();
+                return obj;
+            });
         }
 
-        function renderDOM() {
-            const chunk = searchState.currentMatches.slice(0, searchState.renderLimit);
-            resultsBox.innerHTML = chunk.map(p => {
-                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
-                const val = state.mode === 'frost' ? p.f : p.v; 
-                return `
-                <div class="search-item-card" onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}')">
-                    <div class="search-item-name">${p.n}</div>
-                    <img src="${imgUrl}" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
-                    <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
-                    <div class="search-item-demand">Dem: ${p.d}</div>
-                </div>`;
-            }).join('');
+        function pushState() { 
+            if (history.length > 50) history.shift(); 
+            history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv })); 
         }
 
-        function addItem(element, name) {
-            pushState();
-            const pet = ALL_PETS.find(x => x.n === name);
-            if (!pet) return;
-            const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
-            
-            if (state.target === 'inv') {
-                state.inv.push(newPet);
-                renderInventory();
-                element.classList.add('added');
-                setTimeout(() => element.classList.remove('added'), 500);
-            } else {
-                state[state.target].push(newPet);
-                render();
-                closeSearch(); 
-            }
-            playSfx('pop'); saveTrade(); 
+        function saveTrade() { 
+            localStorage.setItem('tradeData', JSON.stringify({ A: state.A, B: state.B, inv: state.inv })); 
         }
 
-        function duplicate(s, uid) {
-            pushState();
-            const original = state[s].find(x => x.uid === uid);
-            if (!original) return;
-            const copy = { ...original, uid: Math.random() };
-            state[s].push(copy);
-            if (s === 'inv') renderInventory(); else render();
-            playSfx('pop'); saveTrade(); 
+        function restoreTrade() { 
+            const saved = localStorage.getItem('tradeData'); 
+            if (!saved) return; 
+            const parsed = JSON.parse(saved); 
+            state.A = parsed.A || []; 
+            state.B = parsed.B || []; 
+            state.inv = parsed.inv || []; 
         }
-
-        function remove(s, uid) { 
-            pushState();
-            state[s] = state[s].filter(x => x.uid !== uid); 
-            if (s === 'inv') renderInventory(); else render();
-            saveTrade(); 
-        }
-
-        function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
-        function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
         function calculatePetVal(p, mode) {
             let val = 0;
@@ -743,16 +855,10 @@
                 else val = p.f;
                 if (p.f_st) val += 0.01; if (p.r_st) val += 0.01;
             } else {
-                if (p.type === 'neon') {
-                    if (p.f_st && p.r_st) val = p.nfr_v; 
-                    else if (p.f_st) val = p.n_f_v; else if (p.r_st) val = p.n_r_v; else val = p.n_v;                    
-                } else if (p.type === 'mega') {
-                    if (p.f_st && p.r_st) val = p.mfr_v; 
-                    else if (p.f_st) val = p.m_f_v; else if (p.r_st) val = p.m_r_v; else val = p.m_v;                    
-                } else {
-                    if (p.f_st && p.r_st) val = p.fr_v;  
-                    else if (p.f_st) val = p.f_v; else if (p.r_st) val = p.r_v; else val = p.v;                      
-                }
+                if (p.type === 'neon') val = p.nfr_v || p.n_v || p.v*3;
+                else if (p.type === 'mega') val = p.mfr_v || p.m_v || p.v*12;
+                else val = p.v;
+                if (p.f_st) val += 0.5; if (p.r_st) val += 0.5;
             }
             return val;
         }
@@ -768,218 +874,24 @@
             return `${prefix}${p.n}${suffix}`;
         }
 
-        function renderInventory() {
-            const list = state.inv;
-            const grid = document.getElementById('invGrid');
+        function renderSide(s) {
+            const list = state[s];
+            const grid = document.getElementById(`grid${s}`); 
             grid.innerHTML = '';
             let totalV = 0, totalD = 0;
-            const groups = {};
+            
             list.forEach(p => {
-                const key = `${p.n}|${p.type}|${p.f_st}|${p.r_st}`;
-                if (!groups[key]) groups[key] = [];
-                groups[key].push(p);
-                totalV += calculatePetVal(p, 'value');
+                let v = calculatePetVal(p, state.mode); 
+                totalV += v;
                 totalD += p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-            });
-            Object.entries(groups).forEach(([key, stack]) => {
-                const p = stack[0], count = stack.length;
-                const currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-                const valTotal = calculatePetVal(p, 'value') * count;
-                const stackUidsString = JSON.stringify(stack.map(item => item.uid));
                 grid.innerHTML += `
                     <div class="card">
-                        ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
-                        <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
-                        <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
-                        <div class="card-img-container" ondblclick="duplicate('inv', ${p.uid})">
+                        <div class="del" onclick="remove('${s}',${p.uid})">✕</div>
+                        <div class="card-img-container" ondblclick="duplicate('${s}',${p.uid})">
                             <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
                         </div>
                         <div class="card-name">${p.n}</div>
-                        <div class="card-val">${valTotal.toFixed(2)}</div>
-                        <div class="card-demand">Dem: ${currentDemand}</div>
-                        <div class="toggles">
-                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="togStack('inv',${stackUidsString},'n')">N</div>
-                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="togStack('inv',${stackUidsString},'m')">M</div>
-                            <div class="t-btn ${p.f_st?'active':''}" onclick="togStack('inv',${stackUidsString},'f')">F</div>
-                            <div class="t-btn ${p.r_st?'active':''}" onclick="togStack('inv',${stackUidsString},'r')">R</div>
-                        </div>
-                    </div>`;
-            });
-            document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
-            document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
-            updateAISuggestions(list);
-        }
-
-        function removeStack(s, uids) { pushState(); state[s] = state[s].filter(x => x.uid !== uids[0]); renderInventory(); saveTrade(); }
-        function togStack(s, uids, type) {
-            pushState(); uids.forEach(uid => {
-                const p = state[s].find(x => x.uid === uid);
-                if (!p) return;
-                if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
-                else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
-                else if (type === 'f') p.f_st = !p.f_st;
-                else if (type === 'r') p.r_st = !p.r_st;
-            });
-            saveTrade(); renderInventory();
-        }
-
-        function findSimilarToTotal() { const totalVal = parseFloat(document.getElementById('invTotalValue').innerText); showSimilarPopup(totalVal); }
-        function findSimilarToPet(val) { showSimilarPopup(val); }
-
-        function showSimilarPopup(val) {
-            const overlay = document.getElementById('similarOverlay');
-            const list = document.getElementById('similarList');
-            overlay.style.display = 'flex';
-            const matches = ALL_PETS.filter(p => p.v >= val * 0.90 && p.v <= val * 1.15).sort((a, b) => b.d - a.d).slice(0, 30);
-            
-            list.innerHTML = matches.map(p => {
-                const isSelected = state.aiTargetPets.some(x => x.n === p.n);
-                return `
-                <div class="similar-item ${isSelected ? 'selected' : ''}" onclick="toggleAiTarget(this, '${p.n.replace(/'/g, "\\'")}')">
-                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width: 40px; height: 40px; object-fit: contain;">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 800; font-size: 0.9em;">${p.n}</div>
-                        <div style="font-size: 0.7em; color: var(--subtext);">Value: ${p.v.toFixed(2)} | Demand: ${p.d}</div>
-                    </div>
-                    <input type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events: none;">
-                </div>`;
-            }).join('');
-        }
-
-        function toggleAiTarget(element, name) {
-            const pet = ALL_PETS.find(x => x.n === name);
-            const index = state.aiTargetPets.findIndex(x => x.n === name);
-            if (index > -1) state.aiTargetPets.splice(index, 1);
-            else state.aiTargetPets.push(pet);
-            element.classList.toggle('selected');
-            element.querySelector('input').checked = !element.querySelector('input').checked;
-        }
-
-        function closeSimilarPopup() { document.getElementById('similarOverlay').style.display = 'none'; renderInventory(); }
-
-        function setAiStrategy(mode) {
-            state.aiMode = mode;
-            state.aiTargetPets = []; 
-            document.getElementById('aiTogNormal').classList.toggle('active', mode === 'normal');
-            document.getElementById('aiTogVelocity').classList.toggle('active', mode === 'velocity');
-            renderInventory();
-        }
-
-        function updateStrategyCount(val) {
-            state.strategyLimit = parseInt(val);
-            document.getElementById('strategyCountVal').innerText = val;
-            renderInventory();
-        }
-
-        function updateAISuggestions(inventory) {
-            const box = document.getElementById('aiSuggestions');
-            if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>`; return; }
-
-            const shuffled = [...inventory].sort(() => Math.random() - 0.5);
-            const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
-            const shadowValue = 155.0;
-            const remaining = (shadowValue - totalInvVal).toFixed(1);
-
-            let suggestions = `<div class="ai-summary"><b>Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon.</div>`;
-            if (state.aiTargetPets.length > 0) {
-                suggestions = `<div class="ai-summary" style="border-color: var(--win); color: var(--win);"><b>Focusing Targets:</b> Cycling offers for <b>${state.aiTargetPets.length} chosen pets</b>.</div>`;
-            }
-
-            let results = [];
-            let usedTargets = new Set();
-            let usedPetUids = new Set();
-
-            const findTarget = (val, typeFilter) => {
-                if (state.aiTargetPets.length > 0) {
-                    const validTargets = state.aiTargetPets.filter(p => p.v >= val * 0.8 && p.v <= val * 1.3);
-                    return validTargets[Math.floor(Math.random() * validTargets.length)] || state.aiTargetPets[0];
-                }
-                let marginMin = state.aiMode === 'velocity' ? 0.80 : 1.01;
-                let marginMax = state.aiMode === 'velocity' ? 1.10 : 1.25;
-                let pool = ALL_PETS.filter(p => p.v > val * marginMin && p.v < val * marginMax && !usedTargets.has(p.n));
-                if (typeFilter === 'preppy') pool = pool.filter(p => (p.cat || "").toLowerCase().includes('preppy'));
-                return pool.sort((a,b) => b.d - a.d)[0];
-            };
-
-            for(let i = 0; i < 50 && results.length < state.strategyLimit; i++) {
-                let bundle = [];
-                let type = "";
-                let available = shuffled.filter(p => !usedPetUids.has(p.uid));
-                if (available.length < 1) break;
-
-                // Trash-to-Treasure Logic: If inventory has many low-demand pets, allow up to 10
-                let bundleLimit = 4;
-                const lowDemCount = available.filter(p => p.d < 5).length;
-                if (lowDemCount >= 6 && state.aiMode === 'velocity') bundleLimit = 10;
-
-                if (state.aiTargetPets.length > 0) {
-                    type = "🎯 Focused Target Offer";
-                    let currentBVal = 0;
-                    for (let p of available) {
-                        let pV = calculatePetVal(p, 'value');
-                        if (currentBVal + pV <= 200) { // Limit total bundle value search
-                            bundle.push(p);
-                            currentBVal += pV;
-                        }
-                        if (bundle.length >= bundleLimit) break;
-                    }
-                } else if (state.aiMode === 'velocity') {
-                    type = "💅 Preppy Velocity";
-                    bundle = available.slice(0, Math.min(available.length, bundleLimit));
-                } else {
-                    type = "🔥 Strategic Upgrade";
-                    bundle = [available[0]];
-                    if (available.length > 1) bundle.push(available[1]);
-                }
-
-                if (bundle.length > 0) {
-                    let bundleVal = bundle.reduce((s, p) => s + calculatePetVal(p, 'value'), 0);
-                    let bundleDem = (bundle.reduce((s, p) => s + p.d, 0) / bundle.length);
-                    let target = findTarget(bundleVal, (state.aiMode === 'velocity' ? 'preppy' : ''));
-                    
-                    if (target) {
-                        if (state.aiTargetPets.length === 0) usedTargets.add(target.n);
-                        bundle.forEach(p => usedPetUids.add(p.uid));
-                        let vDiff = target.v - bundleVal;
-                        let dDiff = target.d - bundleDem;
-                        let winPct = ((target.v / bundleVal) - 1) * 100;
-                        results.push({ offer: bundle, target: target, type: type, vDiff: vDiff.toFixed(2), dDiff: dDiff.toFixed(1), winPct: winPct.toFixed(1) });
-                    }
-                }
-            }
-
-            box.innerHTML = suggestions + results.map(r => `
-                <div class="ai-suggestion">
-                    <small style="color:var(--accent); font-weight:900;">${r.type}</small><br>
-                    Offer: ${r.offer.map(p => `<span class="ai-item-tag">${getFullName(p)}</span>`).join(' + ')}<br>
-                    Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span>
-                    <div class="ai-stats-row">
-                        <span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">Profit: ${r.vDiff > 0 ? '+' : ''}${r.vDiff} (${r.winPct}%)</span>
-                        <span class="ai-stat-pill pill-dem">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function renderSide(s) {
-            const list = state[s];
-            const grid = document.getElementById(`grid${s}`);
-            grid.innerHTML = '';
-            let totalV = 0, totalD = 0;
-            list.forEach(p => {
-                let currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-                let val = calculatePetVal(p, state.mode);
-                totalV += val; totalD += currentDemand;
-                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
-                grid.innerHTML += `
-                    <div class="card">
-                        <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
-                        <div class="card-img-container" ondblclick="duplicate('${s}', ${p.uid})" title="Double click to duplicate">
-                            <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
-                        </div>
-                        <div class="card-name">${p.n}</div>
-                        <div class="card-val">${val.toFixed(2)}</div>
-                        <div class="card-demand">Dem: ${currentDemand}</div>
+                        <div class="card-val">${v.toFixed(2)}</div>
                         <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
                             <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('${s}',${p.uid},'m')">M</div>
@@ -991,42 +903,268 @@
             grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
             document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
             document.getElementById(`cnt${s}`).innerText = list.length;
-            document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
+            document.getElementById(`dem${s}`).innerText = list.length ? (totalD / list.length).toFixed(1) : "0.0";
+            if(s === 'B') updateLiveCounterOffers();
+        }
+
+        function renderInventory() {
+            const list = state.inv;
+            const grid = document.getElementById('invGrid'); 
+            grid.innerHTML = '';
+            let totalV = 0, totalD = 0; 
+            const groups = {};
+            
+            list.forEach(p => {
+                const k = `${p.n}|${p.type}|${p.f_st}|${p.r_st}`; 
+                if (!groups[k]) groups[k] = []; 
+                groups[k].push(p);
+                totalV += calculatePetVal(p, 'value'); 
+                totalD += p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
+            });
+
+            Object.values(groups).forEach(stack => {
+                const p = stack[0], count = stack.length, vTotal = calculatePetVal(p, 'value') * count;
+                const uids = JSON.stringify(stack.map(i => i.uid));
+                grid.innerHTML += `
+                    <div class="card">
+                        ${count>1?`<div class="card-stack-badge">x${count}</div>`:''}
+                        <div class="del" onclick="removeStack('inv',${uids})">✕</div>
+                        <div style="position:absolute;top:5px;right:28px;background:var(--panel);border-radius:5px;padding:2px 4px;font-size:10px;cursor:pointer;border:1px solid var(--border);" onclick="findSimilarToPet(${vTotal})">🔍</div>
+                        <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width:50px;margin:10px 0;">
+                        <div class="card-name">${p.n}</div>
+                        <div class="card-val">${vTotal.toFixed(2)}</div>
+                        <div class="toggles">
+                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="togStack('inv',${uids},'n')">N</div>
+                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="togStack('inv',${uids},'m')">M</div>
+                            <div class="t-btn ${p.f_st?'active':''}" onclick="togStack('inv',${uids},'f')">F</div>
+                            <div class="t-btn ${p.r_st?'active':''}" onclick="togStack('inv',${uids},'r')">R</div>
+                        </div>
+                    </div>`;
+            });
+            document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
+            document.getElementById('invAvgDemand').innerText = list.length ? (totalD / list.length).toFixed(1) : "0.0";
+            updateAISuggestions(list);
+        }
+
+        function updateLiveCounterOffers() {
+            const panel = document.getElementById('liveCounterOffer');
+            const list = document.getElementById('liveAiTargetSuggestions');
+            if (state.B.length === 0 || state.inv.length === 0) { 
+                panel.style.display = 'none'; return; 
+            }
+            panel.style.display = 'block';
+            const totalB = parseFloat(document.getElementById('totB').innerText);
+            let suggestedOffers = "";
+            const shuffled = [...state.inv].sort(() => Math.random() - 0.5);
+            
+            for(let i=0; i<3; i++) {
+                let bundle = [], currentV = 0;
+                for(let p of shuffled) {
+                    let pV = calculatePetVal(p, state.mode);
+                    if (currentV + pV <= totalB * 1.1) { bundle.push(p); currentV += pV; }
+                    if (bundle.length >= 4) break;
+                }
+                if(bundle.length) {
+                    suggestedOffers += `
+                        <div class="ai-suggestion" style="padding:10px;font-size:11px;">
+                            <b>Option ${i+1}:</b><br>
+                            ${bundle.map(p=>p.n).join(' + ')}<br>
+                            <span style="color:var(--win)">Value: ${currentV.toFixed(2)}</span>
+                        </div>`;
+                }
+            }
+            list.innerHTML = suggestedOffers || "Collecting pets to generate offer...";
+        }
+
+        function toggleAiTarget(element, name) {
+            const p = ALL_PETS.find(x => x.n === name);
+            const idx = state.aiTargetPets.findIndex(x => x.n === name);
+            if (idx > -1) state.aiTargetPets.splice(idx, 1); 
+            else state.aiTargetPets.push(p);
+            element.classList.toggle('selected');
+        }
+
+        function findSimilarToTotal() { 
+            showSimilarPopup(parseFloat(document.getElementById('invTotalValue').innerText)); 
+        }
+
+        function findSimilarToPet(val) { 
+            showSimilarPopup(val); 
+        }
+
+        function showSimilarPopup(val) {
+            const overlay = document.getElementById('similarOverlay'), list = document.getElementById('similarList');
+            overlay.style.display = 'flex';
+            const matches = ALL_PETS.filter(p => p.v >= val * 0.8 && p.v <= val * 1.3).sort((a, b) => b.d - a.d).slice(0, 30);
+            list.innerHTML = matches.map(p => `
+                <div class="similar-item" onclick="toggleAiTarget(this, '${p.n.replace(/'/g, "\\'")}')">
+                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width:30px;">
+                    <div style="flex:1;">
+                        <div style="font-weight:800;font-size:12px;">${p.n}</div>
+                        <div style="font-size:10px;color:var(--subtext);">Val: ${p.v.toFixed(2)} | Dem: ${p.d}</div>
+                    </div>
+                </div>`).join('');
+        }
+
+        function closeSimilarPopup() { 
+            document.getElementById('similarOverlay').style.display = 'none'; 
+            renderInventory(); 
+        }
+
+        function addItem(element, name) { 
+            pushState(); 
+            const p = ALL_PETS.find(x => x.n === name); 
+            const newP = { ...p, uid: Math.random(), type: 'reg', f_st: false, r_st: false }; 
+            if (state.target === 'inv') { 
+                state.inv.push(newP); 
+                renderInventory(); 
+                element.classList.add('added'); 
+                setTimeout(()=>element.classList.remove('added'), 500); 
+            } else { 
+                state[state.target].push(newP); 
+                render(); 
+                closeSearch(); 
+            } 
+            saveTrade(); 
+        }
+
+        function duplicate(s, uid) { 
+            pushState(); 
+            const o = state[s].find(x => x.uid === uid); 
+            state[s].push({ ...o, uid: Math.random() }); 
+            if (s === 'inv') renderInventory(); else render(); 
+            saveTrade(); 
+        }
+
+        function remove(s, uid) { 
+            pushState(); 
+            state[s] = state[s].filter(x => x.uid !== uid); 
+            if (s === 'inv') renderInventory(); else render(); 
+            saveTrade(); 
+        }
+
+        function removeStack(s, uids) { 
+            pushState(); 
+            state[s] = state[s].filter(x => x.uid !== uids[0]); 
+            renderInventory(); 
+            saveTrade(); 
+        }
+
+        function togStack(s, uids, t) { 
+            pushState(); 
+            uids.forEach(uid => { 
+                const p = state[s].find(x => x.uid === uid); 
+                if (t === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon'; 
+                else if (t === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega'; 
+                else if (t === 'f') p.f_st = !p.f_st; 
+                else p.r_st = !p.r_st; 
+            }); 
+            renderInventory(); 
+            saveTrade(); 
+        }
+
+        function setAiStrategy(m) { 
+            state.aiMode = m; 
+            state.aiTargetPets = []; 
+            document.getElementById('aiTogNormal').classList.toggle('active', m === 'normal'); 
+            document.getElementById('aiTogVelocity').classList.toggle('active', m === 'velocity'); 
+            renderInventory(); 
+        }
+
+        function updateStrategyCount(v) { 
+            state.strategyLimit = v; 
+            document.getElementById('strategyCountVal').innerText = v; 
+            renderInventory(); 
+        }
+
+        function updateAISuggestions(inv) {
+            const box = document.getElementById('aiSuggestions'); 
+            if (!inv.length) return;
+            const shuffled = [...inv].sort(() => Math.random() - 0.5), results = [];
+            let usedPetUids = new Set();
+            for(let i = 0; i < 50 && results.length < state.strategyLimit; i++) {
+                let bundle = [], available = shuffled.filter(p => !usedPetUids.has(p.uid)); 
+                if (!available.length) break;
+                let limit = (available.filter(p=>p.d<5).length >= 6 && state.aiMode === 'velocity') ? 10 : 4;
+                if (state.aiTargetPets.length > 0) {
+                    let target = state.aiTargetPets[Math.floor(Math.random()*state.aiTargetPets.length)];
+                    let curV = 0; 
+                    for(let p of available) { 
+                        let pV = calculatePetVal(p, 'value'); 
+                        if(curV + pV <= target.v * 1.2) { 
+                            bundle.push(p); 
+                            curV += pV; 
+                        } 
+                        if(bundle.length >= limit) break; 
+                    }
+                    if(bundle.length) { 
+                        bundle.forEach(p=>usedPetUids.add(p.uid)); 
+                        results.push({
+                            offer:bundle, target:target, type:"🎯 Target Focused", 
+                            vDiff:(target.v-curV).toFixed(2), 
+                            dDiff:(target.d-(bundle.reduce((s,p)=>s+p.d,0)/bundle.length)).toFixed(1), 
+                            winPct:((target.v/curV-1)*100).toFixed(1)
+                        }); 
+                    }
+                } else if (state.aiMode === 'velocity') {
+                    bundle = available.slice(0, Math.min(available.length, limit));
+                    let bVal = bundle.reduce((s,p)=>s+calculatePetVal(p,'value'),0);
+                    let target = ALL_PETS.filter(p=>p.v > bVal*0.8 && p.v < bVal*1.1).sort((a,b)=>b.d-a.d)[0];
+                    if(target) { 
+                        bundle.forEach(p=>usedPetUids.add(p.uid)); 
+                        results.push({
+                            offer:bundle, target:target, type:"💅 Velocity Swap", 
+                            vDiff:(target.v-bVal).toFixed(2), 
+                            dDiff:(target.d-(bundle.reduce((s,p)=>s+p.d,0)/bundle.length)).toFixed(1), 
+                            winPct:((target.v/bVal-1)*100).toFixed(1)
+                        }); 
+                    }
+                } else {
+                    bundle = [available[0]]; if(available[1]) bundle.push(available[1]);
+                    let bVal = bundle.reduce((s,p)=>s+calculatePetVal(p,'value'),0);
+                    let target = ALL_PETS.filter(p=>p.v > bVal*1.02 && p.v < bVal*1.15).sort((a,b)=>b.d-a.d)[0];
+                    if(target) { 
+                        bundle.forEach(p=>usedPetUids.add(p.uid)); 
+                        results.push({
+                            offer:bundle, target:target, type:"🔥 Strategic Upgrade", 
+                            vDiff:(target.v-bVal).toFixed(2), 
+                            dDiff:(target.d-(bundle.reduce((s,p)=>s+p.d,0)/bundle.length)).toFixed(1), 
+                            winPct:((target.v/bVal-1)*100).toFixed(1)
+                        }); 
+                    }
+                }
+            }
+            box.innerHTML = results.map(r => `
+                <div class="ai-suggestion">
+                    <small style="color:var(--accent);font-weight:900;">${r.type}</small><br>
+                    Offer: ${r.offer.map(p=>p.n).join(' + ')}<br>
+                    Target: <span class="ai-item-tag" style="background:var(--win)">${r.target.n}</span>
+                    <div class="ai-stats-row">
+                        <span class="ai-stat-pill pill-win">Profit: ${r.vDiff} (${r.winPct}%)</span>
+                        <span class="ai-stat-pill pill-dem">Dem: ${r.dDiff}</span>
+                    </div>
+                </div>`).join('');
         }
 
         function calculate() {
-            const vA = parseFloat(document.getElementById('totA').innerText);
-            const vB = parseFloat(document.getElementById('totB').innerText);
-            const demA = parseFloat(document.getElementById('demA').innerText);
-            const demB = parseFloat(document.getElementById('demB').innerText);
-            const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub');
-            if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; return; }
-            const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
-            const isTargetingMega = state.B.some(p => p.type === 'mega'), demGap = demA - demB;
-            if (vA === vB) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "Perfectly balanced."; }
-            else if (diff > 0) {
-                if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Demand Gap Trap!"; }
-                else if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Mega liquidity risk."; } 
-                else {
-                    const hasSpecial = state.B.some(p => { const c = p.cat.toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
-                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items require overpay."; } 
-                    else { if (pDiff >= 0.15) verdict.innerText = "BIG WIN"; else if (pDiff >= 0.03) verdict.innerText = "WIN"; else verdict.innerText = "SLIGHT WIN"; verdict.className = "v-text win-c"; playSfx('win'); }
-                }
-            } else { verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : (pDiff <= -0.03 ? "LOSE" : "SLIGHT LOSE"); verdict.className = "v-text lose-c"; }
+            const vA = parseFloat(document.getElementById('totA').innerText), vB = parseFloat(document.getElementById('totB').innerText);
+            const demA = parseFloat(document.getElementById('demA').innerText), demB = parseFloat(document.getElementById('demB').innerText);
+            const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff');
+            if (vA === 0 && vB === 0) return;
+            const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0), demGap = demA - demB;
+            if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; }
+            else if (diff > 0) { verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; verdict.className = "v-text win-c"; }
+            else { verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; verdict.className = "v-text lose-c"; }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); }
+        function openSearch(side) { state.target = side; overlay.classList.add('open'); filterAndRender(''); }
+        function closeSearch() { overlay.classList.remove('open'); }
+        function updateFilter() { filterAndRender(document.getElementById('mainSearch').value.toLowerCase()); }
         function setMode(m) { state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost'); document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); }
-        function tog(s, uid, type) {
-            pushState(); const p = state[s].find(x => x.uid === uid);
-            if (!p) return;
-            if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
-            else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
-            else if (type === 'f') p.f_st = !p.f_st;
-            else if (type === 'r') p.r_st = !p.r_st;
-            saveTrade(); if (s === 'inv') renderInventory(); else render();
-        }
+        function tog(s, uid, t) { pushState(); const p = state[s].find(x => x.uid === uid); if(t==='n') p.type=p.type==='neon'?'reg':'neon'; else if(t==='m') p.type=p.type==='mega'?'reg':'mega'; else if(t==='f') p.f_st=!p.f_st; else p.r_st=!p.r_st; saveTrade(); render(); }
+
         loadPetData();
     </script>
 </body>
