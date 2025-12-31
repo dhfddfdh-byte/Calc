@@ -321,6 +321,31 @@
             .v-text { font-size: 2.5em; }
             .verdict-box { bottom: 15px; padding: 20px; }
         }
+
+        /* NEW CSS FOR POPUPS */
+        .similar-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(8px);
+            display: none; align-items: center; justify-content: center;
+            z-index: 5000;
+        }
+        .similar-container {
+            width: 90%; max-width: 600px; background: #1a2333; border-radius: 20px;
+            border: 1px solid var(--border); padding: 20px;
+            max-height: 70vh; overflow-y: auto;
+        }
+        .similar-item {
+            display: flex; align-items: center; gap: 15px; background: var(--card);
+            padding: 12px; border-radius: 12px; margin-bottom: 10px; cursor: pointer;
+            border: 1.5px solid transparent; transition: 0.2s;
+        }
+        .similar-item:hover { border-color: var(--accent); background: #334155; }
+        
+        .ai-count-control {
+            margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;
+        }
+        .ai-count-control label { font-size: 0.75em; color: var(--subtext); font-weight: 700; }
+        .ai-count-control input { cursor: pointer; accent-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -332,6 +357,13 @@
 
     <div class="nav-bar">
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
+    </div>
+
+    <div class="similar-overlay" id="similarOverlay" onclick="this.style.display='none'">
+        <div class="similar-container" onclick="event.stopPropagation()">
+            <h3 style="margin-bottom: 15px; font-weight: 900; color: var(--accent);">Pets with Similar Value</h3>
+            <div id="similarList"></div>
+        </div>
     </div>
 
     <div class="inv-overlay" id="invOverlay">
@@ -349,6 +381,7 @@
                     <div class="stat-card">
                         <div class="stat-label">Total Normal Value</div>
                         <div class="stat-value" id="invTotalValue">0.00</div>
+                        <button class="nav-btn" style="width: 100%; margin-top: 15px; padding: 8px; font-size: 0.75em;" onclick="findSimilarToTotal()">Find Global Value Matches</button>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Average Demand</div>
@@ -364,6 +397,11 @@
                         <div class="ai-toggle-group">
                             <div class="ai-tog active" id="aiTogNormal" onclick="setAiStrategy('normal')">Normal Mode</div>
                             <div class="ai-tog" id="aiTogVelocity" onclick="setAiStrategy('velocity')">Velocity Mode</div>
+                        </div>
+
+                        <div class="ai-count-control">
+                            <label>Strategy Count: <span id="strategyCountVal">10</span></label>
+                            <input type="range" id="strategyCountSlider" min="1" max="10" value="10" oninput="updateStrategyCount(this.value)">
                         </div>
 
                         <div id="aiSuggestions">
@@ -412,7 +450,7 @@
             <div class="p-header">
                 <div>
                     <span class="p-title">You Give (<span id="cntA">0</span>)</span>
-                    <span class="p-dem">Avg Demand: <span id="demA">0.0</span></span>
+                    <span class="p-dem" id="demA">Avg Demand: 0.0</span>
                 </div>
                 <span class="p-total" id="totA">0.000</span>
             </div>
@@ -423,7 +461,7 @@
             <div class="p-header">
                 <div>
                     <span class="p-title">They Give (<span id="cntB">0</span>)</span>
-                    <span class="p-dem">Avg Demand: <span id="demB">0.0</span></span>
+                    <span class="p-dem" id="demB">Avg Demand: 0.0</span>
                 </div>
                 <span class="p-total" id="totB">0.000</span>
             </div>
@@ -445,7 +483,7 @@
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         
         let ALL_PETS = [];
-        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal' };
+        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPet: null };
         let history = []; 
 
         let searchState = {
@@ -727,12 +765,15 @@
             return `${prefix}${p.n}${suffix}`;
         }
 
+        // --- UPDATED INVENTORY RENDERING (SIMILAR FINDER BUTTON ADDED) ---
         function renderInventory() {
             const list = state.inv;
             const grid = document.getElementById('invGrid');
             grid.innerHTML = '';
+            
             let totalV = 0, totalD = 0;
             const groups = {};
+
             list.forEach(p => {
                 const key = `${p.n}|${p.type}|${p.f_st}|${p.r_st}`;
                 if (!groups[key]) groups[key] = [];
@@ -740,6 +781,7 @@
                 totalV += calculatePetVal(p, 'value');
                 totalD += p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
             });
+
             Object.entries(groups).forEach(([key, stack]) => {
                 const p = stack[0], count = stack.length;
                 const currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
@@ -749,6 +791,7 @@
                     <div class="card">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
                         <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
+                        <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
                         <div class="card-img-container" ondblclick="duplicate('inv', ${p.uid})">
                             <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
                         </div>
@@ -781,11 +824,55 @@
             saveTrade(); renderInventory();
         }
 
-        // --- NEW STRATEGY FUNCTIONS ---
+        // --- NEW POPUP FUNCTIONS ---
+        function findSimilarToTotal() {
+            const totalVal = parseFloat(document.getElementById('invTotalValue').innerText);
+            showSimilarPopup(totalVal);
+        }
+
+        function findSimilarToPet(val) {
+            showSimilarPopup(val);
+        }
+
+        function showSimilarPopup(val) {
+            const overlay = document.getElementById('similarOverlay');
+            const list = document.getElementById('similarList');
+            overlay.style.display = 'flex';
+            
+            const matches = ALL_PETS.filter(p => p.v >= val * 0.95 && p.v <= val * 1.05)
+                                    .sort((a, b) => b.d - a.d)
+                                    .slice(0, 15);
+            
+            list.innerHTML = matches.map(p => `
+                <div class="similar-item" onclick="setAiTarget('${p.n.replace(/'/g, "\\'")}')">
+                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width: 40px; height: 40px; object-fit: contain;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 800; font-size: 0.9em;">${p.n}</div>
+                        <div style="font-size: 0.7em; color: var(--subtext);">Value: ${p.v.toFixed(2)} | Demand: ${p.d}</div>
+                    </div>
+                    <div style="color: var(--accent); font-weight: 900; font-size: 0.8em;">Target ➔</div>
+                </div>
+            `).join('');
+            if (matches.length === 0) list.innerHTML = `<div style="text-align:center; padding: 20px; color: var(--subtext);">No direct value matches found.</div>`;
+        }
+
+        function setAiTarget(name) {
+            state.aiTargetPet = ALL_PETS.find(x => x.n === name);
+            document.getElementById('similarOverlay').style.display = 'none';
+            renderInventory(); // Re-trigger AI with the locked target
+        }
+
         function setAiStrategy(mode) {
             state.aiMode = mode;
+            state.aiTargetPet = null; // Clear manual target on strategy switch
             document.getElementById('aiTogNormal').classList.toggle('active', mode === 'normal');
             document.getElementById('aiTogVelocity').classList.toggle('active', mode === 'velocity');
+            renderInventory();
+        }
+
+        function updateStrategyCount(val) {
+            state.strategyLimit = parseInt(val);
+            document.getElementById('strategyCountVal').innerText = val;
             renderInventory();
         }
 
@@ -796,34 +883,51 @@
                 return;
             }
 
-            // Shuffle inventory to get fresh results each time
             const shuffled = [...inventory].sort(() => Math.random() - 0.5);
             const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
             const shadowValue = 155.0;
             const remaining = (shadowValue - totalInvVal).toFixed(1);
 
-            let suggestions = `<div class="ai-summary"><b>Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon. Consolidation is key.</div>`;
+            let suggestions = `<div class="ai-summary"><b>Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon.</div>`;
+            
+            if (state.aiTargetPet) {
+                suggestions = `<div class="ai-summary" style="border-color: var(--win); color: var(--win);"><b>Focusing Target:</b> Generating offers from your inventory for <b>${state.aiTargetPet.n}</b>.</div>`;
+            }
+
             let results = [];
             let usedTargets = new Set();
             let usedPetUids = new Set();
 
             const findTarget = (val, typeFilter) => {
-                // In Velocity mode, we allow targets with LOWER value if they have HIGHER demand (Velocity Strategy)
-                let marginMin = state.aiMode === 'velocity' ? 0.85 : 1.01;
-                let marginMax = state.aiMode === 'velocity' ? 1.05 : 1.20;
+                if (state.aiTargetPet) return state.aiTargetPet;
+                
+                let marginMin = state.aiMode === 'velocity' ? 0.80 : 1.01;
+                let marginMax = state.aiMode === 'velocity' ? 1.10 : 1.25;
 
                 let pool = ALL_PETS.filter(p => p.v > val * marginMin && p.v < val * marginMax && !usedTargets.has(p.n));
                 if (typeFilter === 'preppy') pool = pool.filter(p => (p.cat || "").toLowerCase().includes('preppy'));
                 return pool.sort((a,b) => b.d - a.d)[0];
             };
 
-            for(let i = 0; i < 30 && results.length < 10; i++) {
+            for(let i = 0; i < 40 && results.length < state.strategyLimit; i++) {
                 let bundle = [];
                 let type = "";
                 let available = shuffled.filter(p => !usedPetUids.has(p.uid));
                 if (available.length < 1) break;
 
-                if (state.aiMode === 'velocity' || results.length > 5) {
+                if (state.aiTargetPet) {
+                    type = "🎯 Focused Target Offer";
+                    // Attempt to build a bundle that matches target value
+                    let currentBVal = 0;
+                    for (let p of available) {
+                        let pV = calculatePetVal(p, 'value');
+                        if (currentBVal + pV <= state.aiTargetPet.v * 1.05) {
+                            bundle.push(p);
+                            currentBVal += pV;
+                        }
+                        if (bundle.length >= 4) break;
+                    }
+                } else if (state.aiMode === 'velocity') {
                     type = "💅 Preppy Velocity";
                     bundle = available.slice(0, Math.min(available.length, 3));
                 } else {
@@ -838,7 +942,7 @@
                     let target = findTarget(bundleVal, (state.aiMode === 'velocity' ? 'preppy' : ''));
                     
                     if (target) {
-                        usedTargets.add(target.n);
+                        if (!state.aiTargetPet) usedTargets.add(target.n);
                         bundle.forEach(p => usedPetUids.add(p.uid));
                         let vDiff = target.v - bundleVal;
                         let dDiff = target.d - bundleDem;
@@ -908,7 +1012,7 @@
                 if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Demand Gap Trap!"; }
                 else if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Mega liquidity risk."; } 
                 else {
-                    const hasSpecial = state.B.some(p => { const c = p.cat.toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
+                    const hasSpecial = state.B.some(p => { const c = (p.cat || "").toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
                     if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items require overpay."; } 
                     else { if (pDiff >= 0.15) verdict.innerText = "BIG WIN"; else if (pDiff >= 0.03) verdict.innerText = "WIN"; else verdict.innerText = "SLIGHT WIN"; verdict.className = "v-text win-c"; playSfx('win'); }
                 }
