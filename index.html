@@ -895,7 +895,7 @@
             renderInventory();
         }
 
-        // --- NEW UPDATED AI STRATEGIST BRAIN ---
+        // --- FIXED AI STRATEGIST (Realistic Corridor) ---
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
             if (inventory.length === 0) { 
@@ -903,78 +903,44 @@
                 return; 
             }
 
-            // Shuffle inventory to ensure all pets (Red Panda etc) get used eventually
             const shuffledPool = [...inventory].sort(() => Math.random() - 0.5);
             let usedPetUids = new Set();
             let results = [];
-
-            // Helper to get next available items from shuffled pool
-            const getNextBatch = (maxVal, minItems = 1) => {
-                let batch = [];
-                let currentVal = 0;
-                let available = shuffledPool.filter(p => !usedPetUids.has(p.uid));
-                
-                for (let p of available) {
-                    let v = calculatePetVal(p, 'value');
-                    batch.push(p);
-                    currentVal += v;
-                    // Smart bundling: If demand is low, we want more items (up to 9-12)
-                    let avgDem = batch.reduce((s,i) => s + i.d, 0) / batch.length;
-                    let targetCount = avgDem < 4 ? 9 : 3; 
-                    
-                    if (currentVal >= maxVal * 0.7 || batch.length >= targetCount) break;
-                }
-                return batch;
-            };
 
             for (let i = 0; i < state.strategyLimit; i++) {
                 let available = shuffledPool.filter(p => !usedPetUids.has(p.uid));
                 if (available.length === 0) break;
 
-                // Pick a seed item
-                let seed = available[0];
-                let seedVal = calculatePetVal(seed, 'value');
+                // Pick a seed bundle (1-4 pets)
+                let bundle = [];
+                let bundleVal = 0;
+                let count = Math.min(available.length, Math.floor(Math.random() * 3) + 1);
                 
-                // Target Logic: Must be an upgrade!
+                for(let j=0; j<count; j++) {
+                    bundle.push(available[j]);
+                    bundleVal += calculatePetVal(available[j], 'value');
+                }
+
+                // Hunt for a realistic target within +/- 15% of the bundle value
                 let targets = ALL_PETS.filter(p => {
-                    // Don't trade for the exact same pet or a side-grade
-                    if (p.n === seed.n) return false;
-                    // Find something worth 15% to 50% more than the seed, or much higher demand
-                    return p.v >= seedVal * 1.1 && p.v <= seedVal * 4.0;
+                    if (bundle.some(b => b.n === p.n)) return false;
+                    // Realistic value matching: Offer must be 90%-110% of Target
+                    return p.v >= bundleVal * 0.85 && p.v <= bundleVal * 1.15;
                 }).sort((a,b) => b.d - a.d);
 
-                let target = targets[Math.floor(Math.random() * Math.min(targets.length, 10))];
+                let target = targets[0]; // Pick the best demand match in that price range
 
                 if (target) {
-                    // Try to build a bundle that matches target value
-                    let bundle = [seed];
-                    let currentV = seedVal;
-                    let remaining = shuffledPool.filter(p => !usedPetUids.has(p.uid) && p.uid !== seed.uid);
-                    
-                    // Bundle logic for smart upgrades
-                    for (let p of remaining) {
-                        let pv = calculatePetVal(p, 'value');
-                        if (currentV + pv <= target.v * 1.05) {
-                            bundle.push(p);
-                            currentV += pv;
-                        }
-                        // Stop if we have a good count or close value
-                        if (bundle.length >= (target.d > 7 ? 6 : 4) || currentV >= target.v * 0.9) break;
-                    }
-
-                    // Profit math
-                    let vDiff = target.v - currentV;
-                    let winPct = ((target.v / currentV) - 1) * 100;
-                    
-                    // Variety Check: Don't repeat identical trades
                     bundle.forEach(p => usedPetUids.add(p.uid));
+                    let vDiff = target.v - bundleVal;
+                    let winPct = ((target.v / bundleVal) - 1) * 100;
                     
                     results.push({
                         offer: bundle,
                         target: target,
                         vDiff: vDiff.toFixed(2),
                         winPct: winPct.toFixed(1),
-                        type: currentV > target.v ? "💎 Demand Overpay" : "📈 Strategic Upgrade"
+                        type: bundleVal > target.v ? "💎 Demand Overpay" : "📈 Strategic Upgrade"
                     });
                 }
             }
@@ -993,11 +959,12 @@
             `).join('');
         }
 
-        // --- UPDATED TRADE SIDE SUGGESTIONS ---
+        // --- FIXED SMART OFFER SUGGESTIONS (Realistic Corridor) ---
         function updateTradeSuggestions() {
             const container = document.getElementById('sideASuggestions');
             const list = document.getElementById('suggestList');
             const targetVal = parseFloat(document.getElementById('totB').innerText);
+            const targetDem = parseFloat(document.getElementById('demB').innerText);
             
             if (targetVal <= 0 || state.inv.length === 0) {
                 container.style.display = 'none';
@@ -1010,39 +977,47 @@
             let usedInSugg = new Set();
             const suggestions = [];
 
-            // Generate 3 unique variety options
+            // Attempt to build 3 realistic offers
             for (let i = 0; i < 3; i++) {
                 let bundle = [];
                 let currentSum = 0;
-                // Shuffle every time for variety!
                 let pool = [...state.inv].sort(() => Math.random() - 0.5);
+                
+                // Requirement: Must reach 90% of target value, but not exceed 115% (unless demand is low)
+                let maxOverpay = targetDem > 7 ? 1.25 : 1.10; 
                 
                 for (let p of pool) {
                     if (usedInSugg.has(p.uid)) continue;
                     let v = calculatePetVal(p, state.mode);
-                    if (currentSum + v <= targetVal * 1.15) {
+                    
+                    if (currentSum + v <= targetVal * maxOverpay) {
                         bundle.push(p);
                         currentSum += v;
                     }
-                    if (currentSum >= targetVal * 0.92 || bundle.length >= 9) break;
+                    if (currentSum >= targetVal * 0.95 || bundle.length >= 12) break;
                 }
 
-                if (bundle.length > 0) {
+                // Validate: Only suggest if the value is actually close (No more 0.96 for a 5.75!)
+                if (bundle.length > 0 && currentSum >= targetVal * 0.85) {
                     bundle.forEach(p => usedInSugg.add(p.uid));
                     suggestions.push({ items: bundle, total: currentSum });
                 }
             }
 
-            list.innerHTML = suggestions.map(s => {
-                const names = s.items.map(i => getFullName(i)).join(' + ');
-                const uidList = JSON.stringify(s.items.map(i => i.uid));
-                return `
-                    <div class="suggest-pill" onclick='applySuggestion(${uidList})'>
-                        <div class="suggest-items-text">${names}</div>
-                        <div class="suggest-val-text">${s.total.toFixed(2)}</div>
-                    </div>
-                `;
-            }).join('');
+            if(suggestions.length === 0) {
+                list.innerHTML = `<div style="font-size:0.7em; color:var(--subtext); padding:10px;">Insufficient inventory to match this trade's value.</div>`;
+            } else {
+                list.innerHTML = suggestions.map(s => {
+                    const names = s.items.map(i => getFullName(i)).join(' + ');
+                    const uidList = JSON.stringify(s.items.map(i => i.uid));
+                    return `
+                        <div class="suggest-pill" onclick='applySuggestion(${uidList})'>
+                            <div class="suggest-items-text">${names}</div>
+                            <div class="suggest-val-text">${s.total.toFixed(2)}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
         }
 
         function applySuggestion(uids) {
@@ -1106,7 +1081,6 @@
                 else if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Mega liquidity risk."; } 
                 else {
                     const hasSpecial = state.B.some(p => { const c = p.cat.toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
-                    // TYPO FIXED: overpat -> overpay
                     if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items require overpay."; } 
                     else { if (pDiff >= 0.15) verdict.innerText = "BIG WIN"; else if (pDiff >= 0.03) verdict.innerText = "WIN"; else verdict.innerText = "SLIGHT WIN"; verdict.className = "v-text win-c"; playSfx('win'); }
                 }
