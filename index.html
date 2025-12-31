@@ -79,7 +79,6 @@
             margin-bottom: 250px;
         }
 
-        /* REVERTED TO ORIGINAL */
         .trade-panel {
             flex: 1; background: var(--panel); border-radius: 24px;
             border: 1.5px solid var(--border); min-width: 340px; min-height: 520px;
@@ -103,7 +102,6 @@
 
         .p-total { font-size: 1.6em; font-weight: 900; color: white; }
 
-        /* REVERTED TO ORIGINAL */
         .grid {
             padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
             gap: 15px;
@@ -156,7 +154,6 @@
             border-radius: 6px; z-index: 11; border: 1px solid var(--panel);
         }
 
-        /* REVERTED TO ORIGINAL */
         .plus {
             border: 2px dashed var(--border); border-radius: 14px; height: 150px;
             display: flex; align-items: center; justify-content: center; font-size: 2.5em;
@@ -164,29 +161,17 @@
         }
         .plus:hover { border-color: var(--accent); color: var(--accent); }
 
-        /* SCALING FIX FOR VERDICT BOX (1st photo request) */
         .verdict-box {
-            position: fixed; 
-            bottom: 30px; 
-            background: var(--panel); 
-            width: 90%;
-            max-width: 520px; 
-            padding: clamp(15px, 2.5vw, 25px); 
-            border-radius: 30px;
-            border: 1px solid var(--border); 
-            text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.7); 
-            z-index: 1000;
-            left: 50%;
-            transform: translateX(-50%);
+            position: fixed; bottom: 30px; background: var(--panel); width: 90%;
+            max-width: 520px; padding: clamp(15px, 2.5vw, 25px); border-radius: 30px;
+            border: 1px solid var(--border); text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7); z-index: 1000;
+            left: 50%; transform: translateX(-50%);
         }
 
         .v-text {
-            font-size: clamp(2em, 8vw, 3.5em); 
-            font-weight: 950; 
-            line-height: 1; 
-            margin-bottom: 8px;
-            letter-spacing: -2px;
+            font-size: clamp(2em, 8vw, 3.5em); font-weight: 950; line-height: 1; 
+            margin-bottom: 8px; letter-spacing: -2px;
         }
 
         .v-diff { font-weight: 800; font-size: clamp(0.9em, 3vw, 1.2em); margin-bottom: 5px; color: white; }
@@ -206,11 +191,8 @@
         .sw-btn.active { background: var(--accent); color: white; }
 
         .inv-suggest-container {
-            padding: 15px;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            background: rgba(99, 102, 241, 0.03);
-            border-bottom-left-radius: 24px;
-            border-bottom-right-radius: 24px;
+            padding: 15px; border-top: 1px solid rgba(255,255,255,0.05);
+            background: rgba(99, 102, 241, 0.03); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;
         }
         .inv-suggest-title {
             font-size: 0.8em; font-weight: 900; color: var(--accent);
@@ -497,7 +479,7 @@
             </div>
             <div class="grid" id="gridA"></div>
             <div class="inv-suggest-container" id="sideASuggestions" style="display: none;">
-                <div class="inv-suggest-title">🤖 AI Offer Suggestions</div>
+                <div class="inv-suggest-title">🤖 Smart Offer Suggestions</div>
                 <div class="suggest-pill-row" id="suggestList"></div>
             </div>
         </div>
@@ -913,95 +895,105 @@
             renderInventory();
         }
 
+        // --- NEW UPDATED AI STRATEGIST BRAIN ---
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
-            if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>`; return; }
-
-            const shuffled = [...inventory].sort(() => Math.random() - 0.5);
-            const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
-            const shadowValue = 155.0;
-            const remaining = (shadowValue - totalInvVal).toFixed(1);
-
-            let suggestions = `<div class="ai-summary"><b>Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon.</div>`;
-            if (state.aiTargetPets.length > 0) {
-                suggestions = `<div class="ai-summary" style="border-color: var(--win); color: var(--win);"><b>Focusing Targets:</b> Cycling offers for <b>${state.aiTargetPets.length} chosen pets</b>.</div>`;
+            if (inventory.length === 0) { 
+                box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>`; 
+                return; 
             }
 
-            let results = [];
-            let usedTargets = new Set();
+            // Shuffle inventory to ensure all pets (Red Panda etc) get used eventually
+            const shuffledPool = [...inventory].sort(() => Math.random() - 0.5);
             let usedPetUids = new Set();
+            let results = [];
 
-            const findTarget = (val, typeFilter) => {
-                if (state.aiTargetPets.length > 0) {
-                    const validTargets = state.aiTargetPets.filter(p => p.v >= val * 0.8 && p.v <= val * 1.3);
-                    return validTargets[Math.floor(Math.random() * validTargets.length)] || state.aiTargetPets[0];
+            // Helper to get next available items from shuffled pool
+            const getNextBatch = (maxVal, minItems = 1) => {
+                let batch = [];
+                let currentVal = 0;
+                let available = shuffledPool.filter(p => !usedPetUids.has(p.uid));
+                
+                for (let p of available) {
+                    let v = calculatePetVal(p, 'value');
+                    batch.push(p);
+                    currentVal += v;
+                    // Smart bundling: If demand is low, we want more items (up to 9-12)
+                    let avgDem = batch.reduce((s,i) => s + i.d, 0) / batch.length;
+                    let targetCount = avgDem < 4 ? 9 : 3; 
+                    
+                    if (currentVal >= maxVal * 0.7 || batch.length >= targetCount) break;
                 }
-                let marginMin = state.aiMode === 'velocity' ? 0.80 : 1.01;
-                let marginMax = state.aiMode === 'velocity' ? 1.10 : 1.25;
-                let pool = ALL_PETS.filter(p => p.v > val * marginMin && p.v < val * marginMax && !usedTargets.has(p.n));
-                if (typeFilter === 'preppy') pool = pool.filter(p => (p.cat || "").toLowerCase().includes('preppy'));
-                return pool.sort((a,b) => b.d - a.d)[0];
+                return batch;
             };
 
-            for(let i = 0; i < 50 && results.length < state.strategyLimit; i++) {
-                let bundle = [];
-                let type = "";
-                let available = shuffled.filter(p => !usedPetUids.has(p.uid));
-                if (available.length < 1) break;
+            for (let i = 0; i < state.strategyLimit; i++) {
+                let available = shuffledPool.filter(p => !usedPetUids.has(p.uid));
+                if (available.length === 0) break;
 
-                let bundleLimit = 4;
-                const lowDemCount = available.filter(p => p.d < 5).length;
-                if (lowDemCount >= 6 && state.aiMode === 'velocity') bundleLimit = 10;
+                // Pick a seed item
+                let seed = available[0];
+                let seedVal = calculatePetVal(seed, 'value');
+                
+                // Target Logic: Must be an upgrade!
+                let targets = ALL_PETS.filter(p => {
+                    // Don't trade for the exact same pet or a side-grade
+                    if (p.n === seed.n) return false;
+                    // Find something worth 15% to 50% more than the seed, or much higher demand
+                    return p.v >= seedVal * 1.1 && p.v <= seedVal * 4.0;
+                }).sort((a,b) => b.d - a.d);
 
-                if (state.aiTargetPets.length > 0) {
-                    type = "🎯 Focused Target Offer";
-                    let currentBVal = 0;
-                    for (let p of available) {
-                        let pV = calculatePetVal(p, 'value');
-                        if (currentBVal + pV <= 200) { 
-                            bundle.push(p);
-                            currentBVal += pV;
-                        }
-                        if (bundle.length >= bundleLimit) break;
-                    }
-                } else if (state.aiMode === 'velocity') {
-                    type = "💅 Preppy Velocity";
-                    bundle = available.slice(0, Math.min(available.length, bundleLimit));
-                } else {
-                    type = "🔥 Strategic Upgrade";
-                    bundle = [available[0]];
-                    if (available.length > 1) bundle.push(available[1]);
-                }
+                let target = targets[Math.floor(Math.random() * Math.min(targets.length, 10))];
 
-                if (bundle.length > 0) {
-                    let bundleVal = bundle.reduce((s, p) => s + calculatePetVal(p, 'value'), 0);
-                    let bundleDem = (bundle.reduce((s, p) => s + p.d, 0) / bundle.length);
-                    let target = findTarget(bundleVal, (state.aiMode === 'velocity' ? 'preppy' : ''));
+                if (target) {
+                    // Try to build a bundle that matches target value
+                    let bundle = [seed];
+                    let currentV = seedVal;
+                    let remaining = shuffledPool.filter(p => !usedPetUids.has(p.uid) && p.uid !== seed.uid);
                     
-                    if (target) {
-                        if (state.aiTargetPets.length === 0) usedTargets.add(target.n);
-                        bundle.forEach(p => usedPetUids.add(p.uid));
-                        let vDiff = target.v - bundleVal;
-                        let dDiff = target.d - bundleDem;
-                        let winPct = ((target.v / bundleVal) - 1) * 100;
-                        results.push({ offer: bundle, target: target, type: type, vDiff: vDiff.toFixed(2), dDiff: dDiff.toFixed(1), winPct: winPct.toFixed(1) });
+                    // Bundle logic for smart upgrades
+                    for (let p of remaining) {
+                        let pv = calculatePetVal(p, 'value');
+                        if (currentV + pv <= target.v * 1.05) {
+                            bundle.push(p);
+                            currentV += pv;
+                        }
+                        // Stop if we have a good count or close value
+                        if (bundle.length >= (target.d > 7 ? 6 : 4) || currentV >= target.v * 0.9) break;
                     }
+
+                    // Profit math
+                    let vDiff = target.v - currentV;
+                    let winPct = ((target.v / currentV) - 1) * 100;
+                    
+                    // Variety Check: Don't repeat identical trades
+                    bundle.forEach(p => usedPetUids.add(p.uid));
+                    
+                    results.push({
+                        offer: bundle,
+                        target: target,
+                        vDiff: vDiff.toFixed(2),
+                        winPct: winPct.toFixed(1),
+                        type: currentV > target.v ? "💎 Demand Overpay" : "📈 Strategic Upgrade"
+                    });
                 }
             }
 
-            box.innerHTML = suggestions + results.map(r => `
+            box.innerHTML = results.map(r => `
                 <div class="ai-suggestion">
                     <small style="color:var(--accent); font-weight:900;">${r.type}</small><br>
-                    Offer: ${r.offer.map(p => `<span class="ai-item-tag">${getFullName(p)}</span>`).join(' + ')}<br>
-                    Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span>
+                    Give: ${r.offer.map(p => `<span class="ai-item-tag">${getFullName(p)}</span>`).join(' + ')}<br>
+                    Get: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span>
                     <div class="ai-stats-row">
-                        <span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">Profit: ${r.vDiff > 0 ? '+' : ''}${r.vDiff} (${r.winPct}%)</span>
-                        <span class="ai-stat-pill pill-dem">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span>
+                        <span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">
+                            Profit: ${r.vDiff > 0 ? '+' : ''}${r.vDiff} (${r.winPct}%)
+                        </span>
                     </div>
                 </div>
             `).join('');
         }
 
+        // --- UPDATED TRADE SIDE SUGGESTIONS ---
         function updateTradeSuggestions() {
             const container = document.getElementById('sideASuggestions');
             const list = document.getElementById('suggestList');
@@ -1015,36 +1007,33 @@
             container.style.display = 'block';
             list.innerHTML = '';
 
+            let usedInSugg = new Set();
             const suggestions = [];
-            const sortedInv = [...state.inv].sort((a,b) => calculatePetVal(b, state.mode) - calculatePetVal(a, state.mode));
 
-            const single = sortedInv.find(p => calculatePetVal(p, state.mode) >= targetVal * 0.9);
-            if (single) suggestions.push({ items: [single], total: calculatePetVal(single, state.mode) });
-
-            let bundle = [], currentSum = 0;
-            for(let p of sortedInv) {
-                let v = calculatePetVal(p, state.mode);
-                if (currentSum + v <= targetVal * 1.2) {
-                    bundle.push(p);
-                    currentSum += v;
+            // Generate 3 unique variety options
+            for (let i = 0; i < 3; i++) {
+                let bundle = [];
+                let currentSum = 0;
+                // Shuffle every time for variety!
+                let pool = [...state.inv].sort(() => Math.random() - 0.5);
+                
+                for (let p of pool) {
+                    if (usedInSugg.has(p.uid)) continue;
+                    let v = calculatePetVal(p, state.mode);
+                    if (currentSum + v <= targetVal * 1.15) {
+                        bundle.push(p);
+                        currentSum += v;
+                    }
+                    if (currentSum >= targetVal * 0.92 || bundle.length >= 9) break;
                 }
-                if (currentSum >= targetVal * 0.95 || bundle.length >= 4) break;
-            }
-            if (bundle.length > 0 && currentSum > 0) suggestions.push({ items: bundle, total: currentSum });
 
-            const demandInv = [...state.inv].sort((a,b) => b.d - a.d);
-            let demBundle = [], demSum = 0;
-            for(let p of demandInv) {
-                let v = calculatePetVal(p, state.mode);
-                if (demSum + v <= targetVal * 1.3) {
-                    demBundle.push(p);
-                    demSum += v;
+                if (bundle.length > 0) {
+                    bundle.forEach(p => usedInSugg.add(p.uid));
+                    suggestions.push({ items: bundle, total: currentSum });
                 }
-                if (demSum >= targetVal * 0.9 || demBundle.length >= 6) break;
             }
-            if (demBundle.length > 0 && demSum > 0) suggestions.push({ items: demBundle, total: demSum });
 
-            list.innerHTML = suggestions.slice(0, 3).map((s, idx) => {
+            list.innerHTML = suggestions.map(s => {
                 const names = s.items.map(i => getFullName(i)).join(' + ');
                 const uidList = JSON.stringify(s.items.map(i => i.uid));
                 return `
@@ -1117,6 +1106,7 @@
                 else if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Mega liquidity risk."; } 
                 else {
                     const hasSpecial = state.B.some(p => { const c = p.cat.toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
+                    // TYPO FIXED: overpat -> overpay
                     if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items require overpay."; } 
                     else { if (pDiff >= 0.15) verdict.innerText = "BIG WIN"; else if (pDiff >= 0.03) verdict.innerText = "WIN"; else verdict.innerText = "SLIGHT WIN"; verdict.className = "v-text win-c"; playSfx('win'); }
                 }
