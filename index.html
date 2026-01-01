@@ -18,7 +18,6 @@
             --lose: #ef4444;
             --trap: #f59e0b;
             --demand-color: #fbbf24;
-            /* Rarity Colors */
             --rarity-legendary: #ff9800;
             --rarity-ultra: #f06292;
             --rarity-rare: #4fc3f7;
@@ -116,7 +115,7 @@
         .card {
             background: var(--card); border-radius: 14px; padding: 12px 8px;
             display: flex; flex-direction: column; align-items: center; position: relative;
-            border: 2px solid transparent; transition: all 0.2s;
+            border: 1.5px solid transparent; transition: all 0.2s;
         }
 
         .card:hover { border-color: var(--accent); transform: translateY(-2px); }
@@ -237,7 +236,6 @@
         .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
         .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
 
-        /* Milestones Styling */
         .milestone-container { background: #161e2e; padding: 15px; border-radius: 15px; border: 1px solid var(--border); margin-top: 15px; }
         .milestone-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; opacity: 0.4; transition: 0.3s; }
         .milestone-row.active { opacity: 1; color: var(--frost); font-weight: 800; }
@@ -318,7 +316,7 @@
         .search-item-card {
             background: #262c3d; border-radius: 18px; padding: 15px 10px;
             display: flex; flex-direction: column; align-items: center; cursor: pointer;
-            transition: all 0.2s; border: 2px solid transparent;
+            transition: all 0.2s; border: 1.5px solid transparent;
         }
         .search-item-card:hover {
             background: #334155; transform: translateY(-4px); border-color: var(--accent);
@@ -717,9 +715,9 @@
         }
 
         function getDemandColor(d) {
-            if (d >= 7) return '#4caf50'; // Green
-            if (d >= 4) return '#ffeb3b'; // Yellow
-            return '#f44336'; // Red
+            if (d >= 7) return '#4caf50';
+            if (d >= 4) return '#ffeb3b';
+            return '#f44336';
         }
 
         function filterAndRender(query) {
@@ -759,12 +757,10 @@
         }
 
         function addItem(element, name) {
-            // LIMIT CHECK: 18 Pets max
             if (state[state.target].length >= 18 && state.target !== 'inv') {
-                alert("Trade limit reached! Adopt Me only allows 18 pets per trade.");
+                alert("Trade limit reached! Adopt Me only allows 18 items per trade.");
                 return;
             }
-
             pushState();
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
@@ -881,7 +877,6 @@
             document.getElementById('invTotalValue').innerText = finalVal;
             document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
             
-            // Check Milestones
             const v = parseFloat(finalVal);
             document.getElementById('mile-1').classList.toggle('active', v >= 1);
             document.getElementById('mile-2').classList.toggle('active', v >= 10);
@@ -1001,8 +996,8 @@
                     Offer: ${r.offer.map(p => getFullName(p)).join(' + ')}<br>
                     Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span>
                     <div class="ai-stats-row">
-                        <span class="ai-stat-pill pill-win">Profit: ${r.vDiff} (${r.winPct}%)</span>
-                        <span class="ai-stat-pill pill-dem">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span>
+                        <span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">Profit: ${r.vDiff} (${r.winPct}%)</span>
+                        <span class="ai-stat-pill pill-dem" style="color:${getDemandColor(parseFloat(r.dDiff) + 5)}">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span>
                     </div>
                 </div>
             `).join('');
@@ -1044,27 +1039,51 @@
             document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
         }
 
+        // --- NEW REASONING ENGINE (SMART DESCRIPTIONS) ---
         function calculate() {
             const vA = parseFloat(document.getElementById('totA').innerText);
             const vB = parseFloat(document.getElementById('totB').innerText);
             const demA = parseFloat(document.getElementById('demA').innerText);
             const demB = parseFloat(document.getElementById('demB').innerText);
             const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub');
+            
             if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; return; }
             
             const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
-            const isTargetingMega = state.B.some(p => p.type === 'mega'), demGap = demA - demB;
+            const demGap = demA - demB;
+            const isTargetingMega = state.B.some(p => p.type === 'mega');
 
-            if (Math.abs(diff) < 0.01) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "The trade is perfectly balanced in value."; }
+            if (Math.abs(diff) < 0.01) { 
+                verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; 
+                vSub.innerText = "The trade is perfectly balanced in value. No one gain or loses raw wealth."; 
+            }
             else if (diff > 0) {
-                if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Demand Gap! You are losing too much liquidity."; }
-                else if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Technically a win, but Megas are harder to trade."; } 
+                // TRAP LOGIC
+                if (demGap >= 3 && pDiff < 0.4) {
+                    verdict.innerText = "TRAP"; verdict.className = "v-text trap-c";
+                    vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`;
+                }
                 else {
                     const hasSpecial = state.B.some(p => { const c = (p.cat || "").toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
-                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items require a massive overpay."; } 
-                    else { verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; verdict.className = "v-text win-c"; vSub.innerText = "You are gaining significant value."; playSfx('win'); }
+                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { 
+                        verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; 
+                        vSub.innerText = "VALUE BAIT: They are offering low-demand 'trash' pets. You need a much higher overpay (1.5x+) to make this even remotely fair."; 
+                    } 
+                    else {
+                        verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; verdict.className = "v-text win-c";
+                        let demTxt = demB > demA ? "and you are gaining trading speed (Demand Up)!" : "but be aware you are losing a bit of trading speed.";
+                        vSub.innerText = `You are gaining ${(pDiff * 100).toFixed(1)}% in raw value ${demTxt}`;
+                        playSfx('win');
+                    }
                 }
-            } else { verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; verdict.className = "v-text lose-c"; vSub.innerText = "You are overpaying for this trade."; }
+            } else {
+                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; verdict.className = "v-text lose-c";
+                if (demB >= demA + 2) {
+                    vSub.innerText = `STRATEGIC OVERPAY: You lose value, but gain massive trading velocity (+${(demB - demA).toFixed(1)} Dem). This is a good move to clear stagnant pets.`;
+                } else {
+                    vSub.innerText = `You are losing ${(Math.abs(pDiff) * 100).toFixed(1)}% of your value with no significant demand gain. This is a bad deal.`;
+                }
+            }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
         }
 
@@ -1080,7 +1099,6 @@
             saveTrade(); if (s === 'inv') renderInventory(); else render();
         }
 
-        // Fix for Smart Offer Suggestions
         function updateTradeSuggestions() {
             const container = document.getElementById('sideASuggestions');
             const list = document.getElementById('suggestList');
