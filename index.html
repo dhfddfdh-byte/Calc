@@ -18,6 +18,12 @@
             --lose: #ef4444;
             --trap: #f59e0b;
             --demand-color: #fbbf24;
+            /* Rarity Colors */
+            --rarity-legendary: #ff9800;
+            --rarity-ultra: #f06292;
+            --rarity-rare: #4fc3f7;
+            --rarity-uncommon: #81c784;
+            --rarity-common: #bdbdbd;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -110,7 +116,7 @@
         .card {
             background: var(--card); border-radius: 14px; padding: 12px 8px;
             display: flex; flex-direction: column; align-items: center; position: relative;
-            border: 1.5px solid transparent; transition: all 0.2s;
+            border: 2px solid transparent; transition: all 0.2s;
         }
 
         .card:hover { border-color: var(--accent); transform: translateY(-2px); }
@@ -231,6 +237,13 @@
         .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
         .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
 
+        /* Milestones Styling */
+        .milestone-container { background: #161e2e; padding: 15px; border-radius: 15px; border: 1px solid var(--border); margin-top: 15px; }
+        .milestone-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; opacity: 0.4; transition: 0.3s; }
+        .milestone-row.active { opacity: 1; color: var(--frost); font-weight: 800; }
+        .milestone-check { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; }
+        .milestone-row.active .milestone-check { border-color: var(--win); background: var(--win); color: white; }
+
         .ai-box { background: rgba(99, 102, 241, 0.05); border: 1.5px solid var(--accent); border-radius: 20px; padding: 20px; margin-top: 10px; }
         .ai-title { display: flex; align-items: center; justify-content: space-between; color: var(--accent); font-weight: 900; font-size: 1.1em; margin-bottom: 15px; }
         .ai-summary { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px dashed var(--accent); font-size: 0.9em; line-height: 1.4; color: white; }
@@ -305,7 +318,7 @@
         .search-item-card {
             background: #262c3d; border-radius: 18px; padding: 15px 10px;
             display: flex; flex-direction: column; align-items: center; cursor: pointer;
-            transition: all 0.2s; border: 1.5px solid transparent;
+            transition: all 0.2s; border: 2px solid transparent;
         }
         .search-item-card:hover {
             background: #334155; transform: translateY(-4px); border-color: var(--accent);
@@ -409,6 +422,15 @@
                     <div class="stat-card">
                         <div class="stat-label">Average Demand</div>
                         <div class="stat-value" id="invAvgDemand">0.0</div>
+                    </div>
+
+                    <div class="milestone-container">
+                        <div style="font-size: 0.8em; font-weight: 900; color: var(--accent); margin-bottom: 10px;">TRADING MILESTONES</div>
+                        <div class="milestone-row" id="mile-1"><div class="milestone-check">✓</div>Starter (1.0 Val)</div>
+                        <div class="milestone-row" id="mile-2"><div class="milestone-check">✓</div>Apprentice (10.0 Val)</div>
+                        <div class="milestone-row" id="mile-3"><div class="milestone-check">✓</div>Merchant (50.0 Val)</div>
+                        <div class="milestone-row" id="mile-4"><div class="milestone-check">✓</div>Rich (100.0 Val)</div>
+                        <div class="milestone-row" id="mile-5"><div class="milestone-check">✓</div>Master (155.0 Val)</div>
                     </div>
                     
                     <div class="ai-box">
@@ -637,7 +659,7 @@
                     mfr_v: row.mfr_v || 0,
                     nfr_f: row.nfr_f || 0,
                     mfr_f: row.mfr_f || 0,
-                    cat: row.categories || row.rarity || ''
+                    cat: (row.categories || row.rarity || '').toLowerCase()
                 })).filter(p => p.n && p.n.length > 0);
                 
                 document.getElementById('loadingScreen').style.display = 'none';
@@ -686,6 +708,20 @@
             }
         });
 
+        function getRarityColor(rarity) {
+            if (rarity.includes('legendary')) return 'var(--rarity-legendary)';
+            if (rarity.includes('ultra')) return 'var(--rarity-ultra)';
+            if (rarity.includes('rare')) return 'var(--rarity-rare)';
+            if (rarity.includes('uncommon')) return 'var(--rarity-uncommon)';
+            return 'var(--rarity-common)';
+        }
+
+        function getDemandColor(d) {
+            if (d >= 7) return '#4caf50'; // Green
+            if (d >= 4) return '#ffeb3b'; // Yellow
+            return '#f44336'; // Red
+        }
+
         function filterAndRender(query) {
             let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
             if (searchState.rarityFilter !== 'none') {
@@ -710,17 +746,25 @@
             resultsBox.innerHTML = chunk.map(p => {
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 const val = state.mode === 'frost' ? p.f : p.v; 
+                const rarityColor = getRarityColor(p.cat);
+                const demandColor = getDemandColor(p.d);
                 return `
-                <div class="search-item-card" onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}')">
+                <div class="search-item-card" onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}')" style="border-color: ${rarityColor}">
                     <div class="search-item-name">${p.n}</div>
                     <img src="${imgUrl}" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                     <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
-                    <div class="search-item-demand">Dem: ${p.d}</div>
+                    <div class="search-item-demand" style="color: ${demandColor}">Dem: ${p.d}</div>
                 </div>`;
             }).join('');
         }
 
         function addItem(element, name) {
+            // LIMIT CHECK: 18 Pets max
+            if (state[state.target].length >= 18 && state.target !== 'inv') {
+                alert("Trade limit reached! Adopt Me only allows 18 pets per trade.");
+                return;
+            }
+
             pushState();
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
@@ -740,6 +784,7 @@
         }
 
         function duplicate(s, uid) {
+            if (state[s].length >= 18 && s !== 'inv') return;
             pushState();
             const original = state[s].find(x => x.uid === uid);
             if (!original) return;
@@ -810,8 +855,11 @@
                 const currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
                 const valTotal = calculatePetVal(p, 'value') * count;
                 const stackUidsString = JSON.stringify(stack.map(item => item.uid));
+                const rarityColor = getRarityColor(p.cat);
+                const demandColor = getDemandColor(currentDemand);
+
                 grid.innerHTML += `
-                    <div class="card">
+                    <div class="card" style="border-color: ${rarityColor}">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
                         <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
                         <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
@@ -820,7 +868,7 @@
                         </div>
                         <div class="card-name">${p.n}</div>
                         <div class="card-val">${valTotal.toFixed(2)}</div>
-                        <div class="card-demand">Dem: ${currentDemand}</div>
+                        <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
                         <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" onclick="togStack('inv',${stackUidsString},'n')">N</div>
                             <div class="t-btn ${p.type==='mega'?'active':''}" onclick="togStack('inv',${stackUidsString},'m')">M</div>
@@ -829,8 +877,18 @@
                         </div>
                     </div>`;
             });
-            document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
+            const finalVal = totalV.toFixed(2);
+            document.getElementById('invTotalValue').innerText = finalVal;
             document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
+            
+            // Check Milestones
+            const v = parseFloat(finalVal);
+            document.getElementById('mile-1').classList.toggle('active', v >= 1);
+            document.getElementById('mile-2').classList.toggle('active', v >= 10);
+            document.getElementById('mile-3').classList.toggle('active', v >= 50);
+            document.getElementById('mile-4').classList.toggle('active', v >= 100);
+            document.getElementById('mile-5').classList.toggle('active', v >= 155);
+
             updateAISuggestions(list);
         }
 
@@ -895,142 +953,59 @@
             renderInventory();
         }
 
-        // --- FIXED AI STRATEGIST (Realistic Corridor) ---
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
-            if (inventory.length === 0) { 
-                box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>`; 
-                return; 
-            }
+            if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to inventory...</div>`; return; }
 
-            const shuffledPool = [...inventory].sort(() => Math.random() - 0.5);
-            let usedPetUids = new Set();
+            const shuffled = [...inventory].sort(() => Math.random() - 0.5);
+            const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
+            const remaining = (155.0 - totalInvVal).toFixed(1);
+
+            let suggestions = `<div class="ai-summary"><b>Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon.</div>`;
+            
             let results = [];
+            let usedPetUids = new Set();
 
-            for (let i = 0; i < state.strategyLimit; i++) {
-                let available = shuffledPool.filter(p => !usedPetUids.has(p.uid));
-                if (available.length === 0) break;
+            const findTarget = (val) => {
+                if (state.aiTargetPets.length > 0) return state.aiTargetPets[Math.floor(Math.random() * state.aiTargetPets.length)];
+                let marginMin = state.aiMode === 'velocity' ? 0.80 : 1.01;
+                let marginMax = state.aiMode === 'velocity' ? 1.10 : 1.25;
+                return ALL_PETS.filter(p => p.v > val * marginMin && p.v < val * marginMax).sort((a,b) => b.d - a.d)[0];
+            };
 
-                // Pick a seed bundle (1-4 pets)
+            for(let i = 0; i < 50 && results.length < state.strategyLimit; i++) {
                 let bundle = [];
-                let bundleVal = 0;
-                let count = Math.min(available.length, Math.floor(Math.random() * 3) + 1);
-                
-                for(let j=0; j<count; j++) {
-                    bundle.push(available[j]);
-                    bundleVal += calculatePetVal(available[j], 'value');
-                }
+                let available = shuffled.filter(p => !usedPetUids.has(p.uid));
+                if (available.length < 1) break;
 
-                // Hunt for a realistic target within +/- 15% of the bundle value
-                let targets = ALL_PETS.filter(p => {
-                    if (bundle.some(b => b.n === p.n)) return false;
-                    // Realistic value matching: Offer must be 90%-110% of Target
-                    return p.v >= bundleVal * 0.85 && p.v <= bundleVal * 1.15;
-                }).sort((a,b) => b.d - a.d);
+                let limit = (state.aiMode === 'velocity') ? 10 : 4;
+                bundle = available.slice(0, Math.min(available.length, limit));
 
-                let target = targets[0]; // Pick the best demand match in that price range
-
-                if (target) {
-                    bundle.forEach(p => usedPetUids.add(p.uid));
-                    let vDiff = target.v - bundleVal;
-                    let winPct = ((target.v / bundleVal) - 1) * 100;
+                if (bundle.length > 0) {
+                    let bundleVal = bundle.reduce((s, p) => s + calculatePetVal(p, 'value'), 0);
+                    let bundleDem = (bundle.reduce((s, p) => s + p.d, 0) / bundle.length);
+                    let target = findTarget(bundleVal);
                     
-                    results.push({
-                        offer: bundle,
-                        target: target,
-                        vDiff: vDiff.toFixed(2),
-                        winPct: winPct.toFixed(1),
-                        type: bundleVal > target.v ? "💎 Demand Overpay" : "📈 Strategic Upgrade"
-                    });
+                    if (target) {
+                        bundle.forEach(p => usedPetUids.add(p.uid));
+                        let vDiff = (target.v - bundleVal).toFixed(2);
+                        let dDiff = (target.d - bundleDem).toFixed(1);
+                        let winPct = ((target.v / bundleVal) - 1) * 100;
+                        results.push({ offer: bundle, target: target, vDiff: vDiff, dDiff: dDiff, winPct: winPct.toFixed(1) });
+                    }
                 }
             }
 
-            box.innerHTML = results.map(r => `
+            box.innerHTML = suggestions + results.map(r => `
                 <div class="ai-suggestion">
-                    <small style="color:var(--accent); font-weight:900;">${r.type}</small><br>
-                    Give: ${r.offer.map(p => `<span class="ai-item-tag">${getFullName(p)}</span>`).join(' + ')}<br>
-                    Get: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span>
+                    Offer: ${r.offer.map(p => getFullName(p)).join(' + ')}<br>
+                    Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span>
                     <div class="ai-stats-row">
-                        <span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">
-                            Profit: ${r.vDiff > 0 ? '+' : ''}${r.vDiff} (${r.winPct}%)
-                        </span>
+                        <span class="ai-stat-pill pill-win">Profit: ${r.vDiff} (${r.winPct}%)</span>
+                        <span class="ai-stat-pill pill-dem">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span>
                     </div>
                 </div>
             `).join('');
-        }
-
-        // --- FIXED SMART OFFER SUGGESTIONS (Realistic Corridor) ---
-        function updateTradeSuggestions() {
-            const container = document.getElementById('sideASuggestions');
-            const list = document.getElementById('suggestList');
-            const targetVal = parseFloat(document.getElementById('totB').innerText);
-            const targetDem = parseFloat(document.getElementById('demB').innerText);
-            
-            if (targetVal <= 0 || state.inv.length === 0) {
-                container.style.display = 'none';
-                return;
-            }
-
-            container.style.display = 'block';
-            list.innerHTML = '';
-
-            let usedInSugg = new Set();
-            const suggestions = [];
-
-            // Attempt to build 3 realistic offers
-            for (let i = 0; i < 3; i++) {
-                let bundle = [];
-                let currentSum = 0;
-                let pool = [...state.inv].sort(() => Math.random() - 0.5);
-                
-                // Requirement: Must reach 90% of target value, but not exceed 115% (unless demand is low)
-                let maxOverpay = targetDem > 7 ? 1.25 : 1.10; 
-                
-                for (let p of pool) {
-                    if (usedInSugg.has(p.uid)) continue;
-                    let v = calculatePetVal(p, state.mode);
-                    
-                    if (currentSum + v <= targetVal * maxOverpay) {
-                        bundle.push(p);
-                        currentSum += v;
-                    }
-                    if (currentSum >= targetVal * 0.95 || bundle.length >= 12) break;
-                }
-
-                // Validate: Only suggest if the value is actually close (No more 0.96 for a 5.75!)
-                if (bundle.length > 0 && currentSum >= targetVal * 0.85) {
-                    bundle.forEach(p => usedInSugg.add(p.uid));
-                    suggestions.push({ items: bundle, total: currentSum });
-                }
-            }
-
-            if(suggestions.length === 0) {
-                list.innerHTML = `<div style="font-size:0.7em; color:var(--subtext); padding:10px;">Insufficient inventory to match this trade's value.</div>`;
-            } else {
-                list.innerHTML = suggestions.map(s => {
-                    const names = s.items.map(i => getFullName(i)).join(' + ');
-                    const uidList = JSON.stringify(s.items.map(i => i.uid));
-                    return `
-                        <div class="suggest-pill" onclick='applySuggestion(${uidList})'>
-                            <div class="suggest-items-text">${names}</div>
-                            <div class="suggest-val-text">${s.total.toFixed(2)}</div>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        function applySuggestion(uids) {
-            pushState();
-            uids.forEach(uid => {
-                const item = state.inv.find(x => x.uid === uid);
-                if (item) {
-                    state.A.push({...item, uid: Math.random()}); 
-                }
-            });
-            render();
-            playSfx('pop');
-            saveTrade();
         }
 
         function renderSide(s) {
@@ -1043,15 +1018,18 @@
                 let val = calculatePetVal(p, state.mode);
                 totalV += val; totalD += currentDemand;
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
+                const rarityColor = getRarityColor(p.cat);
+                const demandColor = getDemandColor(currentDemand);
+
                 grid.innerHTML += `
-                    <div class="card">
+                    <div class="card" style="border-color: ${rarityColor}">
                         <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
                         <div class="card-img-container" ondblclick="duplicate('${s}', ${p.uid})" title="Double click to duplicate">
                             <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                         </div>
                         <div class="card-name">${p.n}</div>
                         <div class="card-val">${val.toFixed(2)}</div>
-                        <div class="card-demand">Dem: ${currentDemand}</div>
+                        <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
                         <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
                             <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('${s}',${p.uid},'m')">M</div>
@@ -1072,69 +1050,25 @@
             const demA = parseFloat(document.getElementById('demA').innerText);
             const demB = parseFloat(document.getElementById('demB').innerText);
             const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub');
+            if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; return; }
             
-            if (vA === 0 && vB === 0) { 
-                verdict.innerText = "--"; 
-                verdict.className = "v-text"; 
-                vSub.innerText = "Add pets to calculate trade results";
-                return; 
-            }
-            
-            const diff = vB - vA;
-            const pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
-            const isTargetingMega = state.B.some(p => p.type === 'mega');
-            const demGap = demA - demB;
+            const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
+            const isTargetingMega = state.B.some(p => p.type === 'mega'), demGap = demA - demB;
 
-            if (Math.abs(diff) < 0.01) { 
-                verdict.innerText = "FAIR"; 
-                verdict.className = "v-text fair-c"; 
-                vSub.innerText = "The trade is perfectly balanced in value."; 
-            }
+            if (Math.abs(diff) < 0.01) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "The trade is perfectly balanced in value."; }
             else if (diff > 0) {
-                // FIXED TRAP LOGIC: Check demand gap and trash pets
-                if (demGap >= 3 && pDiff < 0.4) { 
-                    verdict.innerText = "TRAP"; 
-                    verdict.className = "v-text trap-c"; 
-                    vSub.innerText = "Demand Gap! You are losing too much liquidity."; 
-                }
-                else if (isTargetingMega && pDiff < 0.02) { 
-                    verdict.innerText = "FAIR / RISKY"; 
-                    verdict.className = "v-text fair-c"; 
-                    vSub.innerText = "Technically a win, but Megas are harder to trade."; 
-                } 
+                if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Demand Gap! You are losing too much liquidity."; }
+                else if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Technically a win, but Megas are harder to trade."; } 
                 else {
-                    const hasSpecial = state.B.some(p => { 
-                        const c = (p.cat || "").toLowerCase(); 
-                        return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); 
-                    });
-                    
-                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { 
-                        verdict.innerText = "TRAP"; 
-                        verdict.className = "v-text trap-c"; 
-                        vSub.innerText = "Low demand items require a massive overpay."; 
-                    } 
-                    else { 
-                        verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; 
-                        verdict.className = "v-text win-c"; 
-                        vSub.innerText = "You are gaining significant value.";
-                        playSfx('win'); 
-                    }
+                    const hasSpecial = state.B.some(p => { const c = (p.cat || "").toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
+                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items require a massive overpay."; } 
+                    else { verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; verdict.className = "v-text win-c"; vSub.innerText = "You are gaining significant value."; playSfx('win'); }
                 }
-            } else { 
-                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; 
-                verdict.className = "v-text lose-c"; 
-                vSub.innerText = "You are overpaying for this trade.";
-            }
-            
+            } else { verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; verdict.className = "v-text lose-c"; vSub.innerText = "You are overpaying for this trade."; }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
         }
 
-        function render() { 
-            renderSide('A'); 
-            renderSide('B'); 
-            calculate(); 
-            updateTradeSuggestions(); 
-        }
+        function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
         function setMode(m) { state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost'); document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); }
         function tog(s, uid, type) {
             pushState(); const p = state[s].find(x => x.uid === uid);
@@ -1145,8 +1079,40 @@
             else if (type === 'r') p.r_st = !p.r_st;
             saveTrade(); if (s === 'inv') renderInventory(); else render();
         }
+
+        // Fix for Smart Offer Suggestions
+        function updateTradeSuggestions() {
+            const container = document.getElementById('sideASuggestions');
+            const list = document.getElementById('suggestList');
+            const targetVal = parseFloat(document.getElementById('totB').innerText);
+            if (targetVal <= 0 || state.inv.length === 0) { container.style.display = 'none'; return; }
+            container.style.display = 'block'; list.innerHTML = '';
+            let pool = [...state.inv].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < 3; i++) {
+                let bundle = [], sum = 0;
+                for (let p of pool) {
+                    let v = calculatePetVal(p, state.mode);
+                    if (sum + v <= targetVal * 1.15) { bundle.push(p); sum += v; }
+                    if (sum >= targetVal * 0.9) break;
+                }
+                if (bundle.length > 0) {
+                    list.innerHTML += `<div class="suggest-pill" onclick='applySuggestion(${JSON.stringify(bundle.map(b=>b.uid))})'>
+                        <div class="suggest-items-text">${bundle.map(b=>b.n).join(' + ')}</div>
+                        <div class="suggest-val-text">${sum.toFixed(2)}</div>
+                    </div>`;
+                }
+            }
+        }
+
+        function applySuggestion(uids) {
+            pushState(); uids.forEach(uid => {
+                const item = state.inv.find(x => x.uid === uid);
+                if (item) state.A.push({...item, uid: Math.random()});
+            });
+            render(); saveTrade();
+        }
+
         loadPetData();
     </script>
 </body>
 </html>
-
