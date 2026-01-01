@@ -115,7 +115,7 @@
         .card {
             background: var(--card); border-radius: 14px; padding: 12px 8px;
             display: flex; flex-direction: column; align-items: center; position: relative;
-            border: 2px solid transparent; transition: all 0.2s;
+            border: 1.5px solid transparent; transition: all 0.2s;
         }
 
         .card:hover { border-color: var(--accent); transform: translateY(-2px); }
@@ -316,7 +316,7 @@
         .search-item-card {
             background: #262c3d; border-radius: 18px; padding: 15px 10px;
             display: flex; flex-direction: column; align-items: center; cursor: pointer;
-            transition: all 0.2s; border: 2px solid transparent;
+            transition: all 0.2s; border: 1.5px solid transparent;
         }
         .search-item-card:hover {
             background: #334155; transform: translateY(-4px); border-color: var(--accent);
@@ -377,13 +377,6 @@
         }
         .ai-count-control label { font-size: 0.75em; color: var(--subtext); font-weight: 700; }
         .ai-count-control input { cursor: pointer; accent-color: var(--accent); }
-
-        /* Live Counter Panel */
-        .live-counter-panel {
-            position: absolute; left: calc(100% + 15px); top: 0; width: 280px;
-            background: var(--panel); border-radius: 20px; border: 1.5px solid var(--border);
-            padding: 20px; display: none; z-index: 100;
-        }
     </style>
 </head>
 <body>
@@ -475,12 +468,8 @@
                     <option value="none">Rarity: None</option>
                     <option value="preppy">Preppy</option>
                     <option value="exotic">Exotic</option>
-                    <option value="classy">Classy</option>
-                    <option value="random">Randoms</option>
-                    <option value="high">High Tier</option>
-                    <option value="mid">Mid Tier</option>
                     <option value="legendary">Legendary</option>
-                    <option value="ultra">Ultra-Rare</option>
+                    <option value="ultra-rare">Ultra-Rare</option>
                     <option value="rare">Rare</option>
                     <option value="uncommon">Uncommon</option>
                     <option value="common">Common</option>
@@ -524,11 +513,6 @@
                 <span class="p-total" id="totB">0.000</span>
             </div>
             <div class="grid" id="gridB"></div>
-            
-            <div class="live-counter-panel" id="liveCounterOffer">
-                <h4 style="color:var(--accent); font-size: 13px; margin-bottom:10px;">🤖 AI Counter-Offer</h4>
-                <div id="liveAiTargetSuggestions"></div>
-            </div>
         </div>
     </div>
 
@@ -731,9 +715,9 @@
         }
 
         function getDemandColor(d) {
-            if (d >= 7) return '#4caf50'; // Green
-            if (d >= 4) return '#ffeb3b'; // Yellow
-            return '#f44336'; // Red
+            if (d >= 7) return '#4caf50';
+            if (d >= 4) return '#ffeb3b';
+            return '#f44336';
         }
 
         function filterAndRender(query) {
@@ -773,12 +757,10 @@
         }
 
         function addItem(element, name) {
-            // LIMIT CHECK: 18 Pets max
             if (state[state.target].length >= 18 && state.target !== 'inv') {
-                alert("Trade limit reached! Adopt Me only allows 18 pets per trade.");
+                alert("Trade limit reached! Adopt Me only allows 18 items per trade.");
                 return;
             }
-
             pushState();
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
@@ -895,7 +877,6 @@
             document.getElementById('invTotalValue').innerText = finalVal;
             document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
             
-            // Check Milestones
             const v = parseFloat(finalVal);
             document.getElementById('mile-1').classList.toggle('active', v >= 1);
             document.getElementById('mile-2').classList.toggle('active', v >= 10);
@@ -1056,7 +1037,6 @@
             document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
             document.getElementById(`cnt${s}`).innerText = list.length;
             document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
-            if(s === 'B') updateLiveCounterOffers();
         }
 
         // --- NEW REASONING ENGINE (SMART DESCRIPTIONS) ---
@@ -1119,7 +1099,6 @@
             saveTrade(); if (s === 'inv') renderInventory(); else render();
         }
 
-        // Fix for Smart Offer Suggestions
         function updateTradeSuggestions() {
             const container = document.getElementById('sideASuggestions');
             const list = document.getElementById('suggestList');
