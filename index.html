@@ -1072,19 +1072,60 @@
             const demA = parseFloat(document.getElementById('demA').innerText);
             const demB = parseFloat(document.getElementById('demB').innerText);
             const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub');
-            if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; return; }
-            const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
-            const isTargetingMega = state.B.some(p => p.type === 'mega'), demGap = demA - demB;
-            if (vA === vB) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "Perfectly balanced."; }
+            
+            if (vA === 0 && vB === 0) { 
+                verdict.innerText = "--"; 
+                verdict.className = "v-text"; 
+                vSub.innerText = "Add pets to calculate trade results";
+                return; 
+            }
+            
+            const diff = vB - vA;
+            const pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
+            const isTargetingMega = state.B.some(p => p.type === 'mega');
+            const demGap = demA - demB;
+
+            if (Math.abs(diff) < 0.01) { 
+                verdict.innerText = "FAIR"; 
+                verdict.className = "v-text fair-c"; 
+                vSub.innerText = "The trade is perfectly balanced in value."; 
+            }
             else if (diff > 0) {
-                if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Demand Gap Trap!"; }
-                else if (isTargetingMega && pDiff < 0.02) { verdict.innerText = "FAIR / RISKY"; verdict.className = "v-text fair-c"; vSub.innerText = "Mega liquidity risk."; } 
-                else {
-                    const hasSpecial = state.B.some(p => { const c = p.cat.toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
-                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "Low demand items require overpay."; } 
-                    else { if (pDiff >= 0.15) verdict.innerText = "BIG WIN"; else if (pDiff >= 0.03) verdict.innerText = "WIN"; else verdict.innerText = "SLIGHT WIN"; verdict.className = "v-text win-c"; playSfx('win'); }
+                // FIXED TRAP LOGIC: Check demand gap and trash pets
+                if (demGap >= 3 && pDiff < 0.4) { 
+                    verdict.innerText = "TRAP"; 
+                    verdict.className = "v-text trap-c"; 
+                    vSub.innerText = "Demand Gap! You are losing too much liquidity."; 
                 }
-            } else { verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : (pDiff <= -0.03 ? "LOSE" : "SLIGHT LOSE"); verdict.className = "v-text lose-c"; }
+                else if (isTargetingMega && pDiff < 0.02) { 
+                    verdict.innerText = "FAIR / RISKY"; 
+                    verdict.className = "v-text fair-c"; 
+                    vSub.innerText = "Technically a win, but Megas are harder to trade."; 
+                } 
+                else {
+                    const hasSpecial = state.B.some(p => { 
+                        const c = (p.cat || "").toLowerCase(); 
+                        return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); 
+                    });
+                    
+                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { 
+                        verdict.innerText = "TRAP"; 
+                        verdict.className = "v-text trap-c"; 
+                        vSub.innerText = "Low demand items require a massive overpay."; 
+                    } 
+                    else { 
+                        verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; 
+                        verdict.className = "v-text win-c"; 
+                        vSub.innerText = "You are gaining significant value.";
+                        playSfx('win'); 
+                    }
+                }
+            } else { 
+                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; 
+                verdict.className = "v-text lose-c"; 
+                vSub.innerText = "You are overpaying for this trade.";
+            }
+            
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
         }
 
@@ -1108,3 +1149,4 @@
     </script>
 </body>
 </html>
+
