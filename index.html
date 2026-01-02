@@ -82,7 +82,7 @@
         .container {
             width: 100%; max-width: 1150px; display: flex; gap: 25px;
             flex-wrap: wrap; margin-top: 40px;
-            margin-bottom: 280px; /* Increased margin for gauge */
+            margin-bottom: 280px;
         }
 
         .trade-panel {
@@ -175,47 +175,23 @@
             left: 50%; transform: translateX(-50%);
         }
 
-        /* Gauge Feature Styles */
         .gauge-wrapper {
-            width: 100%;
-            height: 24px;
-            background: #0f172a;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            position: relative;
-            border: 1px solid var(--border);
+            width: 100%; height: 24px; background: #0f172a; border-radius: 12px;
+            margin-bottom: 15px; position: relative; border: 1px solid var(--border);
             overflow: hidden;
         }
-        
         .gauge-bar {
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
             background: linear-gradient(90deg, #ef4444 0%, #facc15 50%, #10b981 100%);
         }
-
         .gauge-bar.trap-active {
-            background: repeating-linear-gradient(
-                45deg,
-                #b45309,
-                #b45309 10px,
-                #f59e0b 10px,
-                #f59e0b 20px
-            );
+            background: repeating-linear-gradient(45deg, #b45309, #b45309 10px, #f59e0b 10px, #f59e0b 20px);
         }
-
         .gauge-needle {
-            position: absolute;
-            top: -2px;
-            left: 50%;
-            width: 4px;
-            height: 28px;
-            background: white;
-            border: 1px solid black;
-            transform: translateX(-50%);
+            position: absolute; top: -2px; left: 50%; width: 4px; height: 28px;
+            background: white; border: 1px solid black; transform: translateX(-50%);
             transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            border-radius: 2px;
-            z-index: 2;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            border-radius: 2px; z-index: 2; box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
         .v-text {
@@ -279,7 +255,7 @@
         .inv-header {
             padding: 25px; border-bottom: 1.5px solid var(--border);
             display: flex; justify-content: space-between; align-items: center;
-            background: #111827;
+            background: #111827; flex-wrap: wrap; gap: 10px;
         }
         .inv-body { display: flex; flex: 1; overflow: hidden; }
         .inv-list { flex: 1.5; padding: 25px; overflow-y: auto; border-right: 1.5px solid var(--border); }
@@ -430,7 +406,6 @@
         .ai-count-control label { font-size: 0.75em; color: var(--subtext); font-weight: 700; }
         .ai-count-control input { cursor: pointer; accent-color: var(--accent); }
 
-        /* History Feature Styles */
         .history-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
@@ -457,7 +432,6 @@
         .history-time { font-size: 0.7em; color: var(--subtext); margin-bottom: 5px; }
         .history-details { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 0.9em; }
 
-        /* Dream Pet Styles */
         .dream-progress-bg {
             width: 100%; height: 10px; background: #0f172a; border-radius: 5px; overflow: hidden; margin: 10px 0;
         }
@@ -470,6 +444,51 @@
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 10px;
         }
+
+        /* Analytics Overlay Styles */
+        #analyticsOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
+            display: none; align-items: center; justify-content: center; z-index: 6000;
+        }
+        .analytics-container {
+            width: 90%; max-width: 700px; background: #1a2333; border-radius: 24px;
+            border: 1px solid var(--border); padding: 30px; max-height: 90vh; overflow-y: auto;
+        }
+        .analytics-title { font-size: 1.5em; font-weight: 900; color: white; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+        .stat-section { margin-bottom: 25px; }
+        .stat-header { font-size: 1em; color: var(--accent); font-weight: 800; margin-bottom: 10px; text-transform: uppercase; }
+        .stat-row { display: flex; align-items: center; margin-bottom: 8px; font-size: 0.85em; }
+        .stat-label { width: 120px; font-weight: 700; color: var(--subtext); }
+        .bar-container { flex: 1; height: 12px; background: #0f172a; border-radius: 6px; overflow: hidden; margin: 0 15px; }
+        .bar-fill { height: 100%; border-radius: 6px; }
+        .stat-count { width: 60px; text-align: right; font-weight: 900; color: white; }
+
+        /* Quantity Modal Styles */
+        #qtyModalOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(5px);
+            display: none; align-items: center; justify-content: center; z-index: 7000;
+        }
+        .qty-modal {
+            background: var(--panel); border: 2px solid var(--accent);
+            padding: 30px; border-radius: 20px; text-align: center; width: 300px;
+        }
+        .qty-title { font-size: 1.2em; font-weight: 900; margin-bottom: 20px; color: white; }
+        .qty-input {
+            width: 100%; padding: 15px; border-radius: 12px; border: 2px solid var(--border);
+            background: #0f172a; color: white; font-size: 1.5em; font-weight: 900;
+            text-align: center; margin-bottom: 20px; outline: none;
+        }
+        .qty-input:focus { border-color: var(--accent); }
+        .qty-actions { display: flex; gap: 10px; }
+        .qty-btn { flex: 1; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer; border: none; }
+        .qty-confirm { background: var(--win); color: white; }
+        .qty-cancel { background: #334155; color: white; }
+
+        .header-tools { display: flex; gap: 8px; }
+        .tool-btn { background: #334155; border: 1px solid var(--border); color: white; padding: 6px 12px; border-radius: 8px; font-size: 0.75em; font-weight: 700; cursor: pointer; }
+        .tool-btn:hover { background: var(--card); border-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -479,12 +498,35 @@
         <div class="loading-text">Loading pet data from Google Sheets...</div>
     </div>
 
+    <!-- Analytics Overlay -->
+    <div id="analyticsOverlay">
+        <div class="analytics-container">
+            <div class="analytics-title">
+                Inventory Analytics
+                <button class="nav-btn" style="float: right; padding: 5px 15px; font-size: 0.6em;" onclick="closeAnalytics()">Close</button>
+            </div>
+            <div id="analyticsContent"></div>
+        </div>
+    </div>
+
+    <!-- Quantity Modal -->
+    <div id="qtyModalOverlay">
+        <div class="qty-modal">
+            <div class="qty-title">How many to add?</div>
+            <div id="qtyItemName" style="color: var(--subtext); margin-bottom: 10px; font-size: 0.9em;"></div>
+            <input type="number" id="qtyInput" class="qty-input" min="1" max="18" value="1">
+            <div class="qty-actions">
+                <button class="qty-btn qty-cancel" onclick="cancelQty()">Cancel</button>
+                <button class="qty-btn qty-confirm" onclick="confirmQty()">Add</button>
+            </div>
+        </div>
+    </div>
+
     <div class="nav-bar">
         <button class="nav-btn" onclick="openHistory()">📜 History</button>
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
     </div>
 
-    <!-- History Overlay -->
     <div class="history-overlay" id="historyOverlay">
         <div class="history-container">
             <div class="history-header">
@@ -511,7 +553,12 @@
         <div class="inv-container">
             <div class="inv-header">
                 <h2 style="font-weight: 900;">INVENTORY MANAGER</h2>
-                <button class="nav-btn" onclick="closeInventory()">Close</button>
+                <div class="header-tools">
+                    <button class="tool-btn" onclick="openAnalytics()">📊 View Portfolio</button>
+                    <button class="tool-btn" onclick="exportData()">⬇ Export Data</button>
+                    <button class="tool-btn" onclick="importData()">⬆ Import Data</button>
+                    <button class="nav-btn" style="padding: 6px 16px;" onclick="closeInventory()">Close</button>
+                </div>
             </div>
             <div class="inv-body">
                 <div class="inv-list">
@@ -549,7 +596,6 @@
                             <div class="ai-tog" id="aiTogVelocity" onclick="setAiStrategy('velocity')">Velocity Mode</div>
                         </div>
 
-                        <!-- Dream Pet UI -->
                         <div id="dreamPetContainer" style="margin-bottom: 15px;">
                             <button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>
                         </div>
@@ -634,7 +680,6 @@
     </div>
 
     <div class="verdict-box">
-        <!-- New Visual Gauge -->
         <div class="gauge-wrapper">
             <div id="gaugeBar" class="gauge-bar"></div>
             <div id="gaugeNeedle" class="gauge-needle"></div>
@@ -656,7 +701,8 @@
         let ALL_PETS = [];
         let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
         let history = []; 
-        let tradeLog = []; // New History Log
+        let tradeLog = []; 
+        let pendingAddItem = null; 
 
         let searchState = {
             currentMatches: [], 
@@ -881,32 +927,70 @@
             }).join('');
         }
 
+        // New Feature 3: Quantity Modal Logic
         function addItem(element, name) {
-            if (state[state.target] && state[state.target].length >= 18 && state.target !== 'inv' && state.target !== 'dream') {
-                alert("Trade limit reached! Adopt Me only allows 18 items per trade.");
+            // Feature 3: Instead of adding immediately, open modal
+            if (state.target === 'dream') {
+                const pet = ALL_PETS.find(x => x.n === name);
+                if (!pet) return;
+                state.dreamPet = { ...pet, uid: Math.random() };
+                renderInventory();
+                closeSearch();
                 return;
             }
+
+            pendingAddItem = { element, name };
+            document.getElementById('qtyItemName').innerText = name;
+            document.getElementById('qtyInput').value = 1;
+            document.getElementById('qtyModalOverlay').style.display = 'flex';
+            document.getElementById('qtyInput').focus();
+        }
+
+        function cancelQty() {
+            document.getElementById('qtyModalOverlay').style.display = 'none';
+            pendingAddItem = null;
+        }
+
+        function confirmQty() {
+            if (!pendingAddItem) return;
+            const { element, name } = pendingAddItem;
+            let qty = parseInt(document.getElementById('qtyInput').value);
+            if (isNaN(qty) || qty < 1) qty = 1;
+            
+            // Check limits
+            if (state.target !== 'inv' && state.target !== 'dream') {
+                if (state[state.target].length + qty > 18) {
+                    alert("Adding this quantity would exceed the 18 item trade limit!");
+                    return; 
+                }
+            }
+
             pushState();
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
-            const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
-            
+
+            for(let i=0; i<qty; i++) {
+                const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
+                if (state.target === 'inv') {
+                    state.inv.push(newPet);
+                } else {
+                    state[state.target].push(newPet);
+                }
+            }
+
             if (state.target === 'inv') {
-                state.inv.push(newPet);
                 renderInventory();
-                element.classList.add('added');
-                setTimeout(() => element.classList.remove('added'), 500);
-            } else if (state.target === 'dream') {
-                // Feature 3: Dream Pet Selection
-                state.dreamPet = newPet;
-                renderInventory(); // Re-render to show dream pet UI
-                closeSearch();
+                if(element) {
+                    element.classList.add('added');
+                    setTimeout(() => element.classList.remove('added'), 500);
+                }
             } else {
-                state[state.target].push(newPet);
                 render();
                 closeSearch(); 
             }
-            playSfx('pop'); saveTrade(); 
+            playSfx('pop'); 
+            saveTrade(); 
+            cancelQty();
         }
 
         function duplicate(s, uid) {
@@ -930,7 +1014,6 @@
         function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
         function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
-        // Feature 2: History Functions
         function openHistory() {
             const el = document.getElementById('historyOverlay');
             el.style.display = 'flex';
@@ -940,9 +1023,7 @@
         
         function logCurrentTrade() {
             if (state.A.length === 0 && state.B.length === 0) return;
-            // Limit history to 10
             if (tradeLog.length >= 10) tradeLog.shift();
-            
             const snapshot = {
                 timestamp: new Date().toLocaleTimeString(),
                 A: JSON.parse(JSON.stringify(state.A)),
@@ -970,7 +1051,6 @@
                 return;
             }
             list.innerHTML = tradeLog.slice().reverse().map((entry, idx) => {
-                // reverse index mapping
                 const originalIdx = tradeLog.length - 1 - idx;
                 return `
                 <div class="history-item" onclick="restoreFromLog(${originalIdx})">
@@ -981,6 +1061,103 @@
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // New Feature 1: Inventory Analytics
+        function openAnalytics() {
+            const content = document.getElementById('analyticsContent');
+            document.getElementById('analyticsOverlay').style.display = 'flex';
+            
+            const rarities = ['legendary', 'ultra-rare', 'rare', 'uncommon', 'common'];
+            const rarityCounts = {};
+            rarities.forEach(r => rarityCounts[r] = 0);
+            
+            // Simplified categories based on manual tags in 'cat' or general keywords
+            const categories = { 'preppy': 0, 'exotic': 0, 'old': 0, 'randoms': 0 };
+            
+            state.inv.forEach(p => {
+                // Rarity
+                const catStr = (p.cat || '').toLowerCase();
+                let rFound = false;
+                rarities.forEach(r => {
+                    if (catStr.includes(r)) { rarityCounts[r]++; rFound = true; }
+                });
+                if(!rFound) rarityCounts['common']++; // Fallback
+
+                // Category Logic
+                if (catStr.includes('preppy')) categories['preppy']++;
+                else if (catStr.includes('exotic')) categories['exotic']++;
+                else if (catStr.includes('old') || p.d > 5) categories['old']++;
+                else categories['randoms']++;
+            });
+
+            const total = state.inv.length || 1; // avoid div by 0
+
+            let html = '<div class="stat-section"><div class="stat-header">Rarity Breakdown</div>';
+            rarities.forEach(r => {
+                const count = rarityCounts[r];
+                const pct = ((count / total) * 100).toFixed(1);
+                const color = getRarityColor(r);
+                html += `
+                    <div class="stat-row">
+                        <div class="stat-label" style="color:${color}">${r.toUpperCase()}</div>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: ${pct}%; background-color: ${color};"></div>
+                        </div>
+                        <div class="stat-count">${count} (${pct}%)</div>
+                    </div>`;
+            });
+            html += '</div>';
+
+            html += '<div class="stat-section"><div class="stat-header">Category Estimates</div>';
+            Object.entries(categories).forEach(([key, count]) => {
+                const pct = ((count / total) * 100).toFixed(1);
+                html += `
+                    <div class="stat-row">
+                        <div class="stat-label">${key.toUpperCase()}</div>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: ${pct}%; background-color: var(--frost);"></div>
+                        </div>
+                        <div class="stat-count">${count}</div>
+                    </div>`;
+            });
+            html += '</div>';
+            
+            content.innerHTML = html;
+        }
+
+        function closeAnalytics() { document.getElementById('analyticsOverlay').style.display = 'none'; }
+
+        // New Feature 2: Export/Import
+        function exportData() {
+            const json = JSON.stringify(state.inv);
+            const encoded = btoa(json); // Base64 encode
+            navigator.clipboard.writeText(encoded).then(() => {
+                alert("Inventory data copied to clipboard!");
+            });
+        }
+
+        function importData() {
+            const code = prompt("Paste your inventory data code here:");
+            if (!code) return;
+            try {
+                const json = atob(code);
+                const data = JSON.parse(json);
+                if (!Array.isArray(data)) throw new Error("Invalid Format");
+                
+                // Validate items exist in DB
+                const validItems = data.filter(item => ALL_PETS.some(p => p.n === item.n)).map(item => {
+                    const fresh = ALL_PETS.find(p => p.n === item.n);
+                    return { ...fresh, uid: Math.random(), type: item.type || 'reg', f_st: item.f_st || false, r_st: item.r_st || false };
+                });
+
+                state.inv = validItems;
+                renderInventory();
+                saveTrade();
+                alert(`Successfully imported ${validItems.length} items.`);
+            } catch (e) {
+                alert("Error: Invalid or corrupt data code.");
+            }
         }
 
         function calculatePetVal(p, mode) {
@@ -1141,7 +1318,6 @@
             const dreamContainer = document.getElementById('dreamPetContainer');
             
             if (state.dreamPet) {
-                // FEATURE 3: DREAM PET LOGIC
                 dreamContainer.innerHTML = `
                     <div class="dream-active-badge">
                         <span>Target: ${state.dreamPet.n}</span>
@@ -1149,7 +1325,7 @@
                     </div>`;
 
                 const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
-                const dreamVal = calculatePetVal(state.dreamPet, 'value'); // Use Value mode for searching
+                const dreamVal = calculatePetVal(state.dreamPet, 'value');
                 const pct = Math.min((totalInvVal / dreamVal) * 100, 100).toFixed(1);
                 
                 let suggestions = `
@@ -1161,15 +1337,12 @@
                     </div>
                 `;
 
-                // Logic: Find closest combination in inventory to dreamVal
                 let bestCombos = [];
                 const shuffled = [...inventory].sort(() => Math.random() - 0.5);
                 
-                // Try 100 random combinations
                 for(let i=0; i<100; i++) {
                     let combo = [];
                     let sum = 0;
-                    // Fisher-Yates shuffle for every iteration is expensive, just slight randomize
                     const attempt = shuffled.sort(() => Math.random() - 0.5); 
                     for(let p of attempt) {
                         let val = calculatePetVal(p, 'value');
@@ -1187,9 +1360,7 @@
                     }
                 }
 
-                // Sort by closest diff
                 bestCombos.sort((a,b) => a.diff - b.diff);
-                // Deduplicate somewhat based on sum
                 bestCombos = bestCombos.filter((v,i,a)=>a.findIndex(t=>(t.sum===v.sum))===i).slice(0, 5);
 
                 box.innerHTML = suggestions + bestCombos.map(r => {
@@ -1209,7 +1380,6 @@
                 dreamContainer.innerHTML = `<button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>`;
             }
 
-            // EXISTING AI LOGIC
             if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to inventory...</div>`; return; }
 
             const shuffled = [...inventory].sort(() => Math.random() - 0.5);
@@ -1299,7 +1469,6 @@
             document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
         }
 
-        // --- NEW REASONING ENGINE (SMART DESCRIPTIONS) ---
         function calculate() {
             const vA = parseFloat(document.getElementById('totA').innerText);
             const vB = parseFloat(document.getElementById('totB').innerText);
@@ -1307,14 +1476,13 @@
             const demB = parseFloat(document.getElementById('demB').innerText);
             const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub');
             
-            // Feature 1: Visual Gauge Logic
             const gaugeNeedle = document.getElementById('gaugeNeedle');
             const gaugeBar = document.getElementById('gaugeBar');
             let isTrap = false;
 
             if (vA === 0 && vB === 0) { 
                 verdict.innerText = "--"; verdict.className = "v-text"; 
-                gaugeNeedle.style.left = "50%"; // Center
+                gaugeNeedle.style.left = "50%";
                 gaugeBar.classList.remove('trap-active');
                 return; 
             }
@@ -1323,9 +1491,6 @@
             const demGap = demA - demB;
             const isTargetingMega = state.B.some(p => p.type === 'mega');
 
-            // Gauge Position Calculation
-            // Map pDiff -0.15 to 0%, 0 to 50%, +0.15 to 100%
-            // Formula: 50 + (pDiff / 0.15 * 50)
             let needlePos = 50 + (pDiff / 0.15 * 50);
             if (needlePos < 0) needlePos = 0;
             if (needlePos > 100) needlePos = 100;
@@ -1336,7 +1501,6 @@
                 vSub.innerText = "The trade is perfectly balanced in value. No one gain or loses raw wealth."; 
             }
             else if (diff > 0) {
-                // TRAP LOGIC
                 if (demGap >= 3 && pDiff < 0.4) {
                     verdict.innerText = "TRAP"; verdict.className = "v-text trap-c";
                     vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`;
@@ -1366,7 +1530,6 @@
             }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
             
-            // Visual Trap Indicator
             if (isTrap) gaugeBar.classList.add('trap-active');
             else gaugeBar.classList.remove('trap-active');
         }
