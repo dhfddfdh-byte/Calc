@@ -176,92 +176,43 @@
         }
 
         .gauge-wrapper {
-            width: 100%; height: 24px; background: #0f172a; border-radius: 12px;
-            margin-bottom: 15px; position: relative; border: 1px solid var(--border);
-            overflow: hidden;
+            width: 100%; height: 24px; background: #0f172a; border-radius: 12px; margin-bottom: 15px; position: relative; border: 1px solid var(--border); overflow: hidden;
         }
         
-        .gauge-bar {
-            width: 100%; height: 100%;
-            background: linear-gradient(90deg, #ef4444 0%, #facc15 50%, #10b981 100%);
-        }
-
-        .gauge-bar.trap-active {
-            background: repeating-linear-gradient(45deg, #b45309, #b45309 10px, #f59e0b 10px, #f59e0b 20px);
-        }
+        .gauge-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #facc15 50%, #10b981 100%); }
+        .gauge-bar.trap-active { background: repeating-linear-gradient(45deg, #b45309, #b45309 10px, #f59e0b 10px, #f59e0b 20px); }
 
         .gauge-needle {
-            position: absolute; top: -2px; left: 50%; width: 4px; height: 28px;
-            background: white; border: 1px solid black; transform: translateX(-50%);
-            transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            border-radius: 2px; z-index: 2; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            position: absolute; top: -2px; left: 50%; width: 4px; height: 28px; background: white; border: 1px solid black; transform: translateX(-50%); transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 2px; z-index: 2; box-shadow: 0 0 10px rgba(0,0,0,0.5);
         }
 
         .v-text {
-            font-size: clamp(2em, 8vw, 3.5em); font-weight: 950; line-height: 1; 
-            margin-bottom: 8px; letter-spacing: -2px;
+            font-size: clamp(2em, 8vw, 3.5em); font-weight: 950; line-height: 1; margin-bottom: 8px; letter-spacing: -2px;
         }
 
         .v-diff { font-weight: 800; font-size: clamp(0.9em, 3vw, 1.2em); margin-bottom: 5px; color: white; }
-        .v-sub {
-            color: var(--subtext); font-style: italic; font-size: clamp(0.75em, 2vw, 0.95em);
-            margin-bottom: 18px; line-height: 1.4; padding: 0 10px;
-        }
+        .v-sub { color: var(--subtext); font-style: italic; font-size: clamp(0.75em, 2vw, 0.95em); margin-bottom: 18px; line-height: 1.4; padding: 0 10px; }
 
-        .switches {
-            display: inline-flex; background: #0f172a; padding: 5px; border-radius: 25px;
-            align-items: center; gap: 10px;
-        }
-
-        .sw-btn {
-            background: transparent; border: none; color: var(--subtext);
-            padding: 8px 24px; border-radius: 20px; cursor: pointer; font-weight: 800;
-        }
+        .switches { display: inline-flex; background: #0f172a; padding: 5px; border-radius: 25px; align-items: center; gap: 10px; }
+        .sw-btn { background: transparent; border: none; color: var(--subtext); padding: 8px 24px; border-radius: 20px; cursor: pointer; font-weight: 800; }
         .sw-btn.active { background: var(--accent); color: white; }
 
-        .save-trade-btn {
-            background: #334155; color: white; border: none;
-            padding: 8px 16px; border-radius: 20px; cursor: pointer;
-            font-weight: 700; font-size: 0.8em; margin-left: 5px;
-        }
+        .save-trade-btn { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 700; font-size: 0.8em; margin-left: 5px; }
         .save-trade-btn:hover { background: var(--accent); }
 
-        .inv-suggest-container {
-            padding: 15px; border-top: 1px solid rgba(255,255,255,0.05);
-            background: rgba(99, 102, 241, 0.03); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px;
-        }
-        .inv-suggest-title {
-            font-size: 0.8em; font-weight: 900; color: var(--accent);
-            text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 5px;
-        }
+        .inv-suggest-container { padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(99, 102, 241, 0.03); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; }
+        .inv-suggest-title { font-size: 0.8em; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
         .suggest-pill-row { display: flex; flex-direction: column; gap: 8px; }
         .suggest-pill {
-            background: var(--card); border: 1px solid var(--border); padding: 8px 12px;
-            border-radius: 12px; font-size: 0.75em; cursor: pointer; transition: 0.2s;
-            display: flex; justify-content: space-between; align-items: center;
+            background: var(--card); border: 1px solid var(--border); padding: 8px 12px; border-radius: 12px; font-size: 0.75em; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;
         }
         .suggest-pill:hover { border-color: var(--accent); background: #262c3d; }
         .suggest-items-text { font-weight: 700; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
         .suggest-val-text { font-weight: 900; color: var(--win); }
 
-        .inv-overlay, .analytics-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
-            display: none; align-items: center; justify-content: center;
-            z-index: 3000;
-        }
-        .inv-container, .analytics-container {
-            width: 95%; max-width: 1100px; background: #1a2333; border-radius: 28px;
-            border: 1px solid var(--border); display: flex; flex-direction: column;
-            max-height: 85vh; overflow: hidden;
-        }
-        .analytics-container { max-width: 800px; }
-        
-        .inv-header {
-            padding: 25px; border-bottom: 1.5px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
-            background: #111827; flex-wrap: wrap; gap: 10px;
-        }
+        .inv-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 3000; }
+        .inv-container { width: 95%; max-width: 1100px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); display: flex; flex-direction: column; max-height: 85vh; overflow: hidden; }
+        .inv-header { padding: 25px; border-bottom: 1.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #111827; }
         .inv-body { display: flex; flex: 1; overflow: hidden; }
         .inv-list { flex: 1.5; padding: 25px; overflow-y: auto; border-right: 1.5px solid var(--border); }
         .inv-stats { flex: 1.2; padding: 30px; background: #0f172a; overflow-y: auto; }
@@ -293,175 +244,73 @@
         .ai-tog { flex: 1; text-align: center; font-size: 0.7em; font-weight: 900; padding: 8px; border-radius: 7px; cursor: pointer; color: var(--subtext); transition: 0.2s; }
         .ai-tog.active { background: var(--accent); color: white; }
 
-        .search-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.3s;
-        }
+        .search-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .search-overlay.open { opacity: 1; pointer-events: auto; }
-
-        .search-container {
-            width: 95%; max-width: 900px; background: #1a2333; border-radius: 28px;
-            border: 1px solid var(--border); display: flex; flex-direction: column;
-            max-height: 85vh; box-shadow: 0 25px 60px rgba(0,0,0,0.6); overflow: hidden;
-            transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        .search-container { width: 95%; max-width: 900px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); display: flex; flex-direction: column; max-height: 85vh; box-shadow: 0 25px 60px rgba(0,0,0,0.6); overflow: hidden; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .search-overlay.open .search-container { transform: scale(1); }
-
-        .search-header {
-            padding: 20px 25px; display: flex; gap: 12px; align-items: center;
-            background: #111827; border-bottom: 1px solid var(--border);
-            flex-wrap: wrap;
-        }
-
+        .search-header { padding: 20px 25px; display: flex; gap: 12px; align-items: center; background: #111827; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
         .search-input-wrapper { flex: 2; position: relative; display: flex; align-items: center; min-width: 200px; }
-
-        #mainSearch {
-            width: 100%; padding: 14px 15px 14px 45px; background: #262c3d;
-            border: 1px solid #334155; border-radius: 35px; color: white;
-            font-size: 1.1em; outline: none;
-        }
-
-        #sortSelect, #rarityFilter {
-            flex: 1; padding: 14px 15px; background: #262c3d;
-            border: 1px solid #334155; border-radius: 35px; color: #94a3b8;
-            font-size: 0.95em; font-weight: 600; outline: none; cursor: pointer;
-            min-width: 150px;
-        }
+        #mainSearch { width: 100%; padding: 14px 15px 14px 45px; background: #262c3d; border: 1px solid #334155; border-radius: 35px; color: white; font-size: 1.1em; outline: none; }
+        #sortSelect, #rarityFilter { flex: 1; padding: 14px 15px; background: #262c3d; border: 1px solid #334155; border-radius: 35px; color: #94a3b8; font-size: 0.95em; font-weight: 600; outline: none; cursor: pointer; min-width: 150px; }
         #sortSelect:hover, #rarityFilter:hover { border-color: var(--accent); color: white; }
-
         .search-icon-fixed { position: absolute; left: 18px; font-size: 1.2em; }
-        
-        .close-modal-btn {
-            width: 45px; height: 45px; background: #262c3d; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; cursor: pointer;
-            color: #94a3b8; font-size: 1.4em;
-        }
+        .close-modal-btn { width: 45px; height: 45px; background: #262c3d; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; font-size: 1.4em; }
         .close-modal-btn:hover { background: #ef4444; color: white; }
-
-        .results-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 12px; padding: 25px; overflow-y: auto; background: #161e2e;
-            scroll-behavior: smooth;
-        }
-
-        .search-item-card {
-            background: #262c3d; border-radius: 18px; padding: 15px 10px;
-            display: flex; flex-direction: column; align-items: center; cursor: pointer;
-            transition: all 0.2s; border: 1.5px solid transparent;
-        }
-        .search-item-card:hover {
-            background: #334155; transform: translateY(-4px); border-color: var(--accent);
-        }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 25px; overflow-y: auto; background: #161e2e; scroll-behavior: smooth; }
+        .search-item-card { background: #262c3d; border-radius: 18px; padding: 15px 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: all 0.2s; border: 1.5px solid transparent; }
+        .search-item-card:hover { background: #334155; transform: translateY(-4px); border-color: var(--accent); }
         .search-item-card.added { border-color: var(--win) !important; background: rgba(16, 185, 129, 0.1); }
-
-        .search-item-name {
-            font-size: 0.75em; font-weight: 800; color: #94a3b8; text-align: center;
-            margin-bottom: 10px; height: 2.5em; overflow: hidden;
-        }
-
-        .search-item-img {
-            width: 85px; height: 85px; object-fit: contain; margin-bottom: 10px;
-        }
+        .search-item-name { font-size: 0.75em; font-weight: 800; color: #94a3b8; text-align: center; margin-bottom: 10px; height: 2.5em; overflow: hidden; }
+        .search-item-img { width: 85px; height: 85px; object-fit: contain; margin-bottom: 10px; }
         .search-item-val { font-weight: 900; font-size: 1.2em; color: white; }
-        
-        .search-item-demand {
-            font-size: 0.9em; font-weight: 800; color: var(--demand-color);
-            margin-top: 2px; text-shadow: 0 0 5px rgba(251, 191, 36, 0.3);
-        }
-
+        .search-item-demand { font-size: 0.9em; font-weight: 800; color: var(--demand-color); margin-top: 2px; text-shadow: 0 0 5px rgba(251, 191, 36, 0.3); }
         .results-grid::-webkit-scrollbar { width: 10px; }
-        .results-grid::-webkit-scrollbar-thumb {
-            background: #334155; border-radius: 10px; border: 2px solid #161e2e;
-        }
+        .results-grid::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; border: 2px solid #161e2e; }
 
-        .win-c { color: var(--win); }
-        .lose-c { color: var(--lose); }
-        .trap-c { color: var(--trap); }
-        .fair-c { color: white; }
+        .win-c { color: var(--win); } .lose-c { color: var(--lose); } .trap-c { color: var(--trap); } .fair-c { color: white; }
+        @media (max-width: 768px) { .v-text { font-size: 2.5em; } .verdict-box { bottom: 15px; padding: 20px; } }
 
-        @media (max-width: 768px) {
-            .v-text { font-size: 2.5em; }
-            .verdict-box { bottom: 15px; padding: 20px; }
-        }
-
-        .similar-overlay, .history-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(8px);
-            display: none; align-items: center; justify-content: center;
-            z-index: 5000;
-        }
-        .similar-container, .history-container {
-            width: 90%; max-width: 600px; background: #1a2333; border-radius: 20px;
-            border: 1px solid var(--border); padding: 20px;
-            max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column;
-        }
-        .similar-item {
-            display: flex; align-items: center; gap: 15px; background: var(--card);
-            padding: 12px; border-radius: 12px; margin-bottom: 10px; cursor: pointer;
-            border: 1.5px solid transparent; transition: 0.2s;
-        }
+        .similar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 5000; }
+        .similar-container { width: 90%; max-width: 600px; background: #1a2333; border-radius: 20px; border: 1px solid var(--border); padding: 20px; max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; }
+        .similar-item { display: flex; align-items: center; gap: 15px; background: var(--card); padding: 12px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; border: 1.5px solid transparent; transition: 0.2s; }
         .similar-item:hover { border-color: var(--accent); background: #334155; }
         .similar-item.selected { border-color: var(--win); background: rgba(16, 185, 129, 0.05); }
         
-        .ai-count-control {
-            margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px;
-        }
+        .ai-count-control { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
         .ai-count-control label { font-size: 0.75em; color: var(--subtext); font-weight: 700; }
         .ai-count-control input { cursor: pointer; accent-color: var(--accent); }
 
-        .history-header {
-            padding: 10px 0 20px 0; border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .history-list { padding: 20px 0; overflow-y: auto; }
-        .history-item {
-            background: var(--panel); border: 1px solid var(--border);
-            padding: 15px; border-radius: 12px; margin-bottom: 10px;
-            cursor: pointer; transition: 0.2s;
-        }
+        .history-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4500; }
+        .history-container { width: 95%; max-width: 600px; background: #1a2333; border-radius: 20px; border: 1px solid var(--border); max-height: 80vh; display: flex; flex-direction: column; }
+        .history-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .history-list { padding: 20px; overflow-y: auto; }
+        .history-item { background: var(--panel); border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
         .history-item:hover { background: var(--card); border-color: var(--accent); }
         .history-time { font-size: 0.7em; color: var(--subtext); margin-bottom: 5px; }
         .history-details { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 0.9em; }
 
-        .dream-progress-bg {
-            width: 100%; height: 10px; background: #0f172a; border-radius: 5px; overflow: hidden; margin: 10px 0;
-        }
-        .dream-progress-fill {
-            height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease;
-        }
-        .dream-active-badge {
-            background: var(--accent); color: white; padding: 5px 10px;
-            border-radius: 8px; font-size: 0.8em; font-weight: 800;
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 10px;
-        }
+        .dream-progress-bg { width: 100%; height: 10px; background: #0f172a; border-radius: 5px; overflow: hidden; margin: 10px 0; }
+        .dream-progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; }
+        .dream-active-badge { background: var(--accent); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.8em; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 
-        /* Analytics and Modal Styles */
-        .analytics-body { padding: 30px; overflow-y: auto; color: white; }
-        .analytics-section { margin-bottom: 30px; }
-        .analytics-h { font-size: 1.1em; font-weight: 800; color: var(--accent); margin-bottom: 15px; text-transform: uppercase; }
-        .chart-row { display: flex; align-items: center; margin-bottom: 12px; }
-        .chart-label { width: 120px; font-size: 0.8em; color: var(--subtext); font-weight: 700; }
-        .chart-bar-bg { flex: 1; height: 12px; background: #0f172a; border-radius: 6px; overflow: hidden; margin: 0 15px; }
-        .chart-bar-fill { height: 100%; border-radius: 6px; }
-        .chart-val { width: 50px; text-align: right; font-size: 0.8em; font-weight: 900; }
+        /* Feature 1: Analytics Portfolio */
+        .analytics-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4600; }
+        .analytics-container { width: 95%; max-width: 700px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+        .analytics-body { padding: 30px; overflow-y: auto; }
+        .analytics-section { margin-bottom: 25px; }
+        .analytics-section h4 { color: var(--accent); margin-bottom: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9em; }
+        .bar-row { display: flex; align-items: center; margin-bottom: 12px; }
+        .bar-label { width: 100px; font-size: 0.8em; font-weight: 700; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bar-track { flex: 1; height: 10px; background: #0f172a; border-radius: 5px; margin: 0 15px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
+        .bar-stat { width: 60px; text-align: right; font-size: 0.8em; font-weight: 800; color: white; }
 
-        .qty-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(5px);
-            display: none; align-items: center; justify-content: center; z-index: 6000;
-        }
-        .qty-modal {
-            background: var(--panel); border: 1px solid var(--border);
-            padding: 30px; border-radius: 20px; text-align: center; width: 300px;
-        }
-        .qty-input {
-            background: var(--bg); border: 1px solid var(--border); color: white;
-            font-size: 1.5em; padding: 10px; border-radius: 10px; width: 80px;
-            text-align: center; margin: 20px 0; font-weight: 800;
-        }
+        /* Feature 3: Quantity Modal */
+        .qty-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 6000; }
+        .qty-modal { background: #1a2333; border: 1px solid var(--border); padding: 25px; border-radius: 20px; width: 300px; text-align: center; }
+        .qty-modal h3 { color: white; margin-bottom: 20px; font-size: 1.1em; }
+        .qty-input { background: #0f172a; border: 1px solid var(--border); color: white; font-size: 1.5em; padding: 10px; width: 100%; border-radius: 10px; text-align: center; margin-bottom: 20px; outline: none; }
+        .qty-input:focus { border-color: var(--accent); }
         .qty-actions { display: flex; gap: 10px; justify-content: center; }
     </style>
 </head>
@@ -477,6 +326,29 @@
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
     </div>
 
+    <!-- Analytics Overlay -->
+    <div class="analytics-overlay" id="analyticsOverlay">
+        <div class="analytics-container">
+            <div class="history-header">
+                <h3 style="color: white; font-weight: 900;">INVENTORY PORTFOLIO</h3>
+                <button class="nav-btn" style="padding: 5px 15px;" onclick="closeAnalytics()">Close</button>
+            </div>
+            <div class="analytics-body" id="analyticsBody"></div>
+        </div>
+    </div>
+
+    <!-- Quantity Modal -->
+    <div class="qty-modal-overlay" id="qtyModal" onclick="closeQtyModal()">
+        <div class="qty-modal" onclick="event.stopPropagation()">
+            <h3 id="qtyTitle">How many?</h3>
+            <input type="number" id="qtyInput" class="qty-input" min="1" max="18" value="1">
+            <div class="qty-actions">
+                <button class="nav-btn" onclick="confirmQty()">Add</button>
+                <button class="nav-btn" style="background: #ef4444; border-color: #b91c1c;" onclick="closeQtyModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- History Overlay -->
     <div class="history-overlay" id="historyOverlay">
         <div class="history-container">
@@ -486,32 +358,6 @@
             </div>
             <div class="history-list" id="historyList">
                 <div style="text-align: center; color: var(--subtext);">No history yet. Calculate trades to save them!</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Analytics Overlay -->
-    <div class="analytics-overlay" id="analyticsOverlay">
-        <div class="analytics-container">
-            <div class="inv-header">
-                <h2 style="font-weight: 900; color:white;">INVENTORY PORTFOLIO</h2>
-                <button class="nav-btn" onclick="document.getElementById('analyticsOverlay').style.display='none'">Close</button>
-            </div>
-            <div class="analytics-body" id="analyticsContent">
-                <!-- Content injected via JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Quantity Selector Modal -->
-    <div class="qty-modal-overlay" id="qtyModal">
-        <div class="qty-modal">
-            <h3 style="color:white; margin-bottom:5px;">Add Item</h3>
-            <div id="qtyItemName" style="color:var(--subtext); font-size:0.9em;">Pet Name</div>
-            <input type="number" id="qtyInput" class="qty-input" value="1" min="1" max="18">
-            <div class="qty-actions">
-                <button class="nav-btn" style="background:var(--lose); border-color:var(--lose);" onclick="closeQtySelector()">Cancel</button>
-                <button class="nav-btn" style="background:var(--win); border-color:var(--win);" onclick="confirmQtyAdd()">Add</button>
             </div>
         </div>
     </div>
@@ -529,10 +375,11 @@
     <div class="inv-overlay" id="invOverlay">
         <div class="inv-container">
             <div class="inv-header">
-                <div style="display:flex; align-items:center; gap:15px;">
-                    <h2 style="font-weight: 900;">INVENTORY MANAGER</h2>
-                    <button class="nav-btn" style="padding:8px 12px; font-size:0.75em;" onclick="exportData()">Export Data</button>
-                    <button class="nav-btn" style="padding:8px 12px; font-size:0.75em;" onclick="importData()">Import Data</button>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <h2 style="font-weight: 900;">INVENTORY</h2>
+                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em;" onclick="exportInv()">Export Data</button>
+                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em;" onclick="importInv()">Import Data</button>
+                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em; background: var(--accent); border-color: var(--accent);" onclick="openAnalytics()">View Portfolio</button>
                 </div>
                 <button class="nav-btn" onclick="closeInventory()">Close</button>
             </div>
@@ -542,8 +389,6 @@
                     <div class="grid" id="invGrid"></div>
                 </div>
                 <div class="inv-stats">
-                    <button class="nav-btn" style="width: 100%; margin-bottom: 20px; background:var(--accent); border-color:var(--accent);" onclick="openAnalytics()">View Portfolio</button>
-                    
                     <div class="stat-card">
                         <div class="stat-label">Total Normal Value</div>
                         <div class="stat-value" id="invTotalValue">0.00</div>
@@ -574,7 +419,6 @@
                             <div class="ai-tog" id="aiTogVelocity" onclick="setAiStrategy('velocity')">Velocity Mode</div>
                         </div>
 
-                        <!-- Dream Pet UI -->
                         <div id="dreamPetContainer" style="margin-bottom: 15px;">
                             <button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>
                         </div>
@@ -681,7 +525,7 @@
         let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
         let history = []; 
         let tradeLog = []; 
-        let qtyState = { petName: null, element: null };
+        let selectedPetForQty = null; // Temp storage for Qty Modal
 
         let searchState = {
             currentMatches: [], 
@@ -896,8 +740,12 @@
                 const val = state.mode === 'frost' ? p.f : p.v; 
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(p.d);
+                // Feature 3: Right Click trigger
                 return `
-                <div class="search-item-card" onclick="openQtySelector(this, '${p.n.replace(/'/g, "\\'")}')" style="border-color: ${rarityColor}">
+                <div class="search-item-card" 
+                     onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}', 1)" 
+                     oncontextmenu="event.preventDefault(); openQtyModal('${p.n.replace(/'/g, "\\'")}')"
+                     style="border-color: ${rarityColor}">
                     <div class="search-item-name">${p.n}</div>
                     <img src="${imgUrl}" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                     <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
@@ -906,72 +754,71 @@
             }).join('');
         }
 
-        // Feature 3: Quantity Selector Logic
-        function openQtySelector(element, name) {
-            if (state.target === 'dream') {
-                addItem(element, name); // Direct add for Dream Pet (single)
-                return;
-            }
-            qtyState.petName = name;
-            qtyState.element = element;
-            document.getElementById('qtyItemName').innerText = name;
+        // Feature 3: Quantity Modal Logic
+        function openQtyModal(name) {
+            selectedPetForQty = name;
+            document.getElementById('qtyTitle').innerText = `How many ${name}?`;
             document.getElementById('qtyInput').value = 1;
             document.getElementById('qtyModal').style.display = 'flex';
-            document.getElementById('qtyInput').focus();
+            setTimeout(() => document.getElementById('qtyInput').focus(), 50);
         }
 
-        function closeQtySelector() {
+        function closeQtyModal() {
             document.getElementById('qtyModal').style.display = 'none';
+            selectedPetForQty = null;
         }
 
-        function confirmQtyAdd() {
-            const qty = parseInt(document.getElementById('qtyInput').value);
-            if (!qty || qty < 1) return;
-            
-            const targetArr = state[state.target];
-            const currentCount = targetArr ? targetArr.length : 0;
-
-            if (state.target !== 'inv' && currentCount + qty > 18) {
-                alert(`Cannot add ${qty} items. Limit is 18. You have ${currentCount} items.`);
-                return;
+        function confirmQty() {
+            const count = parseInt(document.getElementById('qtyInput').value);
+            if (count > 0 && selectedPetForQty) {
+                // Pass null as element since we don't have the card reference here easily, 
+                // but animation isn't critical for bulk add.
+                addItem(null, selectedPetForQty, count);
             }
-
-            for(let i=0; i<qty; i++) {
-                addItem(qtyState.element, qtyState.petName, true);
-            }
-            playSfx('pop');
-            saveTrade();
-            closeQtySelector();
-            if(state.target !== 'inv') closeSearch();
+            closeQtyModal();
         }
 
-        function addItem(element, name, skipSound = false) {
-            // Check handled by wrapper now, but safety check for single adds
-            if (state[state.target] && state[state.target].length >= 18 && state.target !== 'inv' && state.target !== 'dream') {
-                if(!skipSound) alert("Trade limit reached!");
-                return;
+        function addItem(element, name, quantity = 1) {
+            // Check limits for non-inventory targets
+            if (state.target !== 'inv' && state.target !== 'dream') {
+                if ((state[state.target] ? state[state.target].length : 0) + quantity > 18) {
+                    alert("Trade limit reached! Adopt Me only allows 18 items per trade.");
+                    return;
+                }
             }
-            pushState();
+
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
-            const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
-            
+
+            pushState();
+
+            for (let i = 0; i < quantity; i++) {
+                const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
+                
+                if (state.target === 'inv') {
+                    state.inv.push(newPet);
+                } else if (state.target === 'dream') {
+                    state.dreamPet = newPet;
+                    break; // Only one dream pet
+                } else {
+                    state[state.target].push(newPet);
+                }
+            }
+
             if (state.target === 'inv') {
-                state.inv.push(newPet);
                 renderInventory();
-                if(element) {
+                if (element) {
                     element.classList.add('added');
                     setTimeout(() => element.classList.remove('added'), 500);
                 }
             } else if (state.target === 'dream') {
-                state.dreamPet = newPet;
                 renderInventory();
                 closeSearch();
             } else {
-                state[state.target].push(newPet);
                 render();
+                closeSearch(); 
             }
-            if(!skipSound) { playSfx('pop'); saveTrade(); }
+            playSfx('pop'); saveTrade(); 
         }
 
         function duplicate(s, uid) {
@@ -994,6 +841,123 @@
 
         function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
         function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
+
+        // Feature 2: Import/Export
+        function exportInv() {
+            const data = JSON.stringify(state.inv);
+            const encoded = btoa(unescape(encodeURIComponent(data))); // Base64 safe encoding
+            navigator.clipboard.writeText(encoded).then(() => {
+                alert("Inventory code copied to clipboard!");
+            });
+        }
+
+        function importInv() {
+            const code = prompt("Paste your inventory code here:");
+            if (!code) return;
+            try {
+                const decoded = decodeURIComponent(escape(atob(code)));
+                const data = JSON.parse(decoded);
+                
+                // Validate data structure
+                const validData = data.filter(item => ALL_PETS.some(p => p.n === item.n));
+                
+                if (validData.length > 0) {
+                    pushState();
+                    state.inv = validData.map(item => ({...item, uid: Math.random()}));
+                    renderInventory();
+                    alert(`Successfully imported ${validData.length} items!`);
+                    saveTrade();
+                } else {
+                    alert("Invalid data found. No items imported.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error importing data. Code might be invalid.");
+            }
+        }
+
+        // Feature 1: Analytics Portfolio
+        function openAnalytics() {
+            const overlay = document.getElementById('analyticsOverlay');
+            const body = document.getElementById('analyticsBody');
+            overlay.style.display = 'flex';
+            
+            // Calculate Stats
+            const rarities = {};
+            const categories = {};
+            let total = state.inv.length;
+
+            if (total === 0) {
+                body.innerHTML = '<div style="text-align:center; color:#94a3b8;">Inventory is empty. Add pets to see analytics.</div>';
+                return;
+            }
+
+            state.inv.forEach(p => {
+                // Rarity check
+                const r = (p.cat || 'unknown').toLowerCase();
+                let rKey = 'Common';
+                if(r.includes('legendary')) rKey = 'Legendary';
+                else if(r.includes('ultra')) rKey = 'Ultra-Rare';
+                else if(r.includes('rare')) rKey = 'Rare';
+                else if(r.includes('uncommon')) rKey = 'Uncommon';
+                rarities[rKey] = (rarities[rKey] || 0) + 1;
+
+                // Category check
+                let cKey = 'Randoms';
+                if(r.includes('preppy')) cKey = 'Preppy';
+                else if(r.includes('high tier')) cKey = 'High Tier';
+                else if(r.includes('exotic')) cKey = 'Exotic';
+                else if(r.includes('classy')) cKey = 'Classy';
+                categories[cKey] = (categories[cKey] || 0) + 1;
+            });
+
+            const generateBars = (data, colorMap) => {
+                return Object.entries(data)
+                    .sort((a,b) => b[1] - a[1])
+                    .map(([key, count]) => {
+                        const pct = ((count / total) * 100).toFixed(1);
+                        // Simple color logic if not in map
+                        const color = colorMap[key] || '#6366f1'; 
+                        return `
+                        <div class="bar-row">
+                            <div class="bar-label">${key}</div>
+                            <div class="bar-track">
+                                <div class="bar-fill" style="width: ${pct}%; background: ${color};"></div>
+                            </div>
+                            <div class="bar-stat">${count} (${pct}%)</div>
+                        </div>`;
+                    }).join('');
+            };
+
+            const rColors = {
+                'Legendary': 'var(--rarity-legendary)',
+                'Ultra-Rare': 'var(--rarity-ultra)',
+                'Rare': 'var(--rarity-rare)',
+                'Uncommon': 'var(--rarity-uncommon)',
+                'Common': 'var(--rarity-common)'
+            };
+
+            const cColors = {
+                'High Tier': '#a855f7',
+                'Preppy': '#ec4899',
+                'Exotic': '#06b6d4',
+                'Classy': '#f59e0b',
+                'Randoms': '#64748b'
+            };
+
+            body.innerHTML = `
+                <div class="analytics-section">
+                    <h4>Rarity Breakdown</h4>
+                    ${generateBars(rarities, rColors)}
+                </div>
+                <div class="analytics-section">
+                    <h4>Category Breakdown</h4>
+                    ${generateBars(categories, cColors)}
+                </div>
+            `;
+        }
+
+        function closeAnalytics() { document.getElementById('analyticsOverlay').style.display = 'none'; }
 
         function openHistory() {
             const el = document.getElementById('historyOverlay');
@@ -1043,107 +1007,6 @@
                     </div>
                 </div>`;
             }).join('');
-        }
-
-        // Feature 1: Inventory Analytics
-        function openAnalytics() {
-            const inv = state.inv;
-            const content = document.getElementById('analyticsContent');
-            const totalItems = inv.length;
-            
-            if (totalItems === 0) {
-                content.innerHTML = "Inventory is empty.";
-                document.getElementById('analyticsOverlay').style.display = 'flex';
-                return;
-            }
-
-            const rarityCounts = {};
-            const catCounts = {};
-
-            inv.forEach(p => {
-                let r = "Common";
-                if(p.cat.includes("legendary")) r = "Legendary";
-                else if(p.cat.includes("ultra")) r = "Ultra-Rare";
-                else if(p.cat.includes("rare")) r = "Rare";
-                else if(p.cat.includes("uncommon")) r = "Uncommon";
-                
-                rarityCounts[r] = (rarityCounts[r] || 0) + 1;
-
-                let c = "Randoms";
-                if(p.cat.includes("preppy")) c = "Preppy";
-                else if(p.cat.includes("exotic")) c = "Exotic";
-                else if(p.cat.includes("classy")) c = "Classy";
-                else if(p.cat.includes("high tier")) c = "High Tier";
-                
-                catCounts[c] = (catCounts[c] || 0) + 1;
-            });
-
-            const renderBars = (counts) => Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([label, count]) => {
-                const pct = ((count / totalItems) * 100).toFixed(1);
-                let color = varForLabel(label);
-                return `
-                <div class="chart-row">
-                    <div class="chart-label">${label}</div>
-                    <div class="chart-bar-bg"><div class="chart-bar-fill" style="width:${pct}%; background:${color};"></div></div>
-                    <div class="chart-val">${count} (${pct}%)</div>
-                </div>`;
-            }).join('');
-
-            content.innerHTML = `
-                <div class="analytics-section">
-                    <div class="analytics-h">Rarity Breakdown</div>
-                    ${renderBars(rarityCounts)}
-                </div>
-                <div class="analytics-section">
-                    <div class="analytics-h">Category Breakdown</div>
-                    ${renderBars(catCounts)}
-                </div>
-            `;
-            document.getElementById('analyticsOverlay').style.display = 'flex';
-        }
-
-        function varForLabel(l) {
-            l = l.toLowerCase();
-            if(l.includes('legendary')) return 'var(--rarity-legendary)';
-            if(l.includes('ultra')) return 'var(--rarity-ultra)';
-            if(l.includes('rare')) return 'var(--rarity-rare)';
-            if(l.includes('uncommon')) return 'var(--rarity-uncommon)';
-            if(l.includes('preppy')) return '#ec4899';
-            if(l.includes('high')) return 'var(--frost)';
-            if(l.includes('exotic')) return '#8b5cf6';
-            return 'var(--rarity-common)';
-        }
-
-        // Feature 2: Export/Import
-        function exportData() {
-            if(state.inv.length === 0) { alert("Inventory is empty!"); return; }
-            const json = JSON.stringify(state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })));
-            const code = btoa(encodeURIComponent(json));
-            navigator.clipboard.writeText(code).then(() => {
-                alert("Inventory code copied to clipboard!");
-            });
-        }
-
-        function importData() {
-            const code = prompt("Paste your Inventory Code here:");
-            if(!code) return;
-            try {
-                const json = decodeURIComponent(atob(code));
-                const items = JSON.parse(json);
-                if(!Array.isArray(items)) throw new Error("Invalid format");
-                
-                const hydrated = items.map(item => {
-                    const freshData = ALL_PETS.find(p => p.n === item.n);
-                    if (!freshData) return null; 
-                    return { ...freshData, ...item, uid: Math.random() }; 
-                }).filter(x => x);
-                
-                state.inv = hydrated;
-                renderInventory();
-                alert(`Successfully imported ${state.inv.length} items.`);
-            } catch(e) {
-                alert("Invalid Code. Import failed.");
-            }
         }
 
         function calculatePetVal(p, mode) {
@@ -1468,7 +1331,7 @@
 
             if (vA === 0 && vB === 0) { 
                 verdict.innerText = "--"; verdict.className = "v-text"; 
-                gaugeNeedle.style.left = "50%"; 
+                gaugeNeedle.style.left = "50%"; // Center
                 gaugeBar.classList.remove('trap-active');
                 return; 
             }
