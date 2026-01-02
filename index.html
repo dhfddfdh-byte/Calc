@@ -621,33 +621,34 @@
         function getTrendIcons(p) {
             if (!p) return "";
             let html = "";
+            try {
+                const parseTrend = (str, label) => {
+                    if (!str || typeof str !== 'string' || str.trim() === "") return { icon: "", text: "" };
+                    let parts = str.trim().split(' ');
+                    let icon = parts[0]; 
+                    let sentences = [];
+                    for (let i = 1; i < parts.length; i++) {
+                        let segment = parts[i];
+                        if (!segment.includes(':')) continue;
+                        let [t, val] = segment.split(':');
+                        let tier = t === 'Ne' ? 'Neon' : (t === 'M' ? 'Mega' : 'Normal');
+                        let action = val.includes('+') ? 'increased' : 'decreased';
+                        let amt = val.replace(/[+-]/, "").replace(/[VD]$/, "");
+                        sentences.push(`${tier} ${p.n} ${label} ${action} ${amt}`);
+                    }
+                    return { icon: icon, text: sentences.join('\n') };
+                };
 
-            const parseTrend = (str, label) => {
-                if (!str || typeof str !== 'string' || str.trim() === "") return { icon: "", text: "" };
-                let parts = str.trim().split(' ');
-                let icon = parts[0]; 
-                let sentences = [];
-                for (let i = 1; i < parts.length; i++) {
-                    let segment = parts[i].replace(/[VD]$/, ""); 
-                    if (!segment.includes(':')) continue;
-                    let [t, val] = segment.split(':');
-                    let tier = t === 'Ne' ? 'Neon' : (t === 'M' ? 'Mega' : 'Normal');
-                    let action = val.includes('+') ? 'increased' : 'decreased';
-                    let amt = val.replace(/[+-]/, "");
-                    sentences.push(`${tier} ${p.n} ${label} ${action} ${amt}`);
+                let vTrend = parseTrend(p.vt, "Value");
+                if (vTrend.icon) {
+                    html += `<span title="${vTrend.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${vTrend.icon}</span>`;
                 }
-                return { icon: icon, text: sentences.join('\n') };
-            };
 
-            let vTrend = parseTrend(p.vt, "Value");
-            if (vTrend.icon) {
-                html += `<span title="${vTrend.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${vTrend.icon}</span>`;
-            }
-
-            let dTrend = parseTrend(p.dt, "Demand");
-            if (dTrend.icon) {
-                html += `<span title="${dTrend.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${dTrend.icon}</span>`;
-            }
+                let dTrend = parseTrend(p.dt, "Demand");
+                if (dTrend.icon) {
+                    html += `<span title="${dTrend.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${dTrend.icon}</span>`;
+                }
+            } catch (err) { console.error("Trend Icon error:", err); }
             return html;
         }
 
