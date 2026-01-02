@@ -627,11 +627,19 @@
 
         function getTrendIcons(p) {
             if (!p) return "";
-            let icons = "";
-            // Extracts emojis if "value trend" or "demand trend" columns exist in Google Sheet
-            if (p.vt && typeof p.vt === 'string' && p.vt.trim() !== "") icons += p.vt.split(' ')[0]; 
-            if (p.dt && typeof p.dt === 'string' && p.dt.trim() !== "") icons += p.dt.split(' ')[0];
-            return icons ? `<span style="margin-left:4px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${icons}</span>` : "";
+            let html = "";
+            // Extract the emoji (first character) and the numerical text (the rest)
+            if (p.vt && typeof p.vt === 'string' && p.vt.trim() !== "") {
+                const icon = p.vt.split(' ')[0];
+                const hoverText = p.vt.substring(icon.length).trim();
+                html += `<span title="Value: ${hoverText}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${icon}</span>`;
+            }
+            if (p.dt && typeof p.dt === 'string' && p.dt.trim() !== "") {
+                const icon = p.dt.split(' ')[0];
+                const hoverText = p.dt.substring(icon.length).trim();
+                html += `<span title="Demand: ${hoverText}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${icon}</span>`;
+            }
+            return html;
         }
 
         async function loadPetData() {
