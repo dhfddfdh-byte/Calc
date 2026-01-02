@@ -525,14 +525,7 @@
         let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
         let history = []; 
         let tradeLog = []; 
-        let selectedPetForQty = null; // Temp storage for Qty Modal
-
-        let searchState = {
-            currentMatches: [], 
-            renderLimit: 50,    
-            sortMode: 'default',
-            rarityFilter: 'none'
-        };
+        let selectedPetForQty = null; 
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSfx(type) {
@@ -628,16 +621,32 @@
         function getTrendIcons(p) {
             if (!p) return "";
             let html = "";
-            // Extract the emoji (first character) and the numerical text (the rest)
-            if (p.vt && typeof p.vt === 'string' && p.vt.trim() !== "") {
-                const icon = p.vt.split(' ')[0];
-                const hoverText = p.vt.substring(icon.length).trim();
-                html += `<span title="Value: ${hoverText}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${icon}</span>`;
+
+            const parseTrend = (str, label) => {
+                if (!str || typeof str !== 'string' || str.trim() === "") return { icon: "", text: "" };
+                let parts = str.trim().split(' ');
+                let icon = parts[0]; 
+                let sentences = [];
+                for (let i = 1; i < parts.length; i++) {
+                    let segment = parts[i].replace(/[VD]$/, ""); 
+                    if (!segment.includes(':')) continue;
+                    let [t, val] = segment.split(':');
+                    let tier = t === 'Ne' ? 'Neon' : (t === 'M' ? 'Mega' : 'Normal');
+                    let action = val.includes('+') ? 'increased' : 'decreased';
+                    let amt = val.replace(/[+-]/, "");
+                    sentences.push(`${tier} ${p.n} ${label} ${action} ${amt}`);
+                }
+                return { icon: icon, text: sentences.join('\n') };
+            };
+
+            let vTrend = parseTrend(p.vt, "Value");
+            if (vTrend.icon) {
+                html += `<span title="${vTrend.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${vTrend.icon}</span>`;
             }
-            if (p.dt && typeof p.dt === 'string' && p.dt.trim() !== "") {
-                const icon = p.dt.split(' ')[0];
-                const hoverText = p.dt.substring(icon.length).trim();
-                html += `<span title="Demand: ${hoverText}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${icon}</span>`;
+
+            let dTrend = parseTrend(p.dt, "Demand");
+            if (dTrend.icon) {
+                html += `<span title="${dTrend.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${dTrend.icon}</span>`;
             }
             return html;
         }
@@ -800,25 +809,15 @@
                     return;
                 }
             }
-
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
-
             pushState();
-
             for (let i = 0; i < quantity; i++) {
                 const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
-                
-                if (state.target === 'inv') {
-                    state.inv.push(newPet);
-                } else if (state.target === 'dream') {
-                    state.dreamPet = newPet;
-                    break; 
-                } else {
-                    state[state.target].push(newPet);
-                }
+                if (state.target === 'inv') { state.inv.push(newPet); } 
+                else if (state.target === 'dream') { state.dreamPet = newPet; break; } 
+                else { state[state.target].push(newPet); }
             }
-
             if (state.target === 'inv') {
                 renderInventory();
                 if (element) {
