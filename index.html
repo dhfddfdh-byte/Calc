@@ -625,17 +625,6 @@
             }
         }
 
-        function getTrendIcons(p) {
-            let html = "";
-            if (p.vt && p.vt.trim() !== "") {
-                html += `<span title="${p.vt}" style="margin-left:4px; cursor:help; font-size:1.1em;">${p.vt.split(' ')[0]}</span>`;
-            }
-            if (p.dt && p.dt.trim() !== "") {
-                html += `<span title="${p.dt}" style="margin-left:4px; cursor:help; font-size:1.1em;">${p.dt.split(' ')[0]}</span>`;
-            }
-            return html ? `<span style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));">${html}</span>` : "";
-        }
-
         async function loadPetData() {
             try {
                 const response = await fetch(GOOGLE_SHEET_CSV_URL + "&t=" + Date.now());
@@ -725,6 +714,13 @@
             if (d >= 7) return '#4caf50';
             if (d >= 4) return '#ffeb3b';
             return '#f44336';
+        }
+
+        function getTrendIcons(p) {
+            let icons = "";
+            if (p.vt && p.vt.trim() !== "") icons += p.vt.split(' ')[0]; 
+            if (p.dt && p.dt.trim() !== "") icons += p.dt.split(' ')[0];
+            return icons ? `<span style="margin-left:4px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${icons}</span>` : "";
         }
 
         function renderDOM() {
