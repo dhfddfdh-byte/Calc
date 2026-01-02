@@ -625,6 +625,15 @@
             }
         }
 
+        function getTrendIcons(p) {
+            if (!p) return "";
+            let icons = "";
+            // Extracts emojis if "value trend" or "demand trend" columns exist in Google Sheet
+            if (p.vt && typeof p.vt === 'string' && p.vt.trim() !== "") icons += p.vt.split(' ')[0]; 
+            if (p.dt && typeof p.dt === 'string' && p.dt.trim() !== "") icons += p.dt.split(' ')[0];
+            return icons ? `<span style="margin-left:4px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${icons}</span>` : "";
+        }
+
         async function loadPetData() {
             try {
                 const response = await fetch(GOOGLE_SHEET_CSV_URL + "&t=" + Date.now());
@@ -716,11 +725,23 @@
             return '#f44336';
         }
 
-        function getTrendIcons(p) {
-            let icons = "";
-            if (p.vt && p.vt.trim() !== "") icons += p.vt.split(' ')[0]; 
-            if (p.dt && p.dt.trim() !== "") icons += p.dt.split(' ')[0];
-            return icons ? `<span style="margin-left:4px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${icons}</span>` : "";
+        function filterAndRender(query) {
+            let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
+            if (searchState.rarityFilter !== 'none') {
+                matches = matches.filter(p => (p.cat || "").toLowerCase().includes(searchState.rarityFilter));
+            }
+            const mode = searchState.sortMode;
+            if (mode !== 'default') {
+                matches.sort((a, b) => {
+                    if (mode === 'valHigh') return (state.mode === 'frost' ? b.f : b.v) - (state.mode === 'frost' ? a.f : a.v);
+                    if (mode === 'valLow') return (state.mode === 'frost' ? a.f : a.v) - (state.mode === 'frost' ? b.f : b.v);
+                    if (mode === 'demHigh') return b.d - a.d;
+                    if (mode === 'demLow') return a.d - b.d;
+                    return 0;
+                });
+            }
+            searchState.currentMatches = matches;
+            renderDOM();
         }
 
         function renderDOM() {
@@ -1008,7 +1029,7 @@
                 grid.innerHTML += `
                     <div class="card" style="border-color: ${rarityColor}">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
-                        <div class="del" onclick="removeStack('inv', ${stackUidsString})"></div>
+                        <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
                         <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
                         <div class="card-img-container" ondblclick="duplicate('inv', ${p.uid})"><img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp"></div>
                         <div class="card-name">${p.n}${getTrendIcons(p)}</div>
