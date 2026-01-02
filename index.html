@@ -60,6 +60,7 @@
             display: flex;
             justify-content: flex-end;
             margin-bottom: 10px;
+            gap: 10px;
         }
 
         .nav-btn {
@@ -81,7 +82,7 @@
         .container {
             width: 100%; max-width: 1150px; display: flex; gap: 25px;
             flex-wrap: wrap; margin-top: 40px;
-            margin-bottom: 250px;
+            margin-bottom: 280px; /* Increased margin for gauge */
         }
 
         .trade-panel {
@@ -174,6 +175,49 @@
             left: 50%; transform: translateX(-50%);
         }
 
+        /* Gauge Feature Styles */
+        .gauge-wrapper {
+            width: 100%;
+            height: 24px;
+            background: #0f172a;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            position: relative;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        
+        .gauge-bar {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ef4444 0%, #facc15 50%, #10b981 100%);
+        }
+
+        .gauge-bar.trap-active {
+            background: repeating-linear-gradient(
+                45deg,
+                #b45309,
+                #b45309 10px,
+                #f59e0b 10px,
+                #f59e0b 20px
+            );
+        }
+
+        .gauge-needle {
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            width: 4px;
+            height: 28px;
+            background: white;
+            border: 1px solid black;
+            transform: translateX(-50%);
+            transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 2px;
+            z-index: 2;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+
         .v-text {
             font-size: clamp(2em, 8vw, 3.5em); font-weight: 950; line-height: 1; 
             margin-bottom: 8px; letter-spacing: -2px;
@@ -187,6 +231,7 @@
 
         .switches {
             display: inline-flex; background: #0f172a; padding: 5px; border-radius: 25px;
+            align-items: center; gap: 10px;
         }
 
         .sw-btn {
@@ -194,6 +239,13 @@
             padding: 8px 24px; border-radius: 20px; cursor: pointer; font-weight: 800;
         }
         .sw-btn.active { background: var(--accent); color: white; }
+
+        .save-trade-btn {
+            background: #334155; color: white; border: none;
+            padding: 8px 16px; border-radius: 20px; cursor: pointer;
+            font-weight: 700; font-size: 0.8em; margin-left: 5px;
+        }
+        .save-trade-btn:hover { background: var(--accent); }
 
         .inv-suggest-container {
             padding: 15px; border-top: 1px solid rgba(255,255,255,0.05);
@@ -377,6 +429,47 @@
         }
         .ai-count-control label { font-size: 0.75em; color: var(--subtext); font-weight: 700; }
         .ai-count-control input { cursor: pointer; accent-color: var(--accent); }
+
+        /* History Feature Styles */
+        .history-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px);
+            display: none; align-items: center; justify-content: center;
+            z-index: 4500;
+        }
+        .history-container {
+            width: 95%; max-width: 600px; background: #1a2333; border-radius: 20px;
+            border: 1px solid var(--border); max-height: 80vh; display: flex; flex-direction: column;
+        }
+        .history-header {
+            padding: 20px; border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .history-list {
+            padding: 20px; overflow-y: auto;
+        }
+        .history-item {
+            background: var(--panel); border: 1px solid var(--border);
+            padding: 15px; border-radius: 12px; margin-bottom: 10px;
+            cursor: pointer; transition: 0.2s;
+        }
+        .history-item:hover { background: var(--card); border-color: var(--accent); }
+        .history-time { font-size: 0.7em; color: var(--subtext); margin-bottom: 5px; }
+        .history-details { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 0.9em; }
+
+        /* Dream Pet Styles */
+        .dream-progress-bg {
+            width: 100%; height: 10px; background: #0f172a; border-radius: 5px; overflow: hidden; margin: 10px 0;
+        }
+        .dream-progress-fill {
+            height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease;
+        }
+        .dream-active-badge {
+            background: var(--accent); color: white; padding: 5px 10px;
+            border-radius: 8px; font-size: 0.8em; font-weight: 800;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -387,7 +480,21 @@
     </div>
 
     <div class="nav-bar">
+        <button class="nav-btn" onclick="openHistory()">📜 History</button>
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
+    </div>
+
+    <!-- History Overlay -->
+    <div class="history-overlay" id="historyOverlay">
+        <div class="history-container">
+            <div class="history-header">
+                <h3 style="color: white;">Trade History (Last 10)</h3>
+                <button class="nav-btn" style="padding: 5px 15px;" onclick="closeHistory()">Close</button>
+            </div>
+            <div class="history-list" id="historyList">
+                <div style="text-align: center; color: var(--subtext);">No history yet. Calculate trades to save them!</div>
+            </div>
+        </div>
     </div>
 
     <div class="similar-overlay" id="similarOverlay" onclick="closeSimilarPopup()">
@@ -440,6 +547,11 @@
                         <div class="ai-toggle-group">
                             <div class="ai-tog active" id="aiTogNormal" onclick="setAiStrategy('normal')">Normal Mode</div>
                             <div class="ai-tog" id="aiTogVelocity" onclick="setAiStrategy('velocity')">Velocity Mode</div>
+                        </div>
+
+                        <!-- Dream Pet UI -->
+                        <div id="dreamPetContainer" style="margin-bottom: 15px;">
+                            <button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>
                         </div>
 
                         <div class="ai-count-control">
@@ -522,12 +634,19 @@
     </div>
 
     <div class="verdict-box">
+        <!-- New Visual Gauge -->
+        <div class="gauge-wrapper">
+            <div id="gaugeBar" class="gauge-bar"></div>
+            <div id="gaugeNeedle" class="gauge-needle"></div>
+        </div>
+        
         <div id="verdict" class="v-text">--</div>
         <div id="vDiff" class="v-diff">Difference: 0.000 (0.0%)</div>
         <div id="vSub" class="v-sub">Add pets to calculate trade results</div>
         <div class="switches">
             <button class="sw-btn active" id="btnFrost" onclick="setMode('frost')">Frost</button>
             <button class="sw-btn" id="btnValue" onclick="setMode('value')">Value</button>
+            <button class="save-trade-btn" onclick="logCurrentTrade()">Save to History</button>
         </div>
     </div>
 
@@ -535,8 +654,9 @@
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         
         let ALL_PETS = [];
-        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [] };
+        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
         let history = []; 
+        let tradeLog = []; // New History Log
 
         let searchState = {
             currentMatches: [], 
@@ -762,7 +882,7 @@
         }
 
         function addItem(element, name) {
-            if (state[state.target].length >= 18 && state.target !== 'inv') {
+            if (state[state.target] && state[state.target].length >= 18 && state.target !== 'inv' && state.target !== 'dream') {
                 alert("Trade limit reached! Adopt Me only allows 18 items per trade.");
                 return;
             }
@@ -776,6 +896,11 @@
                 renderInventory();
                 element.classList.add('added');
                 setTimeout(() => element.classList.remove('added'), 500);
+            } else if (state.target === 'dream') {
+                // Feature 3: Dream Pet Selection
+                state.dreamPet = newPet;
+                renderInventory(); // Re-render to show dream pet UI
+                closeSearch();
             } else {
                 state[state.target].push(newPet);
                 render();
@@ -804,6 +929,59 @@
 
         function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
         function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
+
+        // Feature 2: History Functions
+        function openHistory() {
+            const el = document.getElementById('historyOverlay');
+            el.style.display = 'flex';
+            renderHistoryLog();
+        }
+        function closeHistory() { document.getElementById('historyOverlay').style.display = 'none'; }
+        
+        function logCurrentTrade() {
+            if (state.A.length === 0 && state.B.length === 0) return;
+            // Limit history to 10
+            if (tradeLog.length >= 10) tradeLog.shift();
+            
+            const snapshot = {
+                timestamp: new Date().toLocaleTimeString(),
+                A: JSON.parse(JSON.stringify(state.A)),
+                B: JSON.parse(JSON.stringify(state.B)),
+                verdict: document.getElementById('verdict').innerText
+            };
+            tradeLog.push(snapshot);
+            alert("Trade Saved to History!");
+        }
+
+        function restoreFromLog(index) {
+            const entry = tradeLog[index];
+            if (!entry) return;
+            state.A = JSON.parse(JSON.stringify(entry.A));
+            state.B = JSON.parse(JSON.stringify(entry.B));
+            closeHistory();
+            render();
+            playSfx('pop');
+        }
+
+        function renderHistoryLog() {
+            const list = document.getElementById('historyList');
+            if (tradeLog.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: var(--subtext);">No history yet. Calculate trades to save them!</div>';
+                return;
+            }
+            list.innerHTML = tradeLog.slice().reverse().map((entry, idx) => {
+                // reverse index mapping
+                const originalIdx = tradeLog.length - 1 - idx;
+                return `
+                <div class="history-item" onclick="restoreFromLog(${originalIdx})">
+                    <div class="history-time">${entry.timestamp}</div>
+                    <div class="history-details">
+                        <span>${entry.A.length} Items vs ${entry.B.length} Items</span>
+                        <span style="color: ${entry.verdict.includes('WIN') ? 'var(--win)' : (entry.verdict.includes('LOSE') ? 'var(--lose)' : 'white')}">${entry.verdict}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
 
         function calculatePetVal(p, mode) {
             let val = 0;
@@ -953,8 +1131,85 @@
             renderInventory();
         }
 
+        function clearDreamPet() {
+            state.dreamPet = null;
+            renderInventory();
+        }
+
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
+            const dreamContainer = document.getElementById('dreamPetContainer');
+            
+            if (state.dreamPet) {
+                // FEATURE 3: DREAM PET LOGIC
+                dreamContainer.innerHTML = `
+                    <div class="dream-active-badge">
+                        <span>Target: ${state.dreamPet.n}</span>
+                        <span style="cursor: pointer;" onclick="clearDreamPet()">✕</span>
+                    </div>`;
+
+                const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
+                const dreamVal = calculatePetVal(state.dreamPet, 'value'); // Use Value mode for searching
+                const pct = Math.min((totalInvVal / dreamVal) * 100, 100).toFixed(1);
+                
+                let suggestions = `
+                    <div class="ai-summary">
+                        <b>Dream Progress:</b> ${pct}%
+                        <div class="dream-progress-bg">
+                            <div class="dream-progress-fill" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+
+                // Logic: Find closest combination in inventory to dreamVal
+                let bestCombos = [];
+                const shuffled = [...inventory].sort(() => Math.random() - 0.5);
+                
+                // Try 100 random combinations
+                for(let i=0; i<100; i++) {
+                    let combo = [];
+                    let sum = 0;
+                    // Fisher-Yates shuffle for every iteration is expensive, just slight randomize
+                    const attempt = shuffled.sort(() => Math.random() - 0.5); 
+                    for(let p of attempt) {
+                        let val = calculatePetVal(p, 'value');
+                        if (sum + val <= dreamVal * 1.1) {
+                            combo.push(p);
+                            sum += val;
+                        }
+                    }
+                    if(combo.length > 0) {
+                        bestCombos.push({ 
+                            offer: combo, 
+                            sum: sum, 
+                            diff: Math.abs(dreamVal - sum) 
+                        });
+                    }
+                }
+
+                // Sort by closest diff
+                bestCombos.sort((a,b) => a.diff - b.diff);
+                // Deduplicate somewhat based on sum
+                bestCombos = bestCombos.filter((v,i,a)=>a.findIndex(t=>(t.sum===v.sum))===i).slice(0, 5);
+
+                box.innerHTML = suggestions + bestCombos.map(r => {
+                    const diffVal = (state.dreamPet.v - r.sum).toFixed(2);
+                    return `
+                    <div class="ai-suggestion" style="border-left-color: var(--rarity-legendary);">
+                        Offer: ${r.offer.map(p => getFullName(p)).join(' + ')}<br>
+                        <div class="ai-stats-row">
+                            <span class="ai-stat-pill" style="background:#334155; color:white;">Total: ${r.sum.toFixed(2)}</span>
+                            <span class="ai-stat-pill" style="color: ${diffVal > 0 ? 'var(--lose)' : 'var(--win)'}">Remaining: ${diffVal}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                return;
+            } else {
+                dreamContainer.innerHTML = `<button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>`;
+            }
+
+            // EXISTING AI LOGIC
             if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to inventory...</div>`; return; }
 
             const shuffled = [...inventory].sort(() => Math.random() - 0.5);
@@ -1052,11 +1307,29 @@
             const demB = parseFloat(document.getElementById('demB').innerText);
             const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub');
             
-            if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; return; }
+            // Feature 1: Visual Gauge Logic
+            const gaugeNeedle = document.getElementById('gaugeNeedle');
+            const gaugeBar = document.getElementById('gaugeBar');
+            let isTrap = false;
+
+            if (vA === 0 && vB === 0) { 
+                verdict.innerText = "--"; verdict.className = "v-text"; 
+                gaugeNeedle.style.left = "50%"; // Center
+                gaugeBar.classList.remove('trap-active');
+                return; 
+            }
             
             const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
             const demGap = demA - demB;
             const isTargetingMega = state.B.some(p => p.type === 'mega');
+
+            // Gauge Position Calculation
+            // Map pDiff -0.15 to 0%, 0 to 50%, +0.15 to 100%
+            // Formula: 50 + (pDiff / 0.15 * 50)
+            let needlePos = 50 + (pDiff / 0.15 * 50);
+            if (needlePos < 0) needlePos = 0;
+            if (needlePos > 100) needlePos = 100;
+            gaugeNeedle.style.left = `${needlePos}%`;
 
             if (Math.abs(diff) < 0.01) { 
                 verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; 
@@ -1067,12 +1340,14 @@
                 if (demGap >= 3 && pDiff < 0.4) {
                     verdict.innerText = "TRAP"; verdict.className = "v-text trap-c";
                     vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`;
+                    isTrap = true;
                 }
                 else {
                     const hasSpecial = state.B.some(p => { const c = (p.cat || "").toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
                     if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { 
                         verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; 
                         vSub.innerText = "VALUE BAIT: They are offering low-demand 'trash' pets. You need a much higher overpay (1.5x+) to make this even remotely fair."; 
+                        isTrap = true;
                     } 
                     else {
                         verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; verdict.className = "v-text win-c";
@@ -1090,6 +1365,10 @@
                 }
             }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
+            
+            // Visual Trap Indicator
+            if (isTrap) gaugeBar.classList.add('trap-active');
+            else gaugeBar.classList.remove('trap-active');
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
