@@ -622,33 +622,32 @@
             if (!p) return "";
             let html = "";
             try {
-                const parseTrend = (str, label) => {
-                    if (!str || typeof str !== 'string' || str.trim() === "") return { icon: "", text: "" };
+                const generateTooltip = (str, label) => {
+                    if (!str || typeof str !== 'string' || str.trim() === "") return null;
                     let parts = str.trim().split(' ');
+                    if (parts.length < 2) return null;
+                    
                     let icon = parts[0]; 
                     let sentences = [];
                     for (let i = 1; i < parts.length; i++) {
                         let segment = parts[i];
                         if (!segment.includes(':')) continue;
-                        let [t, val] = segment.split(':');
-                        let tier = t === 'Ne' ? 'Neon' : (t === 'M' ? 'Mega' : 'Normal');
+                        let [tierKey, val] = segment.split(':');
+                        let tier = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
                         let action = val.includes('+') ? 'increased' : 'decreased';
-                        let amt = val.replace(/[+-]/, "").replace(/[VD]$/, "");
-                        sentences.push(`${tier} ${p.n} ${label} ${action} ${amt}`);
+                        let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
+                        sentences.push(`${tier} ${p.n} ${label} ${action} ${amount}`);
                     }
-                    return { icon: icon, text: sentences.join('\n') };
+                    return { icon, text: sentences.join(' | ') };
                 };
 
-                let vTrend = parseTrend(p.vt, "Value");
-                if (vTrend.icon) {
-                    html += `<span title="${vTrend.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${vTrend.icon}</span>`;
-                }
-
-                let dTrend = parseTrend(p.dt, "Demand");
-                if (dTrend.icon) {
-                    html += `<span title="${dTrend.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5));">${dTrend.icon}</span>`;
-                }
-            } catch (err) { console.error("Trend Icon error:", err); }
+                const vData = generateTooltip(p.vt, "Value");
+                if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help;">${vData.icon}</span>`;
+                
+                const dData = generateTooltip(p.dt, "Demand");
+                if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help;">${dData.icon}</span>`;
+                
+            } catch (err) { return ""; }
             return html;
         }
 
@@ -679,8 +678,8 @@
                     nfr_f: row.nfr_f || 0,
                     mfr_f: row.mfr_f || 0,
                     cat: (row.categories || row.rarity || '').toLowerCase(),
-                    vt: row['value trend'] || '', 
-                    dt: row['demand trend'] || ''
+                    vt: row['value trend'] || row['vt'] || '', 
+                    dt: row['demand trend'] || row['dt'] || ''
                 })).filter(p => p.n && p.n.length > 0);
                 
                 document.getElementById('loadingScreen').style.display = 'none';
