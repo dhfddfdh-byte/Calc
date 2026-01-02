@@ -625,6 +625,17 @@
             }
         }
 
+        function getTrendIcons(p) {
+            let html = "";
+            if (p.vt && p.vt.trim() !== "") {
+                html += `<span title="${p.vt}" style="margin-left:4px; cursor:help; font-size:1.1em;">${p.vt.split(' ')[0]}</span>`;
+            }
+            if (p.dt && p.dt.trim() !== "") {
+                html += `<span title="${p.dt}" style="margin-left:4px; cursor:help; font-size:1.1em;">${p.dt.split(' ')[0]}</span>`;
+            }
+            return html ? `<span style="filter: drop-shadow(0 0 1px rgba(0,0,0,0.5));">${html}</span>` : "";
+        }
+
         async function loadPetData() {
             try {
                 const response = await fetch(GOOGLE_SHEET_CSV_URL + "&t=" + Date.now());
@@ -651,7 +662,9 @@
                     mfr_v: row.mfr_v || 0,
                     nfr_f: row.nfr_f || 0,
                     mfr_f: row.mfr_f || 0,
-                    cat: (row.categories || row.rarity || '').toLowerCase()
+                    cat: (row.categories || row.rarity || '').toLowerCase(),
+                    vt: row['value trend'] || '', 
+                    dt: row['demand trend'] || ''
                 })).filter(p => p.n && p.n.length > 0);
                 
                 document.getElementById('loadingScreen').style.display = 'none';
@@ -714,25 +727,6 @@
             return '#f44336';
         }
 
-        function filterAndRender(query) {
-            let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
-            if (searchState.rarityFilter !== 'none') {
-                matches = matches.filter(p => (p.cat || "").toLowerCase().includes(searchState.rarityFilter));
-            }
-            const mode = searchState.sortMode;
-            if (mode !== 'default') {
-                matches.sort((a, b) => {
-                    if (mode === 'valHigh') return (state.mode === 'frost' ? b.f : b.v) - (state.mode === 'frost' ? a.f : a.v);
-                    if (mode === 'valLow') return (state.mode === 'frost' ? a.f : a.v) - (state.mode === 'frost' ? b.f : b.v);
-                    if (mode === 'demHigh') return b.d - a.d;
-                    if (mode === 'demLow') return a.d - b.d;
-                    return 0;
-                });
-            }
-            searchState.currentMatches = matches;
-            renderDOM();
-        }
-
         function renderDOM() {
             const chunk = searchState.currentMatches.slice(0, searchState.renderLimit);
             resultsBox.innerHTML = chunk.map(p => {
@@ -740,13 +734,12 @@
                 const val = state.mode === 'frost' ? p.f : p.v; 
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(p.d);
-                // Feature 3: Right Click trigger
                 return `
                 <div class="search-item-card" 
                      onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}', 1)" 
                      oncontextmenu="event.preventDefault(); openQtyModal('${p.n.replace(/'/g, "\\'")}')"
                      style="border-color: ${rarityColor}">
-                    <div class="search-item-name">${p.n}</div>
+                    <div class="search-item-name">${p.n}${getTrendIcons(p)}</div>
                     <img src="${imgUrl}" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                     <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
                     <div class="search-item-demand" style="color: ${demandColor}">Dem: ${p.d}</div>
@@ -754,7 +747,6 @@
             }).join('');
         }
 
-        // Feature 3: Quantity Modal Logic
         function openQtyModal(name) {
             selectedPetForQty = name;
             document.getElementById('qtyTitle').innerText = `How many ${name}?`;
@@ -771,15 +763,12 @@
         function confirmQty() {
             const count = parseInt(document.getElementById('qtyInput').value);
             if (count > 0 && selectedPetForQty) {
-                // Pass null as element since we don't have the card reference here easily, 
-                // but animation isn't critical for bulk add.
                 addItem(null, selectedPetForQty, count);
             }
             closeQtyModal();
         }
 
         function addItem(element, name, quantity = 1) {
-            // Check limits for non-inventory targets
             if (state.target !== 'inv' && state.target !== 'dream') {
                 if ((state[state.target] ? state[state.target].length : 0) + quantity > 18) {
                     alert("Trade limit reached! Adopt Me only allows 18 items per trade.");
@@ -799,7 +788,7 @@
                     state.inv.push(newPet);
                 } else if (state.target === 'dream') {
                     state.dreamPet = newPet;
-                    break; // Only one dream pet
+                    break; 
                 } else {
                     state[state.target].push(newPet);
                 }
@@ -842,10 +831,9 @@
         function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
         function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
-        // Feature 2: Import/Export
         function exportInv() {
             const data = JSON.stringify(state.inv);
-            const encoded = btoa(unescape(encodeURIComponent(data))); // Base64 safe encoding
+            const encoded = btoa(unescape(encodeURIComponent(data))); 
             navigator.clipboard.writeText(encoded).then(() => {
                 alert("Inventory code copied to clipboard!");
             });
@@ -857,10 +845,7 @@
             try {
                 const decoded = decodeURIComponent(escape(atob(code)));
                 const data = JSON.parse(decoded);
-                
-                // Validate data structure
                 const validData = data.filter(item => ALL_PETS.some(p => p.n === item.n));
-                
                 if (validData.length > 0) {
                     pushState();
                     state.inv = validData.map(item => ({...item, uid: Math.random()}));
@@ -876,24 +861,18 @@
             }
         }
 
-        // Feature 1: Analytics Portfolio
         function openAnalytics() {
             const overlay = document.getElementById('analyticsOverlay');
             const body = document.getElementById('analyticsBody');
             overlay.style.display = 'flex';
-            
-            // Calculate Stats
             const rarities = {};
             const categories = {};
             let total = state.inv.length;
-
             if (total === 0) {
                 body.innerHTML = '<div style="text-align:center; color:#94a3b8;">Inventory is empty. Add pets to see analytics.</div>';
                 return;
             }
-
             state.inv.forEach(p => {
-                // Rarity check
                 const r = (p.cat || 'unknown').toLowerCase();
                 let rKey = 'Common';
                 if(r.includes('legendary')) rKey = 'Legendary';
@@ -901,8 +880,6 @@
                 else if(r.includes('rare')) rKey = 'Rare';
                 else if(r.includes('uncommon')) rKey = 'Uncommon';
                 rarities[rKey] = (rarities[rKey] || 0) + 1;
-
-                // Category check
                 let cKey = 'Randoms';
                 if(r.includes('preppy')) cKey = 'Preppy';
                 else if(r.includes('high tier')) cKey = 'High Tier';
@@ -910,13 +887,11 @@
                 else if(r.includes('classy')) cKey = 'Classy';
                 categories[cKey] = (categories[cKey] || 0) + 1;
             });
-
             const generateBars = (data, colorMap) => {
                 return Object.entries(data)
                     .sort((a,b) => b[1] - a[1])
                     .map(([key, count]) => {
                         const pct = ((count / total) * 100).toFixed(1);
-                        // Simple color logic if not in map
                         const color = colorMap[key] || '#6366f1'; 
                         return `
                         <div class="bar-row">
@@ -928,48 +903,20 @@
                         </div>`;
                     }).join('');
             };
-
-            const rColors = {
-                'Legendary': 'var(--rarity-legendary)',
-                'Ultra-Rare': 'var(--rarity-ultra)',
-                'Rare': 'var(--rarity-rare)',
-                'Uncommon': 'var(--rarity-uncommon)',
-                'Common': 'var(--rarity-common)'
-            };
-
-            const cColors = {
-                'High Tier': '#a855f7',
-                'Preppy': '#ec4899',
-                'Exotic': '#06b6d4',
-                'Classy': '#f59e0b',
-                'Randoms': '#64748b'
-            };
-
+            const rColors = { 'Legendary': 'var(--rarity-legendary)', 'Ultra-Rare': 'var(--rarity-ultra)', 'Rare': 'var(--rarity-rare)', 'Uncommon': 'var(--rarity-uncommon)', 'Common': 'var(--rarity-common)' };
+            const cColors = { 'High Tier': '#a855f7', 'Preppy': '#ec4899', 'Exotic': '#06b6d4', 'Classy': '#f59e0b', 'Randoms': '#64748b' };
             body.innerHTML = `
-                <div class="analytics-section">
-                    <h4>Rarity Breakdown</h4>
-                    ${generateBars(rarities, rColors)}
-                </div>
-                <div class="analytics-section">
-                    <h4>Category Breakdown</h4>
-                    ${generateBars(categories, cColors)}
-                </div>
-            `;
+                <div class="analytics-section"><h4>Rarity Breakdown</h4>${generateBars(rarities, rColors)}</div>
+                <div class="analytics-section"><h4>Category Breakdown</h4>${generateBars(categories, cColors)}</div>`;
         }
 
         function closeAnalytics() { document.getElementById('analyticsOverlay').style.display = 'none'; }
-
-        function openHistory() {
-            const el = document.getElementById('historyOverlay');
-            el.style.display = 'flex';
-            renderHistoryLog();
-        }
+        function openHistory() { document.getElementById('historyOverlay').style.display = 'flex'; renderHistoryLog(); }
         function closeHistory() { document.getElementById('historyOverlay').style.display = 'none'; }
         
         function logCurrentTrade() {
             if (state.A.length === 0 && state.B.length === 0) return;
             if (tradeLog.length >= 10) tradeLog.shift();
-            
             const snapshot = {
                 timestamp: new Date().toLocaleTimeString(),
                 A: JSON.parse(JSON.stringify(state.A)),
@@ -1062,16 +1009,13 @@
                 const stackUidsString = JSON.stringify(stack.map(item => item.uid));
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(currentDemand);
-
                 grid.innerHTML += `
                     <div class="card" style="border-color: ${rarityColor}">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
-                        <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
+                        <div class="del" onclick="removeStack('inv', ${stackUidsString})"></div>
                         <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
-                        <div class="card-img-container" ondblclick="duplicate('inv', ${p.uid})">
-                            <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
-                        </div>
-                        <div class="card-name">${p.n}</div>
+                        <div class="card-img-container" ondblclick="duplicate('inv', ${p.uid})"><img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp"></div>
+                        <div class="card-name">${p.n}${getTrendIcons(p)}</div>
                         <div class="card-val">${valTotal.toFixed(2)}</div>
                         <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
                         <div class="toggles">
@@ -1085,14 +1029,12 @@
             const finalVal = totalV.toFixed(2);
             document.getElementById('invTotalValue').innerText = finalVal;
             document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
-            
             const v = parseFloat(finalVal);
             document.getElementById('mile-1').classList.toggle('active', v >= 1);
             document.getElementById('mile-2').classList.toggle('active', v >= 10);
             document.getElementById('mile-3').classList.toggle('active', v >= 50);
             document.getElementById('mile-4').classList.toggle('active', v >= 100);
             document.getElementById('mile-5').classList.toggle('active', v >= 155);
-
             updateAISuggestions(list);
         }
 
@@ -1111,27 +1053,21 @@
 
         function findSimilarToTotal() { const totalVal = parseFloat(document.getElementById('invTotalValue').innerText); showSimilarPopup(totalVal); }
         function findSimilarToPet(val) { showSimilarPopup(val); }
-
         function showSimilarPopup(val) {
             const overlay = document.getElementById('similarOverlay');
             const list = document.getElementById('similarList');
             overlay.style.display = 'flex';
             const matches = ALL_PETS.filter(p => p.v >= val * 0.90 && p.v <= val * 1.15).sort((a, b) => b.d - a.d).slice(0, 30);
-            
             list.innerHTML = matches.map(p => {
                 const isSelected = state.aiTargetPets.some(x => x.n === p.n);
                 return `
                 <div class="similar-item ${isSelected ? 'selected' : ''}" onclick="toggleAiTarget(this, '${p.n.replace(/'/g, "\\'")}')">
                     <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width: 40px; height: 40px; object-fit: contain;">
-                    <div style="flex: 1;">
-                        <div style="font-weight: 800; font-size: 0.9em;">${p.n}</div>
-                        <div style="font-size: 0.7em; color: var(--subtext);">Value: ${p.v.toFixed(2)} | Demand: ${p.d}</div>
-                    </div>
+                    <div style="flex: 1;"><div style="font-weight: 800; font-size: 0.9em;">${p.n}</div><div style="font-size: 0.7em; color: var(--subtext);">Value: ${p.v.toFixed(2)} | Demand: ${p.d}</div></div>
                     <input type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events: none;">
                 </div>`;
             }).join('');
         }
-
         function toggleAiTarget(element, name) {
             const pet = ALL_PETS.find(x => x.n === name);
             const index = state.aiTargetPets.findIndex(x => x.n === name);
@@ -1140,7 +1076,6 @@
             element.classList.toggle('selected');
             element.querySelector('input').checked = !element.querySelector('input').checked;
         }
-
         function closeSimilarPopup() { document.getElementById('similarOverlay').style.display = 'none'; renderInventory(); }
 
         function setAiStrategy(mode) {
@@ -1157,109 +1092,57 @@
             renderInventory();
         }
 
-        function clearDreamPet() {
-            state.dreamPet = null;
-            renderInventory();
-        }
+        function clearDreamPet() { state.dreamPet = null; renderInventory(); }
 
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
             const dreamContainer = document.getElementById('dreamPetContainer');
-            
             if (state.dreamPet) {
-                dreamContainer.innerHTML = `
-                    <div class="dream-active-badge">
-                        <span>Target: ${state.dreamPet.n}</span>
-                        <span style="cursor: pointer;" onclick="clearDreamPet()">✕</span>
-                    </div>`;
-
+                dreamContainer.innerHTML = `<div class="dream-active-badge"><span>Target: ${state.dreamPet.n}</span><span style="cursor: pointer;" onclick="clearDreamPet()">✕</span></div>`;
                 const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
                 const dreamVal = calculatePetVal(state.dreamPet, 'value'); 
                 const pct = Math.min((totalInvVal / dreamVal) * 100, 100).toFixed(1);
-                
-                let suggestions = `
-                    <div class="ai-summary">
-                        <b>Dream Progress:</b> ${pct}%
-                        <div class="dream-progress-bg">
-                            <div class="dream-progress-fill" style="width: ${pct}%"></div>
-                        </div>
-                    </div>
-                `;
-
+                let suggestions = `<div class="ai-summary"><b>Dream Progress:</b> ${pct}%<div class="dream-progress-bg"><div class="dream-progress-fill" style="width: ${pct}%"></div></div></div>`;
                 let bestCombos = [];
                 const shuffled = [...inventory].sort(() => Math.random() - 0.5);
-                
                 for(let i=0; i<100; i++) {
-                    let combo = [];
-                    let sum = 0;
-                    const attempt = shuffled.sort(() => Math.random() - 0.5); 
+                    let combo = []; let sum = 0; const attempt = shuffled.sort(() => Math.random() - 0.5); 
                     for(let p of attempt) {
                         let val = calculatePetVal(p, 'value');
-                        if (sum + val <= dreamVal * 1.1) {
-                            combo.push(p);
-                            sum += val;
-                        }
+                        if (sum + val <= dreamVal * 1.1) { combo.push(p); sum += val; }
                     }
-                    if(combo.length > 0) {
-                        bestCombos.push({ 
-                            offer: combo, 
-                            sum: sum, 
-                            diff: Math.abs(dreamVal - sum) 
-                        });
-                    }
+                    if(combo.length > 0) { bestCombos.push({ offer: combo, sum: sum, diff: Math.abs(dreamVal - sum) }); }
                 }
-
                 bestCombos.sort((a,b) => a.diff - b.diff);
                 bestCombos = bestCombos.filter((v,i,a)=>a.findIndex(t=>(t.sum===v.sum))===i).slice(0, 5);
-
                 box.innerHTML = suggestions + bestCombos.map(r => {
                     const diffVal = (state.dreamPet.v - r.sum).toFixed(2);
-                    return `
-                    <div class="ai-suggestion" style="border-left-color: var(--rarity-legendary);">
-                        Offer: ${r.offer.map(p => getFullName(p)).join(' + ')}<br>
-                        <div class="ai-stats-row">
-                            <span class="ai-stat-pill" style="background:#334155; color:white;">Total: ${r.sum.toFixed(2)}</span>
-                            <span class="ai-stat-pill" style="color: ${diffVal > 0 ? 'var(--lose)' : 'var(--win)'}">Remaining: ${diffVal}</span>
-                        </div>
-                    </div>`;
+                    return `<div class="ai-suggestion" style="border-left-color: var(--rarity-legendary);">Offer: ${r.offer.map(p => getFullName(p)).join(' + ')}<br><div class="ai-stats-row"><span class="ai-stat-pill" style="background:#334155; color:white;">Total: ${r.sum.toFixed(2)}</span><span class="ai-stat-pill" style="color: ${diffVal > 0 ? 'var(--lose)' : 'var(--win)'}">Remaining: ${diffVal}</span></div></div>`;
                 }).join('');
-
                 return;
-            } else {
-                dreamContainer.innerHTML = `<button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>`;
-            }
-
+            } else { dreamContainer.innerHTML = `<button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>`; }
             if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to inventory...</div>`; return; }
-
             const shuffled = [...inventory].sort(() => Math.random() - 0.5);
             const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
             const remaining = (155.0 - totalInvVal).toFixed(1);
-
             let suggestions = `<div class="ai-summary"><b>Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon.</div>`;
-            
             let results = [];
             let usedPetUids = new Set();
-
             const findTarget = (val) => {
                 if (state.aiTargetPets.length > 0) return state.aiTargetPets[Math.floor(Math.random() * state.aiTargetPets.length)];
                 let marginMin = state.aiMode === 'velocity' ? 0.80 : 1.01;
                 let marginMax = state.aiMode === 'velocity' ? 1.10 : 1.25;
                 return ALL_PETS.filter(p => p.v > val * marginMin && p.v < val * marginMax).sort((a,b) => b.d - a.d)[0];
             };
-
             for(let i = 0; i < 50 && results.length < state.strategyLimit; i++) {
-                let bundle = [];
-                let available = shuffled.filter(p => !usedPetUids.has(p.uid));
+                let bundle = []; let available = shuffled.filter(p => !usedPetUids.has(p.uid));
                 if (available.length < 1) break;
-
                 let limit = (state.aiMode === 'velocity') ? 10 : 4;
                 bundle = available.slice(0, Math.min(available.length, limit));
-
                 if (bundle.length > 0) {
                     let bundleVal = bundle.reduce((s, p) => s + calculatePetVal(p, 'value'), 0);
                     let bundleDem = (bundle.reduce((s, p) => s + p.d, 0) / bundle.length);
                     let target = findTarget(bundleVal);
-                    
                     if (target) {
                         bundle.forEach(p => usedPetUids.add(p.uid));
                         let vDiff = (target.v - bundleVal).toFixed(2);
@@ -1269,17 +1152,7 @@
                     }
                 }
             }
-
-            box.innerHTML = suggestions + results.map(r => `
-                <div class="ai-suggestion">
-                    Offer: ${r.offer.map(p => getFullName(p)).join(' + ')}<br>
-                    Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span>
-                    <div class="ai-stats-row">
-                        <span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">Profit: ${r.vDiff} (${r.winPct}%)</span>
-                        <span class="ai-stat-pill pill-dem" style="color:${getDemandColor(parseFloat(r.dDiff) + 5)}">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span>
-                    </div>
-                </div>
-            `).join('');
+            box.innerHTML = suggestions + results.map(r => `<div class="ai-suggestion">Offer: ${r.offer.map(p => getFullName(p)).join(' + ')}<br>Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span><div class="ai-stats-row"><span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">Profit: ${r.vDiff} (${r.winPct}%)</span><span class="ai-stat-pill pill-dem" style="color:${getDemandColor(parseFloat(r.dDiff) + 5)}">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span></div></div>`).join('');
         }
 
         function renderSide(s) {
@@ -1294,14 +1167,13 @@
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(currentDemand);
-
                 grid.innerHTML += `
                     <div class="card" style="border-color: ${rarityColor}">
                         <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
                         <div class="card-img-container" ondblclick="duplicate('${s}', ${p.uid})" title="Double click to duplicate">
                             <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                         </div>
-                        <div class="card-name">${p.n}</div>
+                        <div class="card-name">${p.n}${getTrendIcons(p)}</div>
                         <div class="card-val">${val.toFixed(2)}</div>
                         <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
                         <div class="toggles">
@@ -1324,62 +1196,30 @@
             const demA = parseFloat(document.getElementById('demA').innerText);
             const demB = parseFloat(document.getElementById('demB').innerText);
             const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub');
-            
             const gaugeNeedle = document.getElementById('gaugeNeedle');
             const gaugeBar = document.getElementById('gaugeBar');
             let isTrap = false;
-
-            if (vA === 0 && vB === 0) { 
-                verdict.innerText = "--"; verdict.className = "v-text"; 
-                gaugeNeedle.style.left = "50%"; // Center
-                gaugeBar.classList.remove('trap-active');
-                return; 
-            }
-            
+            if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; gaugeNeedle.style.left = "50%"; gaugeBar.classList.remove('trap-active'); return; }
             const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
             const demGap = demA - demB;
-
             let needlePos = 50 + (pDiff / 0.15 * 50);
-            if (needlePos < 0) needlePos = 0;
-            if (needlePos > 100) needlePos = 100;
+            if (needlePos < 0) needlePos = 0; if (needlePos > 100) needlePos = 100;
             gaugeNeedle.style.left = `${needlePos}%`;
-
-            if (Math.abs(diff) < 0.01) { 
-                verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; 
-                vSub.innerText = "The trade is perfectly balanced in value. No one gain or loses raw wealth."; 
-            }
+            if (Math.abs(diff) < 0.01) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "The trade is perfectly balanced in value. No one gain or loses raw wealth."; }
             else if (diff > 0) {
-                if (demGap >= 3 && pDiff < 0.4) {
-                    verdict.innerText = "TRAP"; verdict.className = "v-text trap-c";
-                    vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`;
-                    isTrap = true;
-                }
+                if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`; isTrap = true; }
                 else {
                     const hasSpecial = state.B.some(p => { const c = (p.cat || "").toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
-                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { 
-                        verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; 
-                        vSub.innerText = "VALUE BAIT: They are offering low-demand 'trash' pets. You need a much higher overpay (1.5x+) to make this even remotely fair."; 
-                        isTrap = true;
-                    } 
-                    else {
-                        verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; verdict.className = "v-text win-c";
-                        let demTxt = demB > demA ? "and you are gaining trading speed (Demand Up)!" : "but be aware you are losing a bit of trading speed.";
-                        vSub.innerText = `You are gaining ${(pDiff * 100).toFixed(1)}% in raw value ${demTxt}`;
-                        playSfx('win');
-                    }
+                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "VALUE BAIT: They are offering low-demand 'trash' pets. You need a much higher overpay (1.5x+) to make this even remotely fair."; isTrap = true; } 
+                    else { verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; verdict.className = "v-text win-c"; let demTxt = demB > demA ? "and you are gaining trading speed (Demand Up)!" : "but be aware you are losing a bit of trading speed."; vSub.innerText = `You are gaining ${(pDiff * 100).toFixed(1)}% in raw value ${demTxt}`; playSfx('win'); }
                 }
             } else {
                 verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; verdict.className = "v-text lose-c";
-                if (demB >= demA + 2) {
-                    vSub.innerText = `STRATEGIC OVERPAY: You lose value, but gain massive trading velocity (+${(demB - demA).toFixed(1)} Dem). This is a good move to clear stagnant pets.`;
-                } else {
-                    vSub.innerText = `You are losing ${(Math.abs(pDiff) * 100).toFixed(1)}% of your value with no significant demand gain. This is a bad deal.`;
-                }
+                if (demB >= demA + 2) { vSub.innerText = `STRATEGIC OVERPAY: You lose value, but gain massive trading velocity (+${(demB - demA).toFixed(1)} Dem). This is a good move to clear stagnant pets.`; }
+                else { vSub.innerText = `You are losing ${(Math.abs(pDiff) * 100).toFixed(1)}% of your value with no significant demand gain. This is a bad deal.`; }
             }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
-            
-            if (isTrap) gaugeBar.classList.add('trap-active');
-            else gaugeBar.classList.remove('trap-active');
+            if (isTrap) gaugeBar.classList.add('trap-active'); else gaugeBar.classList.remove('trap-active');
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
@@ -1409,10 +1249,7 @@
                     if (sum >= targetVal * 0.9) break;
                 }
                 if (bundle.length > 0) {
-                    list.innerHTML += `<div class="suggest-pill" onclick='applySuggestion(${JSON.stringify(bundle.map(b=>b.uid))})'>
-                        <div class="suggest-items-text">${bundle.map(b=>b.n).join(' + ')}</div>
-                        <div class="suggest-val-text">${sum.toFixed(2)}</div>
-                    </div>`;
+                    list.innerHTML += `<div class="suggest-pill" onclick='applySuggestion(${JSON.stringify(bundle.map(b=>b.uid))})'><div class="suggest-items-text">${bundle.map(b=>b.n).join(' + ')}</div><div class="suggest-val-text">${sum.toFixed(2)}</div></div>`;
                 }
             }
         }
