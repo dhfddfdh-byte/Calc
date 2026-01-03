@@ -789,74 +789,6 @@
             }
         }
 
-        // Rest of your functions remain the same...
-        // (Keep all your other functions: closeGraph, openGraph, handlePetContext, etc.)
-
-        const generateSentence = (str, label) => {
-            if (!str || typeof str !== 'string' || str.trim() === "") return null;
-            let parts = str.trim().split(' ');
-            if (parts.length < 2) return null;
-            
-            let icon = parts[0]; 
-            let sentences = [];
-            for (let i = 1; i < parts.length; i++) {
-                let segment = parts[i];
-                if (!segment.includes(':')) continue;
-                let [tierKey, val] = segment.split(':');
-                let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
-                let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
-                let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
-                sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} BY ${amount}`);
-            }
-            return { icon, text: sentences.join('\n') };
-        };
-
-        const vData = generateSentence(p.vt, "Value");
-        if (vData) html += `<span title="${crashWarning}${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
-        
-        const dData = generateSentence(p.dt, "Demand");
-        if (dData) html += `<span title="${crashWarning}${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
-        
-        // NEW: Show crash siren icon if detected
-        if (crashWarning) {
-            html += `<span title="${crashWarning}" style="margin-left:4px; cursor:help; font-size:1.4em; color:#ef4444; filter: drop-shadow(0 0 4px #ef4444); animation: pulse 2s infinite;">🚨</span>`;
-        }
-        
-    } catch (err) { 
-        console.error("getTrendIcons error:", err);
-        return ""; 
-    }
-    return html;
-}
-
-
-        async function fetchHistory() {
-            if (HISTORY_DATA.length > 0) return; 
-            try {
-                const response = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
-                if (!response.ok) throw new Error("History fetch failed");
-                const text = await response.text();
-                const lines = text.trim().split('\n');
-                if (lines.length < 2) {
-                    console.log("No history data yet");
-                    return;
-                }
-                HISTORY_DATA = lines.slice(1).map(line => {
-                    const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    return { 
-                        time: vals[0]?.trim() || '', 
-                        name: vals[1]?.trim() || '', 
-                        d: parseFloat(vals[2]) || 0,
-                        v: parseFloat(vals[5]) || 0
-                    };
-                }).filter(row => row.name); // Remove empty rows
-                console.log("✅ History loaded:", HISTORY_DATA.length, "records");
-            } catch (e) { 
-                console.error("❌ History fetch failed:", e);
-                HISTORY_DATA = []; // Ensure it's still an array
-            }
-        }
-
         function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
 
         async function openGraph(name) {
@@ -911,6 +843,9 @@
                 }
             });
         }
+
+        // CONTINUE WITH THE REST OF YOUR ORIGINAL FUNCTIONS HERE
+        // (handlePetContext, openInfo, closeInfo, playSfx, pushState, undo, parseCSV, etc.)
 
         function handlePetContext(e, name) {
             e.preventDefault();
@@ -1611,5 +1546,6 @@
     </script>
 </body>
 </html>
+
 
 
