@@ -343,7 +343,7 @@
 
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
-        <div class="loading-text" id="loadingText">Loading pet data...</div>
+        <div class="loading-text" id="loadingText">Loading pet data from Google Sheets...</div>
     </div>
 
     <!-- Feature: History Graph Overlay -->
@@ -649,8 +649,6 @@
             if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
             const dData = generateSentence(p.dt, "Demand");
             if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
-            
-            // Add Placeholder for Crash Siren (populated by Visibility Observer)
             html += `<span class="crash-siren-container" data-pet-name="${p.n}"></span>`;
             return html;
         }
@@ -879,8 +877,6 @@
                     <div class="search-item-val">${(state.mode === 'frost' ? p.f : p.v).toFixed(2)}</div>
                     <div class="search-item-demand" style="color: ${getDemandColor(p.d)}">Dem: ${p.d}</div>
                 </div>`).join('');
-            
-            // Re-attach observers
             grid.querySelectorAll('.search-item-card').forEach(el => visibilityObserver.observe(el));
         }
 
@@ -1025,7 +1021,6 @@
             });
             document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
             document.getElementById('invAvgDemand').innerText = state.inv.length > 0 ? (totalD / state.inv.length).toFixed(1) : "0.0";
-            
             grid.querySelectorAll('.card').forEach(el => visibilityObserver.observe(el));
             updateAISuggestions(state.inv);
         }
@@ -1088,25 +1083,77 @@
             document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
             document.getElementById(`cnt${s}`).innerText = state[s].length;
             document.getElementById(`dem${s}`).innerText = state[s].length > 0 ? (totalD / state[s].length).toFixed(1) : "0.0";
-            
             grid.querySelectorAll('.card').forEach(el => visibilityObserver.observe(el));
         }
 
         function calculate() {
-            const vA = parseFloat(document.getElementById('totA').innerText), vB = parseFloat(document.getElementById('totB').innerText), demA = parseFloat(document.getElementById('demA').innerText), demB = parseFloat(document.getElementById('demB').innerText), verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub'), gaugeNeedle = document.getElementById('gaugeNeedle'), gaugeBar = document.getElementById('gaugeBar');
-            if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; gaugeNeedle.style.left = "50%"; return; }
-            const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : 0, demGap = demA - demB;
-            let needlePos = 50 + (pDiff / 0.15 * 50); needlePos = Math.max(0, Math.min(100, needlePos));
-            gaugeNeedle.style.left = `${needlePos}%`;
-            
-            if (Math.abs(diff) < 0.01) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "Balanced."; }
-            else if (diff > 0) {
-                if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "High value, low demand."; gaugeBar.classList.add('trap-active'); }
-                else { verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; verdict.className = "v-text win-c"; vSub.innerText = `Gain: ${(pDiff * 100).toFixed(1)}%.`; playSfx('win'); gaugeBar.classList.remove('trap-active'); }
-            } else {
-                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; verdict.className = "v-text lose-c"; vSub.innerText = `Loss: ${(Math.abs(pDiff) * 100).toFixed(1)}%.`; gaugeBar.classList.remove('trap-active');
+            const vA = parseFloat(document.getElementById('totA').innerText);
+            const vB = parseFloat(document.getElementById('totB').innerText);
+            const demA = parseFloat(document.getElementById('demA').innerText);
+            const demB = parseFloat(document.getElementById('demB').innerText);
+            const verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub');
+            const gaugeNeedle = document.getElementById('gaugeNeedle');
+            const gaugeBar = document.getElementById('gaugeBar');
+            let isTrap = false;
+
+            if (vA === 0 && vB === 0) { 
+                verdict.innerText = "--"; 
+                verdict.className = "v-text"; 
+                gaugeNeedle.style.left = "50%"; 
+                gaugeBar.classList.remove('trap-active'); 
+                vSub.innerText = "Add pets to calculate trade results";
+                return; 
             }
-            vDiff.innerText = `Diff: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
+
+            const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
+            const demGap = demA - demB;
+            let needlePos = 50 + (pDiff / 0.15 * 50);
+            needlePos = Math.max(0, Math.min(100, needlePos));
+            gaugeNeedle.style.left = `${needlePos}%`;
+
+            if (Math.abs(diff) < 0.01) { 
+                verdict.innerText = "FAIR"; 
+                verdict.className = "v-text fair-c"; 
+                vSub.innerText = "The trade is perfectly balanced in value. No one gain or loses raw wealth."; 
+            }
+            else if (diff > 0) {
+                if (demGap >= 3 && pDiff < 0.4) { 
+                    verdict.innerText = "TRAP"; 
+                    verdict.className = "v-text trap-c"; 
+                    vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`; 
+                    isTrap = true; 
+                }
+                else {
+                    const hasSpecial = state.B.some(p => { 
+                        const c = (p.cat || "").toLowerCase(); 
+                        return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); 
+                    });
+                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { 
+                        verdict.innerText = "TRAP"; 
+                        verdict.className = "v-text trap-c"; 
+                        vSub.innerText = "VALUE BAIT: They are offering low-demand 'trash' pets. You need a much higher overpay (1.5x+) to make this even remotely fair."; 
+                        isTrap = true; 
+                    } 
+                    else { 
+                        verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; 
+                        verdict.className = "v-text win-c"; 
+                        let demTxt = demB > demA ? "and you are gaining trading speed (Demand Up)!" : "but be aware you are losing a bit of trading speed."; 
+                        vSub.innerText = `You are gaining ${(pDiff * 100).toFixed(1)}% in raw value ${demTxt}`; 
+                        playSfx('win'); 
+                    }
+                }
+            } else {
+                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; 
+                verdict.className = "v-text lose-c";
+                if (demB >= demA + 2) { 
+                    vSub.innerText = `STRATEGIC OVERPAY: You lose value, but gain massive trading velocity (+${(demB - demA).toFixed(1)} Dem). This is a good move to clear stagnant pets.`; 
+                }
+                else { 
+                    vSub.innerText = `You are losing ${(Math.abs(pDiff) * 100).toFixed(1)}% of your value with no significant demand gain. This is a bad deal.`; 
+                }
+            }
+            vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
+            if (isTrap) gaugeBar.classList.add('trap-active'); else gaugeBar.classList.remove('trap-active');
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
