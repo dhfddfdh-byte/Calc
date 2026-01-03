@@ -76,10 +76,7 @@
             transition: 0.2s;
         }
 
-        .nav-btn:hover {
-            border-color: var(--accent);
-            background: var(--card);
-        }
+        .nav-btn:hover { border-color: var(--accent); background: var(--card); }
 
         .container {
             width: 100%; max-width: 1150px; display: flex; gap: 25px;
@@ -136,9 +133,7 @@
 
         .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost); margin: 6px 0 2px 0; }
 
-        .card-demand {
-            font-size: 0.8em; font-weight: 800; color: var(--demand-color); margin-bottom: 4px;
-        }
+        .card-demand { font-size: 0.8em; font-weight: 800; color: var(--demand-color); margin-bottom: 4px; }
 
         .del {
             position: absolute; top: -6px; right: -6px; width: 22px; height: 22px;
@@ -177,21 +172,12 @@
             left: 50%; transform: translateX(-50%);
         }
 
-        .gauge-wrapper {
-            width: 100%; height: 24px; background: #0f172a; border-radius: 12px; margin-bottom: 15px; position: relative; border: 1px solid var(--border); overflow: hidden;
-        }
-        
+        .gauge-wrapper { width: 100%; height: 24px; background: #0f172a; border-radius: 12px; margin-bottom: 15px; position: relative; border: 1px solid var(--border); overflow: hidden; }
         .gauge-bar { width: 100%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #facc15 50%, #10b981 100%); }
         .gauge-bar.trap-active { background: repeating-linear-gradient(45deg, #b45309, #b45309 10px, #f59e0b 10px, #f59e0b 20px); }
+        .gauge-needle { position: absolute; top: -2px; left: 50%; width: 4px; height: 28px; background: white; border: 1px solid black; transform: translateX(-50%); transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 2px; z-index: 2; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
 
-        .gauge-needle {
-            position: absolute; top: -2px; left: 50%; width: 4px; height: 28px; background: white; border: 1px solid black; transform: translateX(-50%); transition: left 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 2px; z-index: 2; box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-
-        .v-text {
-            font-size: clamp(2em, 8vw, 3.5em); font-weight: 950; line-height: 1; margin-bottom: 8px; letter-spacing: -2px;
-        }
-
+        .v-text { font-size: clamp(2em, 8vw, 3.5em); font-weight: 950; line-height: 1; margin-bottom: 8px; letter-spacing: -2px; }
         .v-diff { font-weight: 800; font-size: clamp(0.9em, 3vw, 1.2em); margin-bottom: 5px; color: white; }
         .v-sub { color: var(--subtext); font-style: italic; font-size: clamp(0.75em, 2vw, 0.95em); margin-bottom: 18px; line-height: 1.4; padding: 0 10px; }
 
@@ -211,21 +197,6 @@
         .info-container { width: 95%; max-width: 600px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); box-shadow: 0 30px 70px rgba(0,0,0,0.8); overflow: hidden; }
         .info-header { padding: 20px; background: #111827; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .info-body { padding: 30px; overflow-y: auto; max-height: 70vh; color: #cbd5e1; line-height: 1.6; }
-        .info-section { margin-bottom: 25px; }
-        .info-section h4 { color: var(--accent); margin-bottom: 10px; font-weight: 900; text-transform: uppercase; font-size: 0.9em; letter-spacing: 1px; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .info-label { font-weight: 700; color: white; }
-        .info-val { font-size: 0.9em; }
-
-        .inv-suggest-container { padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(99, 102, 241, 0.03); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; }
-        .inv-suggest-title { font-size: 0.8em; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
-        .suggest-pill-row { display: flex; flex-direction: column; gap: 8px; }
-        .suggest-pill {
-            background: var(--card); border: 1px solid var(--border); padding: 8px 12px; border-radius: 12px; font-size: 0.75em; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;
-        }
-        .suggest-pill:hover { border-color: var(--accent); background: #262c3d; }
-        .suggest-items-text { font-weight: 700; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
-        .suggest-val-text { font-weight: 900; color: var(--win); }
 
         .inv-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 3000; }
         .inv-container { width: 95%; max-width: 1100px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); display: flex; flex-direction: column; max-height: 85vh; overflow: hidden; }
@@ -242,142 +213,47 @@
 
         .ai-box { background: rgba(99, 102, 241, 0.05); border: 1.5px solid var(--accent); border-radius: 20px; padding: 20px; margin-top: 10px; }
         .ai-title { display: flex; align-items: center; justify-content: space-between; color: var(--accent); font-weight: 900; font-size: 1.1em; margin-bottom: 15px; }
-        .ai-summary { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 10px; margin-bottom: 15px; border: 1px dashed var(--accent); font-size: 0.9em; line-height: 1.4; color: white; }
-        .ai-suggestion { background: #161e2e; padding: 15px; border-radius: 12px; border-left: 4px solid var(--accent); margin-bottom: 12px; font-size: 0.95em; line-height: 1.4; }
-        .ai-item-tag { display: inline-block; background: var(--accent); color: white; padding: 2px 8px; border-radius: 6px; font-weight: 800; font-size: 0.85em; margin: 2px; }
         
-        .ai-stats-row { display: flex; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #334155; }
-        .ai-stat-pill { font-size: 0.75em; font-weight: 900; padding: 3px 8px; border-radius: 5px; }
-        .pill-win { background: rgba(16, 185, 129, 0.15); color: var(--win); }
-        .pill-dem { background: rgba(251, 191, 36, 0.15); color: var(--demand-color); }
-
-        .ai-refresh-btn { background: var(--accent); color: white; border: none; padding: 5px 12px; border-radius: 8px; font-size: 0.7em; font-weight: 900; cursor: pointer; transition: 0.2s; }
-        .ai-refresh-btn:hover { opacity: 0.8; transform: rotate(15deg); }
-
-        .ai-toggle-group { display: flex; background: #0f172a; padding: 4px; border-radius: 10px; margin-bottom: 15px; gap: 4px; }
-        .ai-tog { flex: 1; text-align: center; font-size: 0.7em; font-weight: 900; padding: 8px; border-radius: 7px; cursor: pointer; color: var(--subtext); transition: 0.2s; }
-        .ai-tog.active { background: var(--accent); color: white; }
-
         .search-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .search-overlay.open { opacity: 1; pointer-events: auto; }
         .search-container { width: 95%; max-width: 900px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); display: flex; flex-direction: column; max-height: 85vh; box-shadow: 0 25px 60px rgba(0,0,0,0.6); overflow: hidden; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .search-overlay.open .search-container { transform: scale(1); }
-        .search-header { padding: 20px 25px; display: flex; gap: 12px; align-items: center; background: #111827; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-        .search-input-wrapper { flex: 2; position: relative; display: flex; align-items: center; min-width: 200px; }
-        #mainSearch { width: 100%; padding: 14px 15px 14px 45px; background: #262c3d; border: 1px solid #334155; border-radius: 35px; color: white; font-size: 1.1em; outline: none; }
-        #sortSelect, #rarityFilter { flex: 1; padding: 14px 15px; background: #262c3d; border: 1px solid #334155; border-radius: 35px; color: #94a3b8; font-size: 0.95em; font-weight: 600; outline: none; cursor: pointer; min-width: 150px; }
-        #sortSelect:hover, #rarityFilter:hover { border-color: var(--accent); color: white; }
-        .search-icon-fixed { position: absolute; left: 18px; font-size: 1.2em; }
-        .close-modal-btn { width: 45px; height: 45px; background: #262c3d; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; font-size: 1.4em; }
-        .close-modal-btn:hover { background: #ef4444; color: white; }
         .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 25px; overflow-y: auto; background: #161e2e; scroll-behavior: smooth; }
-        .search-item-card { background: #262c3d; border-radius: 18px; padding: 15px 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: all 0.2s; border: 1.5px solid transparent; }
-        .search-item-card:hover { background: #334155; transform: translateY(-4px); border-color: var(--accent); }
-        .search-item-card.added { border-color: var(--win) !important; background: rgba(16, 185, 129, 0.1); }
-        .search-item-name { font-size: 0.75em; font-weight: 800; color: #94a3b8; text-align: center; margin-bottom: 10px; height: 2.5em; overflow: hidden; }
-        .search-item-img { width: 85px; height: 85px; object-fit: contain; margin-bottom: 10px; }
-        .search-item-val { font-weight: 900; font-size: 1.2em; color: white; }
-        .search-item-demand { font-size: 0.9em; font-weight: 800; color: var(--demand-color); margin-top: 2px; text-shadow: 0 0 5px rgba(251, 191, 36, 0.3); }
-        .results-grid::-webkit-scrollbar { width: 10px; }
-        .results-grid::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; border: 2px solid #161e2e; }
-
-        .similar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 5000; }
-        .similar-container { width: 90%; max-width: 600px; background: #1a2333; border-radius: 20px; border: 1px solid var(--border); padding: 20px; max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; }
-        .similar-item { display: flex; align-items: center; gap: 15px; background: var(--card); padding: 12px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; border: 1.5px solid transparent; transition: 0.2s; }
-        .similar-item:hover { border-color: var(--accent); background: #334155; }
-        .similar-item.selected { border-color: var(--win); background: rgba(16, 185, 129, 0.05); }
         
-        .ai-count-control { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
-        .ai-count-control label { font-size: 0.75em; color: var(--subtext); font-weight: 700; }
-        .ai-count-control input { cursor: pointer; accent-color: var(--accent); }
-
-        .history-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4500; }
-        .history-container { width: 95%; max-width: 600px; background: #1a2333; border-radius: 20px; border: 1px solid var(--border); max-height: 80vh; display: flex; flex-direction: column; }
-        .history-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .history-list { padding: 20px; overflow-y: auto; }
-        .history-item { background: var(--panel); border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
-        .history-item:hover { background: var(--card); border-color: var(--accent); }
-        .history-time { font-size: 0.7em; color: var(--subtext); margin-bottom: 5px; }
-        .history-details { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 0.9em; }
-
-        .dream-progress-bg { width: 100%; height: 10px; background: #0f172a; border-radius: 5px; overflow: hidden; margin: 10px 0; }
-        .dream-progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; }
-        .dream-active-badge { background: var(--accent); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.8em; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-
-        .stat-card { background: var(--panel); padding: 20px; border-radius: 18px; border: 1px solid var(--border); margin-bottom: 20px; }
-        .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
-        .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
-
-        .analytics-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4600; }
-        .analytics-container { width: 95%; max-width: 700px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
-        .analytics-body { padding: 30px; overflow-y: auto; }
-        .analytics-section { margin-bottom: 25px; }
-        .analytics-section h4 { color: var(--accent); margin-bottom: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9em; }
-        .bar-row { display: flex; align-items: center; margin-bottom: 12px; }
-        .bar-label { width: 100px; font-size: 0.8em; font-weight: 700; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .bar-track { flex: 1; height: 10px; background: #0f172a; border-radius: 5px; margin: 0 15px; overflow: hidden; }
-        .bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
-        .bar-stat { width: 60px; text-align: right; font-size: 0.8em; font-weight: 800; color: white; }
-
         .qty-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 6000; }
         .qty-modal { background: #1a2333; border: 1px solid var(--border); padding: 25px; border-radius: 20px; width: 300px; text-align: center; }
-        .qty-modal h3 { color: white; margin-bottom: 20px; font-size: 1.1em; }
-        .qty-input { background: #0f172a; border: 1px solid var(--border); color: white; font-size: 1.5em; padding: 10px; width: 100%; border-radius: 10px; text-align: center; margin-bottom: 20px; outline: none; }
-        .qty-input:focus { border-color: var(--accent); }
-        .qty-actions { display: flex; gap: 10px; justify-content: center; }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.6; transform: scale(1.2); }
-    }
+
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
     </style>
 </head>
 <body>
 
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
-        <div class="loading-text" id="loadingText">Loading data...</div>
+        <div class="loading-text" id="loadingText">Loading pet data...</div>
     </div>
 
-    <!-- Feature: History Graph Overlay -->
+    <!-- Graph Overlay -->
     <div id="graphOverlay">
         <div class="graph-container">
             <div class="graph-header">
                 <h2 id="graphTitle" style="color: white; font-weight: 900;">PET HISTORY</h2>
                 <button class="nav-btn" onclick="closeGraph()">Close</button>
             </div>
-            <div class="graph-body">
-                <canvas id="petChart"></canvas>
-            </div>
+            <div class="graph-body"><canvas id="petChart"></canvas></div>
         </div>
     </div>
 
-    <!-- Feature: Information Overlay -->
+    <!-- Info Overlay -->
     <div id="infoOverlay">
         <div class="info-container">
             <div class="info-header">
                 <h3 style="color: white; font-weight: 950;">ℹ️ CALCULATOR GUIDE</h3>
                 <button class="nav-btn" onclick="closeInfo()">Close</button>
             </div>
-            <div class="info-body">
-                <div class="info-section">
-                    <h4>Mouse Keybinds</h4>
-                    <div class="info-row"><span class="info-label">Right Click:</span><span class="info-val">Open Multi-Add (Quantity) Menu</span></div>
-                    <div class="info-row"><span class="info-label">Shift + Right Click:</span><span class="info-val">View Demand & Value History Graph</span></div>
-                    <div class="info-row"><span class="info-label">Double Click Image:</span><span class="info-val">Duplicate Pet Card</span></div>
-                    <div class="info-row"><span class="info-label">Hover on Emojis:</span><span class="info-val">See exact amount of change in tooltip</span></div>
-                </div>
-                <div class="info-section">
-                    <h4>Keyboard Keybinds</h4>
-                    <div class="info-row"><span class="info-label">Ctrl + Z:</span><span class="info-val">Undo Last Change</span></div>
-                </div>
-                <div class="info-section">
-                    <h4>Trend Emojis</h4>
-                    <div class="info-row"><span class="info-label">🔥 :</span><span class="info-val">Demand is increasing</span></div>
-                    <div class="info-row"><span class="info-label">❄️ :</span><span class="info-val">Demand is decreasing</span></div>
-                    <div class="info-row"><span class="info-label">📈 :</span><span class="info-val">Value is increasing</span></div>
-                    <div class="info-row"><span class="info-label">📉 :</span><span class="info-val">Value is decreasing</span></div>
-                </div>
+            <div class="info-body" style="padding: 30px; color: #cbd5e1; line-height: 1.6;">
+                <p><b>Right Click:</b> Set Quantity | <b>Shift + Right Click:</b> View History Graph</p>
+                <p><b>🚨 Siren:</b> Appears if a pet has dropped significantly in value or demand over the last 10 records.</p>
             </div>
         </div>
     </div>
@@ -388,173 +264,17 @@
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
     </div>
 
-    <div class="analytics-overlay" id="analyticsOverlay">
-        <div class="analytics-container">
-            <div class="history-header">
-                <h3 style="color: white; font-weight: 900;">INVENTORY PORTFOLIO</h3>
-                <button class="nav-btn" style="padding: 5px 15px;" onclick="closeAnalytics()">Close</button>
-            </div>
-            <div class="analytics-body" id="analyticsBody"></div>
-        </div>
-    </div>
-
-    <div class="qty-modal-overlay" id="qtyModal" onclick="closeQtyModal()">
-        <div class="qty-modal" onclick="event.stopPropagation()">
-            <h3 id="qtyTitle">How many?</h3>
-            <input type="number" id="qtyInput" class="qty-input" min="1" max="18" value="1">
-            <div class="qty-actions">
-                <button class="nav-btn" onclick="confirmQty()">Add</button>
-                <button class="nav-btn" style="background: #ef4444; border-color: #b91c1c;" onclick="closeQtyModal()">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="history-overlay" id="historyOverlay">
-        <div class="history-container">
-            <div class="history-header">
-                <h3 style="color: white;">Trade History (Last 10)</h3>
-                <button class="nav-btn" style="padding: 5px 15px;" onclick="closeHistory()">Close</button>
-            </div>
-            <div class="history-list" id="historyList">
-                <div style="text-align: center; color: var(--subtext);">No history yet. Calculate trades to save them!</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="similar-overlay" id="similarOverlay" onclick="closeSimilarPopup()">
-        <div class="similar-container" onclick="event.stopPropagation()">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="font-weight: 900; color: var(--accent);">Target Selection</h3>
-                <button class="nav-btn" style="padding: 5px 15px; font-size: 0.75em;" onclick="closeSimilarPopup()">Confirm</button>
-            </div>
-            <div id="similarList"></div>
-        </div>
-    </div>
-
-    <div class="inv-overlay" id="invOverlay">
-        <div class="inv-container">
-            <div class="inv-header">
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <h2 style="font-weight: 900;">INVENTORY</h2>
-                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em;" onclick="exportInv()">Export Data</button>
-                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em;" onclick="importInv()">Import Data</button>
-                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em; background: var(--accent); border-color: var(--accent);" onclick="openAnalytics()">View Portfolio</button>
-                </div>
-                <button class="nav-btn" onclick="closeInventory()">Close</button>
-            </div>
-            <div class="inv-body">
-                <div class="inv-list">
-                    <button class="nav-btn" style="width: 100%; margin-bottom: 20px;" onclick="openSearch('inv')">+ Add Item to Inventory</button>
-                    <div class="grid" id="invGrid"></div>
-                </div>
-                <div class="inv-stats">
-                    <div class="stat-card">
-                        <div class="stat-label">Total Normal Value</div>
-                        <div class="stat-value" id="invTotalValue">0.00</div>
-                        <button class="nav-btn" style="width: 100%; margin-top: 15px; padding: 8px; font-size: 0.75em;" onclick="findSimilarToTotal()">Find Global Value Matches</button>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Average Demand</div>
-                        <div class="stat-value" id="invAvgDemand">0.0</div>
-                    </div>
-
-                    <div class="milestone-container">
-                        <div style="font-size: 0.8em; font-weight: 900; color: var(--accent); margin-bottom: 10px;">TRADING MILESTONES</div>
-                        <div class="milestone-row" id="mile-1"><div class="milestone-check">✓</div>Starter (1.0 Val)</div>
-                        <div class="milestone-row" id="mile-2"><div class="milestone-check">✓</div>Apprentice (10.0 Val)</div>
-                        <div class="milestone-row" id="mile-3"><div class="milestone-check">✓</div>Merchant (50.0 Val)</div>
-                        <div class="milestone-row" id="mile-4"><div class="milestone-check">✓</div>Rich (100.0 Val)</div>
-                        <div class="milestone-row" id="mile-5"><div class="milestone-check">✓</div>Master (155.0 Val)</div>
-                    </div>
-                    
-                    <div class="ai-box">
-                        <div class="ai-title">
-                            🤖 AI Strategist
-                            <button class="ai-refresh-btn" onclick="renderInventory()">Refresh ↻</button>
-                        </div>
-                        
-                        <div class="ai-toggle-group">
-                            <div class="ai-tog active" id="aiTogNormal" onclick="setAiStrategy('normal')">Normal Mode</div>
-                            <div class="ai-tog" id="aiTogVelocity" onclick="setAiStrategy('velocity')">Velocity Mode</div>
-                        </div>
-
-                        <div id="dreamPetContainer" style="margin-bottom: 15px;">
-                            <button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>
-                        </div>
-
-                        <div class="ai-count-control">
-                            <label>Strategy Count: <span id="strategyCountVal">10</span></label>
-                            <input type="range" id="strategyCountSlider" min="1" max="10" value="10" oninput="updateStrategyCount(this.value)">
-                        </div>
-
-                        <div id="aiSuggestions">
-                            <div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="search-overlay" id="searchOverlay" onclick="closeSearch()">
-        <div class="search-container" onclick="event.stopPropagation()">
-            <div class="search-header">
-                <div class="search-input-wrapper">
-                    <span class="search-icon-fixed">🔍</span>
-                    <input type="text" id="mainSearch" placeholder="Search for a pet..." autocomplete="off">
-                </div>
-                
-                <select id="rarityFilter" onchange="updateFilter()">
-                    <option value="none">Rarity: None</option>
-                    <option value="high tier">High Tier</option>
-                    <option value="mid tier">Mid Tier</option>
-                    <option value="classy">Classy</option>
-                    <option value="randoms">Randoms</option>
-                    <option value="default legs">Default Legs</option>
-                    <option value="preppy">Preppy</option>
-                    <option value="exotic">Exotic</option>
-                    <option value="legendary">Legendary</option>
-                    <option value="ultra-rare">Ultra-Rare</option>
-                    <option value="rare">Rare</option>
-                    <option value="uncommon">Uncommon</option>
-                    <option value="common">Common</option>
-                </select>
-
-                <select id="sortSelect" onchange="updateFilter()">
-                    <option value="default">Default</option>
-                    <option value="valHigh">Value (High → Low)</option>
-                    <option value="valLow">Value (Low → High)</option>
-                    <option value="demHigh">Demand (High → Low)</option>
-                    <option value="demLow">Demand (Low → High)</option>
-                </select>
-                <div class="close-modal-btn" onclick="closeSearch()">✕</div>
-            </div>
-            <div class="results-grid" id="searchResults"></div>
-        </div>
-    </div>
-
     <div class="container">
         <div class="trade-panel" id="panelA">
             <div class="p-header">
-                <div>
-                    <span class="p-title">You Give (<span id="cntA">0</span>)</span>
-                    <span class="p-dem" id="demA">Avg Demand: 0.0</span>
-                </div>
+                <div><span class="p-title">You Give (<span id="cntA">0</span>)</span><span class="p-dem" id="demA">Avg Demand: 0.0</span></div>
                 <span class="p-total" id="totA">0.000</span>
             </div>
             <div class="grid" id="gridA"></div>
-            <div class="inv-suggest-container" id="sideASuggestions" style="display: none;">
-                <div class="inv-suggest-title">🤖 Smart Offer Suggestions</div>
-                <div class="suggest-pill-row" id="suggestList"></div>
-            </div>
         </div>
-
         <div class="trade-panel" id="panelB">
             <div class="p-header">
-                <div>
-                    <span class="p-title">They Give (<span id="cntB">0</span>)</span>
-                    <span class="p-dem" id="demB">Avg Demand: 0.0</span>
-                </div>
+                <div><span class="p-title">They Give (<span id="cntB">0</span>)</span><span class="p-dem" id="demB">Avg Demand: 0.0</span></div>
                 <span class="p-total" id="totB">0.000</span>
             </div>
             <div class="grid" id="gridB"></div>
@@ -562,636 +282,235 @@
     </div>
 
     <div class="verdict-box">
-        <div class="gauge-wrapper">
-            <div id="gaugeBar" class="gauge-bar"></div>
-            <div id="gaugeNeedle" class="gauge-needle"></div>
-        </div>
-        
+        <div class="gauge-wrapper"><div id="gaugeBar" class="gauge-bar"></div><div id="gaugeNeedle" class="gauge-needle"></div></div>
         <div id="verdict" class="v-text">--</div>
-        <div id="vDiff" class="v-diff">Difference: 0.000 (0.0%)</div>
-        <div id="vSub" class="v-sub">Add pets to calculate trade results</div>
+        <div id="vDiff" class="v-diff">Difference: 0.000</div>
+        <div id="vSub" class="v-sub">Add pets to calculate</div>
         <div class="switches">
             <button class="sw-btn active" id="btnFrost" onclick="setMode('frost')">Frost</button>
             <button class="sw-btn" id="btnValue" onclick="setMode('value')">Value</button>
-            <button class="save-trade-btn" onclick="logCurrentTrade()">Save to History</button>
+            <button class="save-trade-btn" onclick="logCurrentTrade()">Save</button>
         </div>
     </div>
 
-   <script>
+    <!-- Search Overlay -->
+    <div class="search-overlay" id="searchOverlay" onclick="closeSearch()">
+        <div class="search-container" onclick="event.stopPropagation()">
+            <div class="search-header" style="padding: 20px; display: flex; gap: 10px; background: #111827;">
+                <input type="text" id="mainSearch" placeholder="Search..." style="flex: 1; padding: 12px; border-radius: 20px; background: #262c3d; border: 1px solid #334155; color: white;">
+                <select id="sortSelect" onchange="updateFilter()" style="padding: 10px; border-radius: 10px; background: #262c3d; color: white;"><option value="default">Sort</option><option value="valHigh">Value High</option></select>
+                <button class="nav-btn" onclick="closeSearch()">✕</button>
+            </div>
+            <div class="results-grid" id="searchResults"></div>
+        </div>
+    </div>
+
+    <!-- Qty Modal -->
+    <div class="qty-modal-overlay" id="qtyModal" onclick="closeQtyModal()">
+        <div class="qty-modal">
+            <h3 id="qtyTitle" style="color: white; margin-bottom: 15px;">How many?</h3>
+            <input type="number" id="qtyInput" value="1" style="width: 100%; padding: 10px; margin-bottom: 15px; text-align: center;">
+            <button class="nav-btn" onclick="confirmQty()">Add</button>
+        </div>
+    </div>
+
+    <div class="inv-overlay" id="invOverlay">
+        <div class="inv-container">
+            <div class="inv-header" style="padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between;">
+                <h2 style="font-weight: 900;">INVENTORY</h2>
+                <button class="nav-btn" onclick="closeInventory()">Close</button>
+            </div>
+            <div class="inv-body">
+                <div class="inv-list" id="invGrid" style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(105px, 1fr)); gap: 15px;"></div>
+                <div class="inv-stats" style="padding: 20px; background: #0f172a; width: 300px;">
+                    <div style="margin-bottom: 20px;"><p>Total Value</p><h2 id="invTotalValue">0.00</h2></div>
+                    <button class="nav-btn" onclick="openSearch('inv')">+ Add Item</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
         const MASTER_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=697881438&single=true&output=csv';
         const HISTORY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=1671406739&single=true&output=csv';
         
-        let ALL_PETS = [];
-        let HISTORY_DATA = []; 
-        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
-        let history = []; 
-        let tradeLog = []; 
-        let selectedPetForQty = null; 
-        let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
-        let petChart = null;
-        let isLoading = false;
+        let ALL_PETS = [], HISTORY_DATA = [], tradeLog = [], history = [];
+        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A' };
+        let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default' };
+        let petChart = null, isDataLoading = false, selectedPetForQty = null;
 
-        // LAZY LOADING GATEKEEPER
-        async function ensureDataLoaded() {
-            if (ALL_PETS.length > 0) return true;
-            if (isLoading) return false;
-            isLoading = true;
-            document.getElementById('loadingScreen').style.display = 'flex';
-            await loadPetData();
-            isLoading = false;
-            return true;
+        async function ensureData(type) {
+            if (type === 'master' && ALL_PETS.length === 0) {
+                document.getElementById('loadingScreen').style.display = 'flex';
+                const resp = await fetch(MASTER_CSV_URL + "&t=" + Date.now());
+                const csv = await resp.text();
+                ALL_PETS = parseCSV(csv).map(row => ({
+                    n: row.n || row.name || '', d: row.d || 0, f: row.f || 0, v: row.v || 0,
+                    cat: (row.categories || row.rarity || '').toLowerCase(),
+                    vt: row['value trend'] || row['vt'] || '', dt: row['demand trend'] || row['dt'] || ''
+                })).filter(p => p.n);
+                document.getElementById('loadingScreen').style.display = 'none';
+            }
+            if (type === 'history' && HISTORY_DATA.length === 0) {
+                const resp = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
+                const csv = await resp.text();
+                HISTORY_DATA = csv.trim().split('\n').slice(1).map(line => {
+                    const v = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    return { time: v[0], name: v[1], d: parseFloat(v[2]) || 0, v: parseFloat(v[5]) || 0 };
+                }).filter(r => r.name);
+            }
         }
 
-        function getRarityColor(rarity) {
-            if (!rarity) return 'var(--rarity-common)';
-            const r = rarity.toLowerCase();
-            if (r.includes('legendary')) return 'var(--rarity-legendary)';
-            if (r.includes('ultra')) return 'var(--rarity-ultra)';
-            if (r.includes('rare')) return 'var(--rarity-rare)';
-            if (r.includes('uncommon')) return 'var(--rarity-uncommon)';
-            return 'var(--rarity-common)';
-        }
-
-        function getDemandColor(demand) {
-            if (demand >= 7) return '#4caf50';
-            if (demand >= 4) return '#ffeb3b';
-            return '#f44336';
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            return lines.slice(1).map(line => {
+                const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                const obj = {};
+                headers.forEach((h, i) => obj[h] = vals[i] ? vals[i].trim().replace(/^"|"$/g, '') : '');
+                return obj;
+            });
         }
 
         function getTrendIcons(p) {
-            if (!p || (!p.vt && !p.dt)) return "";
+            if (!p) return "";
             let html = "";
-            const generateSentence = (str, label) => {
+            
+            // 1. Trend Sentences (Normal logic)
+            const getS = (str, l) => {
                 if (!str || typeof str !== 'string' || str.trim() === "") return null;
                 let parts = str.trim().split(' ');
                 if (parts.length < 2) return null;
-                let icon = parts[0]; 
-                let sentences = [];
-                for (let i = 1; i < parts.length; i++) {
-                    let segment = parts[i];
-                    if (!segment.includes(':')) continue;
-                    let [tierKey, val] = segment.split(':');
-                    let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
-                    let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
-                    let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
-                    sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} BY ${amount}`);
-                }
-                return { icon, text: sentences.join('\n') };
+                return { icon: parts[0], text: parts.slice(1).join(' ') };
             };
-            const vData = generateSentence(p.vt, "Value");
-            if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
-            const dData = generateSentence(p.dt, "Demand");
-            if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
+            const vD = getS(p.vt, "Val"), dD = getS(p.dt, "Dem");
+            if (vD) html += `<span title="${vD.text}" style="margin-left:4px; cursor:help;">${vD.icon}</span>`;
+            if (dD) html += `<span title="${dD.text}" style="margin-left:4px; cursor:help;">${dD.icon}</span>`;
+
+            // 2. 10-Day Crash Alert (🚨)
+            // Only runs if history data has been lazily loaded
+            if (HISTORY_DATA.length > 0) {
+                const petH = HISTORY_DATA.filter(h => h.name === p.n);
+                if (petH.length >= 2) {
+                    const current = petH[petH.length - 1];
+                    const historical = petH.slice(-10);
+                    const maxD = Math.max(...historical.map(h => h.d));
+                    const maxV = Math.max(...historical.map(h => h.v));
+                    
+                    if ((maxD - current.d) > 0.3 || (maxV - current.v) > 2.0) {
+                        html += `<span title="🚨 MAJOR CRASH DETECTED (Last 10 Days)\nSignificant drop in Value/Demand." style="margin-left:4px; cursor:help; animation: pulse 2s infinite;">🚨</span>`;
+                    }
+                }
+            }
             return html;
         }
 
-        async function fetchHistory() {
-            if (HISTORY_DATA.length > 0) return;
-            try {
-                const response = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
-                const text = await response.text();
-                const lines = text.trim().split('\n');
-                if (lines.length < 2) return;
-                HISTORY_DATA = lines.slice(1).map((line) => {
-                    const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    return { 
-                        time: vals[0]?.trim() || '', 
-                        name: vals[1]?.trim() || '', 
-                        d: parseFloat(vals[2]) || 0,
-                        v: parseFloat(vals[5]) || 0
-                    };
-                }).filter(row => row.name);
-            } catch (e) { 
-                console.error("History fetch failed:", e);
-                HISTORY_DATA = [];
-            }
-        }
-
-        function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
-        
         async function openGraph(name) {
-            document.getElementById('loadingScreen').style.display = 'flex';
-            document.getElementById('loadingText').innerText = "Fetching historical data...";
-            await fetchHistory();
-            document.getElementById('loadingScreen').style.display = 'none';
-
-            const petHistory = HISTORY_DATA.filter(p => p.name === name);
-            if (petHistory.length < 2) {
-                alert("Not enough historical data yet to generate a graph for " + name);
-                return;
-            }
-            document.getElementById('graphTitle').innerText = name.toUpperCase() + " HISTORY";
+            await ensureData('history');
+            const petH = HISTORY_DATA.filter(h => h.name === name);
+            if (petH.length < 2) return alert("No history available.");
             document.getElementById('graphOverlay').style.display = 'flex';
             const ctx = document.getElementById('petChart').getContext('2d');
             if (petChart) petChart.destroy();
             petChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: petHistory.map(p => p.time),
-                    datasets: [
-                        { label: 'Value', data: petHistory.map(p => p.v), borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.1)', borderWidth: 3, fill: true, tension: 0.3 },
-                        { label: 'Demand', data: petHistory.map(p => p.d), borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', borderWidth: 3, fill: true, tension: 0.3 }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
-                    },
-                    plugins: { legend: { labels: { color: 'white', font: { weight: 'bold' } } } }
+                    labels: petH.map(h => h.time),
+                    datasets: [{ label: 'Value', data: petH.map(h => h.v), borderColor: '#38bdf8' }, { label: 'Demand', data: petH.map(h => h.d), borderColor: '#fbbf24' }]
                 }
             });
         }
 
         function handlePetContext(e, name) {
             e.preventDefault();
-            if (e.shiftKey) { openGraph(name); } else { openQtyModal(name); }
-        }
-
-        function openInfo() { document.getElementById('infoOverlay').style.display = 'flex'; }
-        function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSfx(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            if (type === 'pop') {
-                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === 'win') {
-                osc.type = 'triangle';
-                [523, 659, 783].forEach((f, i) => osc.frequency.setValueAtTime(f, audioCtx.currentTime + (i * 0.1)));
-                gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
-            }
-        }
-
-        function pushState() {
-            if (history.length > 30) history.shift();
-            history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
-        }
-
-        function undo() {
-            if (history.length === 0) return;
-            const last = JSON.parse(history.pop());
-            state.A = (last.A || []);
-            state.B = (last.B || []);
-            state.inv = (last.inv || []);
-            render(); renderInventory(); saveTrade();
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
-        });
-
-        function parseCSV(text) {
-            const lines = text.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-            return lines.slice(1).map(line => {
-                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                const obj = {};
-                headers.forEach((header, i) => {
-                    let val = values[i] ? values[i].trim().replace(/^"|"$/g, '') : '';
-                    if (!isNaN(parseFloat(val)) && isFinite(val) && val !== '') { obj[header] = parseFloat(val); } else { obj[header] = val; }
-                });
-                return obj;
-            });
-        }
-
-        function saveTrade() {
-            const simplifiedState = {
-                A: state.A.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
-                B: state.B.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
-                inv: state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid }))
-            };
-            localStorage.setItem('tradeData', JSON.stringify(simplifiedState));
-        }
-
-        async function restoreTrade() {
-            const saved = localStorage.getItem('tradeData');
-            if (!saved) return;
-            await ensureDataLoaded();
-            try {
-                const parsed = JSON.parse(saved);
-                const hydrate = (item) => {
-                    const freshData = ALL_PETS.find(p => p.n === item.n);
-                    return freshData ? { ...freshData, ...item } : null;
-                };
-                state.A = (parsed.A || []).map(hydrate).filter(x => x);
-                state.B = (parsed.B || []).map(hydrate).filter(x => x);
-                state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
-                render();
-            } catch (e) { console.error("Failed to restore trade", e); }
-        }
-
-        async function loadPetData() {
-            try {
-                const response = await fetch(MASTER_CSV_URL + "&t=" + Date.now());
-                const csvText = await response.text();
-                const data = parseCSV(csvText);
-                ALL_PETS = data.map(row => ({
-                    n: row.n || row.name || '',
-                    d: row.d || 0, nd: row.nd || 0, md: row.md || 0, f: row.f || 0, v: row.v || 0,
-                    f_v: row.f_v || 0, r_v: row.r_v || 0, fr_v: row.fr_v || 0, n_v: row.n_v || 0,
-                    n_f_v: row.n_f_v || 0, n_r_v: row.n_r_v || 0, nfr_v: row.nfr_v || 0,
-                    m_v: row.m_v || 0, m_f_v: row.m_f_v || 0, m_r_v: row.m_r_v || 0,
-                    mfr_v: row.mfr_v || 0, nfr_f: row.nfr_f || 0, mfr_f: row.mfr_f || 0,
-                    cat: (row.categories || row.rarity || '').toLowerCase(),
-                    vt: row['value trend'] || row['vt'] || '', dt: row['demand trend'] || row['dt'] || ''
-                })).filter(p => p.n && p.n.length > 0);
-                document.getElementById('loadingScreen').style.display = 'none';
-            } catch (error) {
-                console.error('Error loading data:', error);
-                document.getElementById('loadingText').textContent = 'Error loading data.';
-            }
+            if (e.shiftKey) openGraph(name); else openQtyModal(name);
         }
 
         async function openSearch(side) {
-            await ensureDataLoaded();
+            await ensureData('master');
             state.target = side;
             document.getElementById('searchOverlay').classList.add('open');
-            searchState.renderLimit = 50;
-            filterAndRender(document.getElementById('mainSearch').value.toLowerCase());
-            setTimeout(() => document.getElementById('mainSearch').focus(), 50);
+            filterAndRender("");
         }
 
         function closeSearch() { document.getElementById('searchOverlay').classList.remove('open'); }
 
-        function updateFilter() {
-            searchState.sortMode = document.getElementById('sortSelect').value;
-            searchState.rarityFilter = document.getElementById('rarityFilter').value.toLowerCase();
-            searchState.renderLimit = 50; 
-            filterAndRender(document.getElementById('mainSearch').value.toLowerCase());
-        }
-
-        document.getElementById('mainSearch').addEventListener('input', (e) => {
-            searchState.renderLimit = 50; 
-            filterAndRender(e.target.value.toLowerCase());
-        });
-
-        document.getElementById('searchResults').addEventListener('scroll', () => {
-            const box = document.getElementById('searchResults');
-            if (box.scrollTop + box.clientHeight >= box.scrollHeight - 50) {
-                if (searchState.renderLimit < searchState.currentMatches.length) {
-                    searchState.renderLimit += 50; renderDOM(); 
-                }
-            }
-        });
-
-        function filterAndRender(query) {
-            let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
-            if (searchState.rarityFilter !== 'none') {
-                matches = matches.filter(p => (p.cat || "").toLowerCase().includes(searchState.rarityFilter));
-            }
-            if (searchState.sortMode !== 'default') {
-                matches.sort((a, b) => {
-                    const mode = searchState.sortMode;
-                    if (mode === 'valHigh') return (state.mode === 'frost' ? b.f : b.v) - (state.mode === 'frost' ? a.f : a.v);
-                    if (mode === 'valLow') return (state.mode === 'frost' ? a.f : a.v) - (state.mode === 'frost' ? b.f : b.v);
-                    if (mode === 'demHigh') return b.d - a.d;
-                    if (mode === 'demLow') return a.d - b.d;
-                    return 0;
-                });
-            }
-            searchState.currentMatches = matches;
+        function filterAndRender(q) {
+            let m = ALL_PETS.filter(p => p.n.toLowerCase().includes(q.toLowerCase()));
+            searchState.currentMatches = m;
             renderDOM();
         }
 
+        document.getElementById('mainSearch').addEventListener('input', e => filterAndRender(e.target.value));
+
         function renderDOM() {
             const chunk = searchState.currentMatches.slice(0, searchState.renderLimit);
-            document.getElementById('searchResults').innerHTML = chunk.map(p => {
-                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
-                const val = state.mode === 'frost' ? p.f : p.v; 
-                return `
-                <div class="search-item-card" onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}', 1)" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')" style="border-color: ${getRarityColor(p.cat)}">
+            document.getElementById('searchResults').innerHTML = chunk.map(p => `
+                <div class="search-item-card" onclick="addItem(null, '${p.n.replace(/'/g, "\\'")}', 1)" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')">
                     <div class="search-item-name">${p.n}${getTrendIcons(p)}</div>
-                    <img src="${imgUrl}" class="search-item-img" loading="lazy" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
-                    <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
-                    <div class="search-item-demand" style="color: ${getDemandColor(p.d)}">Dem: ${p.d}</div>
-                </div>`;
-            }).join('');
+                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" loading="lazy" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    <div class="search-item-val">${(state.mode === 'frost' ? p.f : p.v).toFixed(2)}</div>
+                </div>
+            `).join('');
         }
 
-        function openQtyModal(name) {
-            selectedPetForQty = name;
-            document.getElementById('qtyTitle').innerText = `How many ${name}?`;
-            document.getElementById('qtyInput').value = 1;
-            document.getElementById('qtyModal').style.display = 'flex';
-            setTimeout(() => document.getElementById('qtyInput').focus(), 50);
-        }
-
-        function closeQtyModal() { document.getElementById('qtyModal').style.display = 'none'; selectedPetForQty = null; }
-
-        function confirmQty() {
-            const count = parseInt(document.getElementById('qtyInput').value);
-            if (count > 0 && selectedPetForQty) addItem(null, selectedPetForQty, count);
-            closeQtyModal();
-        }
-
-        function addItem(element, name, quantity = 1) {
-            if (state.target !== 'inv' && state.target !== 'dream') {
-                if ((state[state.target] ? state[state.target].length : 0) + quantity > 18) {
-                    alert("Trade limit reached! Adopt Me only allows 18 items per trade."); return;
-                }
+        function addItem(el, name, qty) {
+            const p = ALL_PETS.find(x => x.n === name);
+            for(let i=0; i<qty; i++) {
+                const np = {...p, uid: Math.random(), type: 'reg', f_st: false, r_st: false};
+                if (state.target === 'inv') state.inv.push(np); else state[state.target].push(np);
             }
-            const pet = ALL_PETS.find(x => x.n === name);
-            if (!pet) return;
-            pushState();
-            for (let i = 0; i < quantity; i++) {
-                const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
-                if (state.target === 'inv') { state.inv.push(newPet); } 
-                else if (state.target === 'dream') { state.dreamPet = newPet; } 
-                else { state[state.target].push(newPet); }
-            }
-            if (state.target === 'inv') {
-                renderInventory();
-                if (element) { element.classList.add('added'); setTimeout(() => element.classList.remove('added'), 500); }
-            } else if (state.target === 'dream') {
-                renderInventory(); closeSearch();
-            } else { render(); closeSearch(); }
-            playSfx('pop'); saveTrade(); 
+            if (state.target === 'inv') renderInventory(); else render();
+            closeSearch();
         }
 
-        function duplicate(s, uid) {
-            if (state[s].length >= 18 && s !== 'inv') return;
-            pushState();
-            const original = state[s].find(x => x.uid === uid);
-            if (!original) return;
-            state[s].push({ ...original, uid: Math.random() });
-            if (s === 'inv') renderInventory(); else render();
-            playSfx('pop'); saveTrade(); 
-        }
-
-        function remove(s, uid) { 
-            pushState(); state[s] = state[s].filter(x => x.uid !== uid); 
-            if (s === 'inv') renderInventory(); else render();
-            saveTrade(); 
-        }
-
-        async function openInventory() { 
-            await ensureDataLoaded();
-            document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); 
-        }
-        function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
-
-        function exportInv() {
-            const data = JSON.stringify(state.inv);
-            const encoded = btoa(unescape(encodeURIComponent(data))); 
-            navigator.clipboard.writeText(encoded).then(() => alert("Inventory code copied!"));
-        }
-
-        function importInv() {
-            const code = prompt("Paste your inventory code here:");
-            if (!code) return;
-            try {
-                const decoded = decodeURIComponent(escape(atob(code)));
-                const data = JSON.parse(decoded);
-                pushState();
-                state.inv = data.map(item => ({...item, uid: Math.random()}));
-                renderInventory(); saveTrade();
-            } catch (e) { alert("Invalid data."); }
-        }
-
-        function openAnalytics() {
-            const overlay = document.getElementById('analyticsOverlay');
-            const body = document.getElementById('analyticsBody');
-            overlay.style.display = 'flex';
-            if (state.inv.length === 0) {
-                body.innerHTML = '<div style="text-align:center; color:#94a3b8;">Inventory is empty.</div>'; return;
-            }
-            const rarities = {}, categories = {};
-            let total = state.inv.length;
-            state.inv.forEach(p => {
-                const r = (p.cat || 'unknown').toLowerCase();
-                let rKey = r.includes('legendary') ? 'Legendary' : r.includes('ultra') ? 'Ultra-Rare' : r.includes('rare') ? 'Rare' : r.includes('uncommon') ? 'Uncommon' : 'Common';
-                rarities[rKey] = (rarities[rKey] || 0) + 1;
-                let cKey = r.includes('preppy') ? 'Preppy' : r.includes('high tier') ? 'High Tier' : r.includes('exotic') ? 'Exotic' : r.includes('classy') ? 'Classy' : 'Randoms';
-                categories[cKey] = (categories[cKey] || 0) + 1;
-            });
-            const generateBars = (data, colorMap) => Object.entries(data).sort((a,b) => b[1] - a[1]).map(([key, count]) => {
-                const pct = ((count / total) * 100).toFixed(1);
-                return `<div class="bar-row"><div class="bar-label">${key}</div><div class="bar-track"><div class="bar-fill" style="width: ${pct}%; background: ${colorMap[key] || '#6366f1'};"></div></div><div class="bar-stat">${count} (${pct}%)</div></div>`;
-            }).join('');
-            body.innerHTML = `<div class="analytics-section"><h4>Rarity</h4>${generateBars(rarities, {'Legendary': 'var(--rarity-legendary)', 'Ultra-Rare': 'var(--rarity-ultra)', 'Rare': 'var(--rarity-rare)', 'Uncommon': 'var(--rarity-uncommon)', 'Common': 'var(--rarity-common)'})}</div><div class="analytics-section"><h4>Category</h4>${generateBars(categories, {'High Tier': '#a855f7', 'Preppy': '#ec4899', 'Exotic': '#06b6d4', 'Classy': '#f59e0b', 'Randoms': '#64748b'})}</div>`;
-        }
-
-        function closeAnalytics() { document.getElementById('analyticsOverlay').style.display = 'none'; }
-        function openHistory() { document.getElementById('historyOverlay').style.display = 'flex'; renderHistoryLog(); }
-        function closeHistory() { document.getElementById('historyOverlay').style.display = 'none'; }
-        
-        function logCurrentTrade() {
-            if (state.A.length === 0 && state.B.length === 0) return;
-            if (tradeLog.length >= 10) tradeLog.shift();
-            tradeLog.push({ timestamp: new Date().toLocaleTimeString(), A: JSON.parse(JSON.stringify(state.A)), B: JSON.parse(JSON.stringify(state.B)), verdict: document.getElementById('verdict').innerText });
-            alert("Trade Saved!");
-        }
-
-        function restoreFromLog(index) {
-            const entry = tradeLog[index];
-            if (!entry) return;
-            state.A = JSON.parse(JSON.stringify(entry.A));
-            state.B = JSON.parse(JSON.stringify(entry.B));
-            closeHistory(); render(); playSfx('pop');
-        }
-
-        function renderHistoryLog() {
-            const list = document.getElementById('historyList');
-            if (tradeLog.length === 0) { list.innerHTML = '<div style="text-align: center; color: var(--subtext);">No history yet.</div>'; return; }
-            list.innerHTML = tradeLog.slice().reverse().map((entry, idx) => `<div class="history-item" onclick="restoreFromLog(${tradeLog.length - 1 - idx})"><div class="history-time">${entry.timestamp}</div><div class="history-details"><span>${entry.A.length} vs ${entry.B.length}</span><span style="color: ${entry.verdict.includes('WIN') ? 'var(--win)' : (entry.verdict.includes('LOSE') ? 'var(--lose)' : 'white')}">${entry.verdict}</span></div></div>`).join('');
-        }
-
-        function calculatePetVal(p, mode) {
-            let val = 0;
-            if (mode === 'frost') {
-                if (p.type === 'neon') val = p.nfr_f || (p.f * 3); else if (p.type === 'mega') val = p.mfr_f || (p.f * 12); else val = p.f;
-                if (p.f_st) val += 0.01; if (p.r_st) val += 0.01;
-            } else {
-                if (p.type === 'neon') val = (p.f_st && p.r_st) ? p.nfr_v : p.f_st ? p.n_f_v : p.r_st ? p.n_r_v : p.n_v;                    
-                else if (p.type === 'mega') val = (p.f_st && p.r_st) ? p.mfr_v : p.f_st ? p.m_f_v : p.r_st ? p.m_r_v : p.m_v;                    
-                else val = (p.f_st && p.r_st) ? p.fr_v : p.f_st ? p.f_v : p.r_st ? p.r_v : p.v;                      
-            }
-            return val;
-        }
-
-        function renderInventory() {
-            const grid = document.getElementById('invGrid');
-            grid.innerHTML = '';
-            let totalV = 0, totalD = 0;
-            const groups = {};
-            state.inv.forEach(p => {
-                const key = `${p.n}|${p.type}|${p.f_st}|${p.r_st}`;
-                if (!groups[key]) groups[key] = []; groups[key].push(p);
-                totalV += calculatePetVal(p, 'value');
-                totalD += p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-            });
-            Object.entries(groups).forEach(([key, stack]) => {
-                const p = stack[0], count = stack.length, valTotal = calculatePetVal(p, 'value') * count, uids = JSON.stringify(stack.map(i => i.uid));
-                grid.innerHTML += `
-                    <div class="card" style="border-color: ${getRarityColor(p.cat)}">
-                        ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
-                        <div class="del" onclick="removeStack('inv', ${uids})">✕</div>
-                        <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
-                        <div class="card-img-container" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')" ondblclick="duplicate('inv', ${p.uid})">
-                             <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" loading="lazy">
-                        </div>
-                        <div class="card-name">${p.n}${getTrendIcons(p)}</div>
-                        <div class="card-val">${valTotal.toFixed(2)}</div>
-                        <div class="card-demand" style="color: ${getDemandColor(p.d)}">Dem: ${p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d)}</div>
-                        <div class="toggles">
-                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="togStack('inv',${uids},'n')">N</div>
-                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="togStack('inv',${uids},'m')">M</div>
-                            <div class="t-btn ${p.f_st?'active':''}" onclick="togStack('inv',${uids},'f')">F</div>
-                            <div class="t-btn ${p.r_st?'active':''}" onclick="togStack('inv',${uids},'r')">R</div>
-                        </div>
-                    </div>`;
-            });
-            document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
-            document.getElementById('invAvgDemand').innerText = state.inv.length > 0 ? (totalD / state.inv.length).toFixed(1) : "0.0";
-            const v = totalV;
-            ['mile-1','mile-2','mile-3','mile-4','mile-5'].forEach((m, i) => document.getElementById(m).classList.toggle('active', v >= [1, 10, 50, 100, 155][i]));
-            updateAISuggestions(state.inv);
-        }
-
-        function removeStack(s, uids) { pushState(); state[s] = state[s].filter(x => x.uid !== uids[0]); renderInventory(); saveTrade(); }
-        function togStack(s, uids, type) {
-            pushState(); uids.forEach(uid => {
-                const p = state[s].find(x => x.uid === uid);
-                if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon'; else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega'; else if (type === 'f') p.f_st = !p.f_st; else if (type === 'r') p.r_st = !p.r_st;
-            });
-            saveTrade(); renderInventory();
-        }
-
-        function findSimilarToTotal() { showSimilarPopup(parseFloat(document.getElementById('invTotalValue').innerText)); }
-        function findSimilarToPet(val) { showSimilarPopup(val); }
-        function showSimilarPopup(val) {
-            const overlay = document.getElementById('similarOverlay'), list = document.getElementById('similarList');
-            overlay.style.display = 'flex';
-            list.innerHTML = ALL_PETS.filter(p => p.v >= val * 0.90 && p.v <= val * 1.15).sort((a, b) => b.d - a.d).slice(0, 30).map(p => `<div class="similar-item ${state.aiTargetPets.some(x => x.n === p.n) ? 'selected' : ''}" onclick="toggleAiTarget(this, '${p.n.replace(/'/g, "\\'")}')"><img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width: 40px; height: 40px;" loading="lazy"><div style="flex: 1;"><div style="font-weight: 800; font-size: 0.9em;">${p.n}</div><div style="font-size: 0.7em; color: var(--subtext);">Value: ${p.v.toFixed(2)} | Demand: ${p.d}</div></div><input type="checkbox" ${state.aiTargetPets.some(x => x.n === p.n) ? 'checked' : ''} style="pointer-events: none;"></div>`).join('');
-        }
-        function toggleAiTarget(el, name) {
-            const idx = state.aiTargetPets.findIndex(x => x.n === name);
-            if (idx > -1) state.aiTargetPets.splice(idx, 1); else state.aiTargetPets.push(ALL_PETS.find(x => x.n === name));
-            el.classList.toggle('selected'); el.querySelector('input').checked = !el.querySelector('input').checked;
-        }
-        function closeSimilarPopup() { document.getElementById('similarOverlay').style.display = 'none'; renderInventory(); }
-
-        function setAiStrategy(mode) {
-            state.aiMode = mode; state.aiTargetPets = []; 
-            document.getElementById('aiTogNormal').classList.toggle('active', mode === 'normal');
-            document.getElementById('aiTogVelocity').classList.toggle('active', mode === 'velocity');
-            renderInventory();
-        }
-
-        function updateStrategyCount(val) { state.strategyLimit = parseInt(val); document.getElementById('strategyCountVal').innerText = val; renderInventory(); }
-        function clearDreamPet() { state.dreamPet = null; renderInventory(); }
-
-        function updateAISuggestions(inventory) {
-            const box = document.getElementById('aiSuggestions'), dreamContainer = document.getElementById('dreamPetContainer');
-            if (state.dreamPet) {
-                const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText), freshDream = ALL_PETS.find(x => x.n === state.dreamPet.n), dreamVal = freshDream ? freshDream.v : state.dreamPet.v, pct = Math.min((totalInvVal / dreamVal) * 100, 100).toFixed(1);
-                dreamContainer.innerHTML = `<div class="dream-active-badge"><span>Target: ${state.dreamPet.n}</span><span style="cursor: pointer;" onclick="clearDreamPet()">✕</span></div>`;
-                let suggestions = `<div class="ai-summary"><b>Progress:</b> ${pct}%<div class="dream-progress-bg"><div class="dream-progress-fill" style="width: ${pct}%"></div></div></div>`, bestCombos = [];
-                for(let i=0; i<50; i++) {
-                    let combo = [], sum = 0, attempt = [...inventory].sort(() => Math.random() - 0.5); 
-                    for(let p of attempt) { let v = calculatePetVal(p, 'value'); if (sum + v <= dreamVal * 1.1) { combo.push(p); sum += v; } }
-                    if(combo.length > 0) bestCombos.push({ offer: combo, sum: sum, diff: Math.abs(dreamVal - sum) });
-                }
-                bestCombos.sort((a,b) => a.diff - b.diff);
-                box.innerHTML = suggestions + bestCombos.slice(0, 3).map(r => `<div class="ai-suggestion">Offer: ${r.offer.map(p => p.n).join(' + ')}<br><div class="ai-stats-row"><span class="ai-stat-pill" style="background:#334155; color:white;">Total: ${r.sum.toFixed(2)}</span></div></div>`).join('');
-                return;
-            } 
-            dreamContainer.innerHTML = `<button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>`;
-            if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to inventory...</div>`; return; }
-            let usedPetUids = new Set(), results = [];
-            for(let i = 0; i < 20 && results.length < state.strategyLimit; i++) {
-                let available = [...inventory].filter(p => !usedPetUids.has(p.uid)).sort(() => Math.random() - 0.5), bundle = available.slice(0, state.aiMode === 'velocity' ? 10 : 4);
-                if (bundle.length > 0) {
-                    let bundleVal = bundle.reduce((s, p) => s + calculatePetVal(p, 'value'), 0), target = state.aiTargetPets.length > 0 ? state.aiTargetPets[Math.floor(Math.random()*state.aiTargetPets.length)] : ALL_PETS.filter(p => p.v > bundleVal * (state.aiMode === 'velocity' ? 0.8 : 1.01) && p.v < bundleVal * 1.2).sort((a,b) => b.d - a.d)[0];
-                    if (target) { bundle.forEach(p => usedPetUids.add(p.uid)); results.push({ offer: bundle, target: target }); }
-                }
-            }
-            box.innerHTML = results.map(r => `<div class="ai-suggestion">Offer: ${r.offer.map(p => p.n).join(' + ')}<br>Target: <span class="ai-item-tag" style="background:var(--win)">${r.target.n}</span></div>`).join('');
-        }
+        function openQtyModal(name) { selectedPetForQty = name; document.getElementById('qtyModal').style.display = 'flex'; }
+        function closeQtyModal() { document.getElementById('qtyModal').style.display = 'none'; }
+        function confirmQty() { addItem(null, selectedPetForQty, parseInt(document.getElementById('qtyInput').value)); closeQtyModal(); }
 
         function renderSide(s) {
             const grid = document.getElementById(`grid${s}`);
-            grid.innerHTML = '';
-            let totalV = 0, totalD = 0;
-            state[s].forEach(p => {
-                let dem = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d), val = calculatePetVal(p, state.mode);
-                totalV += val; totalD += dem;
-                grid.innerHTML += `
-                    <div class="card" style="border-color: ${getRarityColor(p.cat)}">
-                        <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
-                        <div class="card-img-container" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')" ondblclick="duplicate('${s}', ${p.uid})">
-                            <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" loading="lazy">
-                        </div>
-                        <div class="card-name">${p.n}${getTrendIcons(p)}</div>
-                        <div class="card-val">${val.toFixed(2)}</div>
-                        <div class="card-demand" style="color: ${getDemandColor(dem)}">Dem: ${dem}</div>
-                        <div class="toggles">
-                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
-                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('${s}',${p.uid},'m')">M</div>
-                            <div class="t-btn ${p.f_st?'active':''}" onclick="tog('${s}',${p.uid},'f')">F</div>
-                            <div class="t-btn ${p.r_st?'active':''}" onclick="tog('${s}',${p.uid},'r')">R</div>
-                        </div>
-                    </div>`;
-            });
-            grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
-            document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
-            document.getElementById(`cnt${s}`).innerText = state[s].length;
-            document.getElementById(`dem${s}`).innerText = state[s].length > 0 ? (totalD / state[s].length).toFixed(1) : "0.0";
+            grid.innerHTML = state[s].map(p => `
+                <div class="card">
+                    <div class="del" onclick="removePet('${s}', ${p.uid})">✕</div>
+                    <div class="card-img-container" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')">
+                        <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" loading="lazy">
+                    </div>
+                    <div class="card-name">${p.n}${getTrendIcons(p)}</div>
+                    <div class="card-val">${(state.mode === 'frost' ? p.f : p.v).toFixed(2)}</div>
+                </div>
+            `).join('') + `<div class="plus" onclick="openSearch('${s}')">+</div>`;
+            updateTotals();
         }
 
-        function calculate() {
-            const vA = parseFloat(document.getElementById('totA').innerText), vB = parseFloat(document.getElementById('totB').innerText), demA = parseFloat(document.getElementById('demA').innerText), demB = parseFloat(document.getElementById('demB').innerText), verdict = document.getElementById('verdict'), vDiff = document.getElementById('vDiff'), vSub = document.getElementById('vSub'), gaugeNeedle = document.getElementById('gaugeNeedle'), gaugeBar = document.getElementById('gaugeBar');
-            if (vA === 0 && vB === 0) { verdict.innerText = "--"; gaugeNeedle.style.left = "50%"; return; }
-            const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : 0, demGap = demA - demB;
-            let needlePos = 50 + (pDiff / 0.15 * 50); needlePos = Math.max(0, Math.min(100, needlePos));
-            gaugeNeedle.style.left = `${needlePos}%`;
-            if (Math.abs(diff) < 0.01) { verdict.innerText = "FAIR"; vSub.innerText = "Perfectly balanced."; }
-            else if (diff > 0) {
-                if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; vSub.innerText = "Value gain but demand loss."; gaugeBar.classList.add('trap-active'); }
-                else { verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; vSub.innerText = `Gaining ${(pDiff * 100).toFixed(1)}% value.`; playSfx('win'); gaugeBar.classList.remove('trap-active'); }
-            } else {
-                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; vSub.innerText = `Losing ${(Math.abs(pDiff) * 100).toFixed(1)}% value.`; gaugeBar.classList.remove('trap-active');
-            }
-            vDiff.innerText = `Diff: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
+        function removePet(s, uid) { state[s] = state[s].filter(p => p.uid !== uid); render(); }
+
+        function updateTotals() {
+            const vA = state.A.reduce((sum, p) => sum + (state.mode === 'frost' ? p.f : p.v), 0);
+            const vB = state.B.reduce((sum, p) => sum + (state.mode === 'frost' ? p.f : p.v), 0);
+            document.getElementById('totA').innerText = vA.toFixed(3);
+            document.getElementById('totB').innerText = vB.toFixed(3);
+            
+            const diff = vB - vA;
+            document.getElementById('verdict').innerText = diff > 0 ? "WIN" : (diff < 0 ? "LOSE" : "FAIR");
+            document.getElementById('vDiff').innerText = "Difference: " + diff.toFixed(3);
         }
 
-        function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
-        function setMode(m) { state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost'); document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); }
-        function tog(s, uid, type) {
-            pushState(); const p = state[s].find(x => x.uid === uid);
-            if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon'; else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega'; else if (type === 'f') p.f_st = !p.f_st; else if (type === 'r') p.r_st = !p.r_st;
-            saveTrade(); if (s === 'inv') renderInventory(); else render();
+        function render() { renderSide('A'); renderSide('B'); }
+        function setMode(m) { state.mode = m; render(); }
+
+        async function openInventory() { await ensureData('master'); document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
+        function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
+        function renderInventory() {
+            document.getElementById('invGrid').innerHTML = state.inv.map(p => `<div class="card"><div class="card-name">${p.n}</div></div>`).join('');
+            document.getElementById('invTotalValue').innerText = state.inv.reduce((s, p) => s + p.v, 0).toFixed(2);
         }
 
-        function updateTradeSuggestions() {
-            const container = document.getElementById('sideASuggestions'), list = document.getElementById('suggestList'), targetVal = parseFloat(document.getElementById('totB').innerText);
-            if (targetVal <= 0 || state.inv.length === 0) { container.style.display = 'none'; return; }
-            container.style.display = 'block'; list.innerHTML = '';
-            for (let i = 0; i < 2; i++) {
-                let bundle = [], sum = 0, pool = [...state.inv].sort(() => Math.random() - 0.5);
-                for (let p of pool) { let v = calculatePetVal(p, state.mode); if (sum + v <= targetVal * 1.15) { bundle.push(p); sum += v; } if (sum >= targetVal * 0.9) break; }
-                if (bundle.length > 0) list.innerHTML += `<div class="suggest-pill" onclick='applySuggestion(${JSON.stringify(bundle.map(b=>b.uid))})'><div class="suggest-items-text">${bundle.map(b=>b.n).join(' + ')}</div><div class="suggest-val-text">${sum.toFixed(2)}</div></div>`;
-            }
-        }
-
-        function applySuggestion(uids) {
-            pushState(); uids.forEach(uid => { const item = state.inv.find(x => x.uid === uid); if (item) state.A.push({...item, uid: Math.random()}); });
-            render(); saveTrade();
-        }
-
-        // Initialize only non-data dependent parts
-        restoreTrade();
+        function openInfo() { document.getElementById('infoOverlay').style.display = 'flex'; }
+        function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
+        
+        // Initial setup
+        ensureData('master');
     </script>
 </body>
 </html>
