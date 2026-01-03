@@ -282,7 +282,7 @@
 
         .history-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4500; }
         .history-container { width: 95%; max-width: 600px; background: #1a2333; border-radius: 20px; border: 1px solid var(--border); max-height: 80vh; display: flex; flex-direction: column; }
-        .history-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .history-header { padding: 20px; border-bottom: 1px solid var(--border); display: space-between; align-items: center; }
         .history-list { padding: 20px; overflow-y: auto; }
         .history-item { background: var(--panel); border: 1px solid var(--border); padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; }
         .history-item:hover { background: var(--card); border-color: var(--accent); }
@@ -519,16 +519,16 @@
     </div>
 
     <script>
-        // CRITICAL DATA VARIABLES DEFINED AT TOP FOR SCOPE SAFETY
+        // CRITICAL VARIABLES DECLARED AT THE VERY TOP FOR SCOPE SAFETY
         const MASTER_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=697881438&single=true&output=csv';
         const HISTORY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=1671406739&single=true&output=csv';
         
         let ALL_PETS = [];
+        let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
         let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
         let history = []; 
         let tradeLog = []; 
         let selectedPetForQty = null; 
-        let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
 
         // Consolidated Helper for Trend Icons with Robust, Human-Readable Sentences
         function getTrendIcons(p) {
@@ -555,16 +555,16 @@
                 };
 
                 const vData = generateSentence(p.vt, "Value");
-                if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help;">${vData.icon}</span>`;
+                if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; filter: grayscale(20%);">${vData.icon}</span>`;
                 
                 const dData = generateSentence(p.dt, "Demand");
-                if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help;">${dData.icon}</span>`;
+                if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; filter: grayscale(20%);">${dData.icon}</span>`;
                 
             } catch (err) { return ""; }
             return html;
         }
 
-        // SFX and Audio Logic with User Gesture Safety
+        // SFX and Audio Context Initialization
         const getAudioCtx = (() => {
             let ctx;
             return () => {
