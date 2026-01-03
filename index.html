@@ -246,7 +246,7 @@
         .ai-tog { flex: 1; text-align: center; font-size: 0.7em; font-weight: 900; padding: 8px; border-radius: 7px; cursor: pointer; color: var(--subtext); transition: 0.2s; }
         .ai-tog.active { background: var(--accent); color: white; }
 
-        .search-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .search-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4000; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .search-overlay.open { opacity: 1; pointer-events: auto; }
         .search-container { width: 95%; max-width: 900px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); display: flex; flex-direction: column; max-height: 85vh; box-shadow: 0 25px 60px rgba(0,0,0,0.6); overflow: hidden; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .search-overlay.open .search-container { transform: scale(1); }
@@ -268,9 +268,6 @@
         .search-item-demand { font-size: 0.9em; font-weight: 800; color: var(--demand-color); margin-top: 2px; text-shadow: 0 0 5px rgba(251, 191, 36, 0.3); }
         .results-grid::-webkit-scrollbar { width: 10px; }
         .results-grid::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; border: 2px solid #161e2e; }
-
-        .win-c { color: var(--win); } .lose-c { color: var(--lose); } .trap-c { color: var(--trap); } .fair-c { color: white; }
-        @media (max-width: 768px) { .v-text { font-size: 2.5em; } .verdict-box { bottom: 15px; padding: 20px; } }
 
         /* Feature: History Graph Overlay */
         #graphOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 5500; }
@@ -616,16 +613,18 @@
             if (!p || (!p.vt && !p.dt)) return "";
             let html = "";
             try {
-                // Feature: Scans history to see if the pet recently dropped by > 0.3
+                // Feature: Scans history to see if the pet recently dropped by > 0.3 Demand or > 1.0 Value
                 let alertMsg = "";
                 if (HISTORY_DATA.length > 0) {
                     const petHistory = HISTORY_DATA.filter(row => row.name === p.n);
                     if (petHistory.length >= 2) {
                         const last = petHistory[petHistory.length - 1];
                         const prev = petHistory[petHistory.length - 2];
-                        if (prev.d - last.d > 0.3) {
-                            // IMPROVED: High visibility alert for tooltips
-                            alertMsg = "🚨 ALERT: This pet recently dropped in value by a lot! 🚨\n";
+                        const dDrop = prev.d - last.d;
+                        const vDrop = prev.v - last.v;
+                        if (dDrop > 0.3 || vDrop > 1.0) {
+                            // IMPROVED: HIGH VISIBILITY BOLD WARNING
+                            alertMsg = "🚨 ALERT: THIS PET RECENTLY DROPPED IN VALUE/DEMAND BY A LOT! 🚨\n";
                             alertMsg += "--------------------------------------------------\n\n";
                         }
                     }
@@ -645,13 +644,12 @@
                         let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
                         let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
                         let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
-                        sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} by ${amount}`);
+                        sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} BY ${amount}`);
                     }
                     return { icon, text: sentences.join('\n') };
                 };
 
                 const vData = generateSentence(p.vt, "Value");
-                // IMPROVED: Icons have a drop shadow to make them pop in the UI
                 if (vData) html += `<span title="${alertMsg}${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
                 
                 const dData = generateSentence(p.dt, "Demand");
@@ -1272,8 +1270,7 @@
             if (state.dreamPet) {
                 dreamContainer.innerHTML = `<div class="dream-active-badge"><span>Target: ${state.dreamPet.n}</span><span style="cursor: pointer;" onclick="clearDreamPet()">✕</span></div>`;
                 const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
-                const freshDream = ALL_PETS.find(x => x.n === state.dreamPet.n);
-                const dreamVal = freshDream ? freshDream.v : state.dreamPet.v; 
+                const dreamVal = calculatePetVal(state.dreamPet, 'value'); 
                 const pct = Math.min((totalInvVal / dreamVal) * 100, 100).toFixed(1);
                 let suggestions = `<div class="ai-summary"><b>Dream Progress:</b> ${pct}%<div class="dream-progress-bg"><div class="dream-progress-fill" style="width: ${pct}%"></div></div></div>`;
                 let bestCombos = [];
