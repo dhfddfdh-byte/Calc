@@ -278,6 +278,17 @@
         .graph-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #111827; }
         .graph-body { padding: 30px; background: #0f172a; height: 400px; }
 
+        /* Feature: Information Overlay */
+        #infoOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.97); backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; z-index: 6000; }
+        .info-container { width: 95%; max-width: 600px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); box-shadow: 0 30px 70px rgba(0,0,0,0.8); overflow: hidden; }
+        .info-header { padding: 20px; background: #111827; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .info-body { padding: 30px; overflow-y: auto; max-height: 70vh; color: #cbd5e1; line-height: 1.6; }
+        .info-section { margin-bottom: 25px; }
+        .info-section h4 { color: var(--accent); margin-bottom: 10px; font-weight: 900; text-transform: uppercase; font-size: 0.9em; letter-spacing: 1px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .info-label { font-weight: 700; color: white; }
+        .info-val { font-size: 0.9em; }
+
         .similar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 5000; }
         .similar-container { width: 90%; max-width: 600px; background: #1a2333; border-radius: 20px; border: 1px solid var(--border); padding: 20px; max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; }
         .similar-item { display: flex; align-items: center; gap: 15px; background: var(--card); padding: 12px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; border: 1.5px solid transparent; transition: 0.2s; }
@@ -342,7 +353,38 @@
         </div>
     </div>
 
+    <!-- Feature: Information Overlay -->
+    <div id="infoOverlay">
+        <div class="info-container">
+            <div class="info-header">
+                <h3 style="color: white; font-weight: 950;">ℹ️ CALCULATOR GUIDE</h3>
+                <button class="nav-btn" onclick="closeInfo()">Close</button>
+            </div>
+            <div class="info-body">
+                <div class="info-section">
+                    <h4>Mouse Keybinds</h4>
+                    <div class="info-row"><span class="info-label">Right Click:</span><span class="info-val">Open Multi-Add (Quantity) Menu</span></div>
+                    <div class="info-row"><span class="info-label">Shift + Right Click:</span><span class="info-val">View Demand & Value History Graph</span></div>
+                    <div class="info-row"><span class="info-label">Double Click Image:</span><span class="info-val">Duplicate Pet Card</span></div>
+                    <div class="info-row"><span class="info-label">Hover on Emojis:</span><span class="info-val">See exact amount of change in tooltip</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>Keyboard Keybinds</h4>
+                    <div class="info-row"><span class="info-label">Ctrl + Z:</span><span class="info-val">Undo Last Change</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>Trend Emojis</h4>
+                    <div class="info-row"><span class="info-label">🔥 :</span><span class="info-val">Demand is increasing</span></div>
+                    <div class="info-row"><span class="info-label">❄️ :</span><span class="info-val">Demand is decreasing</span></div>
+                    <div class="info-row"><span class="info-label">📈 :</span><span class="info-val">Value is increasing</span></div>
+                    <div class="info-row"><span class="info-label">📉 :</span><span class="info-val">Value is decreasing</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="nav-bar">
+        <button class="nav-btn" onclick="openInfo()">ℹ️ Information</button>
         <button class="nav-btn" onclick="openHistory()">📜 History</button>
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
     </div>
@@ -545,7 +587,7 @@
         const HISTORY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=1671406739&single=true&output=csv';
         
         let ALL_PETS = [];
-        let HISTORY_DATA = []; // Store historical points for the chart
+        let HISTORY_DATA = []; 
         let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
         let history = []; 
         let tradeLog = []; 
@@ -574,7 +616,6 @@
             if (!p || (!p.vt && !p.dt)) return "";
             let html = "";
             try {
-                // Feature: Scans history to see if the pet recently dropped by > 0.3
                 let volatilityMsg = "";
                 if (HISTORY_DATA.length > 0) {
                     const petHistory = HISTORY_DATA.filter(row => row.name === p.n);
@@ -618,13 +659,11 @@
 
         // Feature: History Chart Functions
         async function fetchHistory() {
-            if (HISTORY_DATA.length > 0) return; // Only fetch once per session
+            if (HISTORY_DATA.length > 0) return; 
             try {
                 const response = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
                 const text = await response.text();
                 const lines = text.trim().split('\n');
-                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-                
                 HISTORY_DATA = lines.slice(1).map(line => {
                     const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     return { 
@@ -701,6 +740,9 @@
                 openQtyModal(name);
             }
         }
+
+        function openInfo() { document.getElementById('infoOverlay').style.display = 'flex'; }
+        function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSfx(type) {
@@ -825,7 +867,6 @@
                 })).filter(p => p.n && p.n.length > 0);
                 
                 document.getElementById('loadingScreen').style.display = 'none';
-                // Trigger history fetch in background so warnings are ready
                 fetchHistory(); 
                 restoreTrade();
                 render();
@@ -834,12 +875,6 @@
                 document.querySelector('.loading-text').textContent = 'Error loading data.';
             }
         }
-
-        const overlay = document.getElementById('searchOverlay');
-        const searchInput = document.getElementById('mainSearch');
-        const resultsBox = document.getElementById('searchResults');
-        const sortSelect = document.getElementById('sortSelect');
-        const rarityFilter = document.getElementById('rarityFilter');
 
         function openSearch(side) {
             state.target = side;
@@ -1155,7 +1190,9 @@
                         <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
                         <div class="card-img-container" 
                              oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')"
-                             ondblclick="duplicate('inv', ${p.uid})"><img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp"></div>
+                             ondblclick="duplicate('inv', ${p.uid})" title="Right click for Qty | Shift + Right click for Graph">
+                             <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
+                        </div>
                         <div class="card-name">${p.n}${getTrendIcons(p)}</div>
                         <div class="card-val">${valTotal.toFixed(2)}</div>
                         <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
