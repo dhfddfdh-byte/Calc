@@ -616,14 +616,17 @@
             if (!p || (!p.vt && !p.dt)) return "";
             let html = "";
             try {
-                let volatilityMsg = "";
+                // Feature: Scans history to see if the pet recently dropped by > 0.3
+                let alertMsg = "";
                 if (HISTORY_DATA.length > 0) {
                     const petHistory = HISTORY_DATA.filter(row => row.name === p.n);
                     if (petHistory.length >= 2) {
                         const last = petHistory[petHistory.length - 1];
                         const prev = petHistory[petHistory.length - 2];
                         if (prev.d - last.d > 0.3) {
-                            volatilityMsg = " | (This pet recently dropped in value by a lot.)";
+                            // IMPROVED: High visibility alert for tooltips
+                            alertMsg = "🚨 ALERT: This pet recently dropped in value by a lot! 🚨\n";
+                            alertMsg += "--------------------------------------------------\n\n";
                         }
                     }
                 }
@@ -640,18 +643,19 @@
                         if (!segment.includes(':')) continue;
                         let [tierKey, val] = segment.split(':');
                         let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
-                        let actionWord = val.includes('+') ? 'increased' : 'decreased';
+                        let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
                         let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
-                        sentences.push(`${tierName} ${p.n} ${label} ${actionWord} ${amount}`);
+                        sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} by ${amount}`);
                     }
-                    return { icon, text: sentences.join(' | ') + volatilityMsg };
+                    return { icon, text: sentences.join('\n') };
                 };
 
                 const vData = generateSentence(p.vt, "Value");
-                if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; filter: grayscale(20%);">${vData.icon}</span>`;
+                // IMPROVED: Icons have a drop shadow to make them pop in the UI
+                if (vData) html += `<span title="${alertMsg}${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
                 
                 const dData = generateSentence(p.dt, "Demand");
-                if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; filter: grayscale(20%);">${dData.icon}</span>`;
+                if (dData) html += `<span title="${alertMsg}${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
                 
             } catch (err) { return ""; }
             return html;
@@ -875,6 +879,12 @@
                 document.querySelector('.loading-text').textContent = 'Error loading data.';
             }
         }
+
+        const overlay = document.getElementById('searchOverlay');
+        const searchInput = document.getElementById('mainSearch');
+        const resultsBox = document.getElementById('searchResults');
+        const sortSelect = document.getElementById('sortSelect');
+        const rarityFilter = document.getElementById('rarityFilter');
 
         function openSearch(side) {
             state.target = side;
@@ -1150,17 +1160,6 @@
                 }
             }
             return val;
-        }
-
-        function getFullName(p) {
-            let prefix = "";
-            if (p.type === 'neon') prefix = "Neon ";
-            else if (p.type === 'mega') prefix = "Mega ";
-            let suffix = "";
-            if (p.f_st && p.r_st) suffix = " (FR)";
-            else if (p.f_st) suffix = " (F)";
-            else if (p.r_st) suffix = " (R)";
-            return `${prefix}${p.n}${suffix}`;
         }
 
         function renderInventory() {
