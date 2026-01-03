@@ -326,6 +326,7 @@
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
     </div>
 
+    <!-- Analytics Overlay -->
     <div class="analytics-overlay" id="analyticsOverlay">
         <div class="analytics-container">
             <div class="history-header">
@@ -336,6 +337,7 @@
         </div>
     </div>
 
+    <!-- Quantity Modal -->
     <div class="qty-modal-overlay" id="qtyModal" onclick="closeQtyModal()">
         <div class="qty-modal" onclick="event.stopPropagation()">
             <h3 id="qtyTitle">How many?</h3>
@@ -347,6 +349,7 @@
         </div>
     </div>
 
+    <!-- History Overlay -->
     <div class="history-overlay" id="historyOverlay">
         <div class="history-container">
             <div class="history-header">
@@ -516,7 +519,7 @@
     </div>
 
     <script>
-        // CRITICAL VARIABLES MOVED TO TOP
+        // CRITICAL VARIABLES DECLARED AT TOP FOR IMMEDIATE SCOPE
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         let ALL_PETS = [];
         let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
@@ -525,7 +528,7 @@
         let selectedPetForQty = null; 
         let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
 
-        // Consolidated Helper for Trend Icons with Safe Tooltips
+        // Consolidated Helper for Trend Icons with Robust Tooltips
         function getTrendIcons(p) {
             if (!p || (!p.vt && !p.dt)) return "";
             let html = "";
@@ -559,7 +562,7 @@
             return html;
         }
 
-        // SFX and Audio Logic
+        // SFX and Audio Context Initialization
         const getAudioCtx = (() => {
             let ctx;
             return () => {
@@ -570,24 +573,26 @@
         })();
 
         function playSfx(type) {
-            const ctx = getAudioCtx();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            if (type === 'pop') {
-                osc.frequency.setValueAtTime(600, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.15, ctx.currentTime);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.1);
-            } else if (type === 'win') {
-                osc.type = 'triangle';
-                [523, 659, 783].forEach((f, i) => osc.frequency.setValueAtTime(f, ctx.currentTime + (i * 0.1)));
-                gain.gain.setValueAtTime(0.04, ctx.currentTime);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.4);
-            }
+            try {
+                const ctx = getAudioCtx();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                if (type === 'pop') {
+                    osc.frequency.setValueAtTime(600, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.1);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    [523, 659, 783].forEach((f, i) => osc.frequency.setValueAtTime(f, ctx.currentTime + (i * 0.1)));
+                    gain.gain.setValueAtTime(0.04, ctx.currentTime);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.4);
+                }
+            } catch (e) {}
         }
 
         function pushState() {
@@ -804,7 +809,7 @@
             for (let i = 0; i < quantity; i++) {
                 const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
                 if (state.target === 'inv') { state.inv.push(newPet); } 
-                else if (state.target === 'dream') { state.dreamPet = newPet; break; } 
+                else if (state.target === 'dream') { state.dreamPet = newPet; } 
                 else { state[state.target].push(newPet); }
             }
             if (state.target === 'inv') {
@@ -989,6 +994,17 @@
                 }
             }
             return val;
+        }
+
+        function getFullName(p) {
+            let prefix = "";
+            if (p.type === 'neon') prefix = "Neon ";
+            else if (p.type === 'mega') prefix = "Mega ";
+            let suffix = "";
+            if (p.f_st && p.r_st) suffix = " (FR)";
+            else if (p.f_st) suffix = " (F)";
+            else if (p.r_st) suffix = " (R)";
+            return `${prefix}${p.n}${suffix}`;
         }
 
         function renderInventory() {
