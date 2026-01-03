@@ -583,183 +583,473 @@
    <script>
         // CRITICAL DATA VARIABLES DEFINED AT TOP
         const MASTER_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=697881438&single=true&output=csv';
-const HISTORY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=1671406739&single=true&output=csv';
-
-// Global Data Caches
-let ALL_PETS = [];
-let PET_MAP = new Map(); // Fast lookup by Name
-let HISTORY_MAP = new Map(); // Fast lookup by Name
-let TREND_HTML_CACHE = new Map(); // Pre-calculated trend HTML
-
-let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
-let history = []; 
-let tradeLog = []; 
-let selectedPetForQty = null; 
-let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
-let petChart = null;
-
-// Initialization
-async function loadPetData() {
-    try {
-        const [petRes, histRes] = await Promise.all([
-            fetch(MASTER_CSV_URL + "&t=" + Date.now()),
-            fetch(HISTORY_CSV_URL + "&t=" + Date.now())
-        ]);
-
-        const petText = await petRes.text();
-        const histText = await histRes.text();
-
-        // 1. Process History into a Map for instant access
-        const histLines = histText.trim().split('\n').slice(1);
-        histLines.forEach(line => {
-            const v = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            const name = v[1]?.trim();
-            if (!name) return;
-            if (!HISTORY_MAP.has(name)) HISTORY_MAP.set(name, []);
-            HISTORY_MAP.get(name).push({ time: v[0], d: parseFloat(v[2]) || 0, v: parseFloat(v[5]) || 0 });
-        });
-
-        // 2. Process Pets
-        const petData = parseCSV(petText);
-        ALL_PETS = petData.map(row => {
-            const p = {
-                n: row.n || row.name || '',
-                d: row.d || 0, nd: row.nd || 0, md: row.md || 0,
-                f: row.f || 0, v: row.v || 0, f_v: row.f_v || 0,
-                r_v: row.r_v || 0, fr_v: row.fr_v || 0,
-                n_v: row.n_v || 0, n_f_v: row.n_f_v || 0, 
-                n_r_v: row.n_r_v || 0, nfr_v: row.nfr_v || 0,
-                m_v: row.m_v || 0, m_f_v: row.m_f_v || 0, 
-                m_r_v: row.m_r_v || 0, mfr_v: row.mfr_v || 0,
-                nfr_f: row.nfr_f || 0, mfr_f: row.mfr_f || 0,
-                cat: (row.categories || row.rarity || '').toLowerCase(),
-                vt: row['value trend'] || row['vt'] || '', 
-                dt: row['demand trend'] || row['dt'] || ''
-            };
-            PET_MAP.set(p.n, p);
-            // Pre-calculate Trend HTML once to save CPU during render
-            TREND_HTML_CACHE.set(p.n, generateTrendHTML(p));
-            return p;
-        }).filter(p => p.n);
-
-        document.getElementById('loadingScreen').style.display = 'none';
-        restoreTrade();
-        render();
-    } catch (error) {
-        console.error('Loading Error:', error);
-    }
-}
-
-// Logic: Trend Calculation (Moved out of render loop)
-function generateTrendHTML(p) {
-    let html = "";
-    const history = HISTORY_MAP.get(p.n);
-    
-    // Crash detection logic (Simplified)
-    if (history && history.length >= 2) {
-        const current = history[history.length - 1];
-        const maxV = Math.max(...history.slice(-10).map(h => h.v));
-        if (maxV - current.v > 2.0) {
-            html += `<span title="MAJOR VALUE DROP DETECTED" style="cursor:help; animation: pulse 2s infinite;">🚨</span>`;
+        const HISTORY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=1671406739&single=true&output=csv';
+        
+        let ALL_PETS = [];
+        let HISTORY_DATA = []; 
+        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
+        let history = []; 
+        let tradeLog = []; 
+        let selectedPetForQty = null; 
+        let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
+        let petChart = null;
+        // Essential Helper Functions
+        function getRarityColor(rarity) {
+            if (!rarity) return 'var(--rarity-common)';
+            const r = rarity.toLowerCase();
+            if (r.includes('legendary')) return 'var(--rarity-legendary)';
+            if (r.includes('ultra')) return 'var(--rarity-ultra)';
+            if (r.includes('rare')) return 'var(--rarity-rare)';
+            if (r.includes('uncommon')) return 'var(--rarity-uncommon)';
+            return 'var(--rarity-common)';
         }
+        function getDemandColor(demand) {
+            if (demand >= 7) return '#4caf50';
+            if (demand >= 4) return '#ffeb3b';
+            return '#f44336';
+        }
+        function getTrendIcons(p) {
+    if (!p || (!p.vt && !p.dt)) return "";
+    let html = "";
+    try {
+        let crashWarning = "";
+        
+        // DEBUG: Check if history data exists
+        if (!Array.isArray(HISTORY_DATA) || HISTORY_DATA.length === 0) {
+            console.log("⚠️ No history data loaded yet for", p.n);
+        } else {
+            try {
+                // Case-insensitive name matching
+                const petHistory = HISTORY_DATA.filter(row => 
+                    row.name && p.n && 
+                    row.name.toLowerCase().trim() === p.n.toLowerCase().trim()
+                );
+                console.log(`📊 ${p.n}: Found ${petHistory.length} history records`);
+                
+                if (petHistory.length >= 2) {
+                    const currentData = petHistory[petHistory.length - 1];
+                    const lookbackLimit = Math.min(10, petHistory.length);
+                    const historicalData = petHistory.slice(-lookbackLimit);
+                    
+                    let maxDemand = Math.max(...historicalData.map(h => h.d));
+                    let maxValue = Math.max(...historicalData.map(h => h.v));
+                    
+                    const demandDrop = maxDemand - currentData.d;
+                    const valueDrop = maxValue - currentData.v;
+                    
+                    console.log(`${p.n} - Demand drop: ${demandDrop.toFixed(2)}, Value drop: ${valueDrop.toFixed(2)}`);
+                    
+                    let hasCrashed = false;
+                    let crashType = "";
+                    let crashAmount = 0;
+                    
+                    if (demandDrop > 0.3) {
+                        hasCrashed = true;
+                        crashType = "DEMAND";
+                        crashAmount = demandDrop;
+                    }
+                    
+                    if (valueDrop > 2.0) {
+                        hasCrashed = true;
+                        if (crashType) crashType += " & VALUE";
+                        else crashType = "VALUE";
+                        crashAmount = Math.max(crashAmount, valueDrop);
+                    }
+                    
+                    if (hasCrashed) {
+                        const isRecovering = petHistory.length >= 3 && 
+                                           currentData.d > petHistory[petHistory.length - 2].d;
+                        
+                        console.log(`🚨 ${p.n} CRASH DETECTED! Type: ${crashType}, Amount: ${crashAmount.toFixed(2)}, Recovering: ${isRecovering}`);
+                        
+                        if (isRecovering) {
+                            crashWarning = `🚨 MAJOR ${crashType} CRASH DETECTED! 🚨\n`;
+                            crashWarning += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                            crashWarning += `⚠️ This pet recently crashed in ${crashType.toLowerCase()}!\n`;
+                            crashWarning += `📉 Peak → Current Drop: ${crashAmount.toFixed(2)}\n\n`;
+                            crashWarning += `📈 RECOVERY IN PROGRESS:\n`;
+                            crashWarning += `The pet has started rising again, but be cautious.\n`;
+                            crashWarning += `A crash this large often signals market instability.\n`;
+                            crashWarning += `Trade with EXTREME caution.\n\n`;
+                        } else {
+                            crashWarning = `🚨 MAJOR ${crashType} CRASH DETECTED! 🚨\n`;
+                            crashWarning += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                            crashWarning += `⚠️ This pet dropped significantly in ${crashType.toLowerCase()}!\n`;
+                            crashWarning += `📉 Total Drop: ${crashAmount.toFixed(2)}\n`;
+                            crashWarning += `❌ NO RECOVERY YET - AVOID TRADING!\n\n`;
+                        }
+                    }
+                }
+            } catch (histErr) {
+                console.error("History check failed for", p.n, histErr);
+            }
+        }
+        
+        const generateSentence = (str, label) => {
+            if (!str || typeof str !== 'string' || str.trim() === "") return null;
+            let parts = str.trim().split(' ');
+            if (parts.length < 2) return null;
+            
+            let icon = parts[0]; 
+            let sentences = [];
+            for (let i = 1; i < parts.length; i++) {
+                let segment = parts[i];
+                if (!segment.includes(':')) continue;
+                let [tierKey, val] = segment.split(':');
+                let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
+                let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
+                let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
+                sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} BY ${amount}`);
+            }
+            return { icon, text: sentences.join('\n') };
+        };
+        
+        // FIXED: Trend icons show ONLY their trend data (no crash warning)
+        const vData = generateSentence(p.vt, "Value");
+        if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
+        
+        const dData = generateSentence(p.dt, "Demand");
+        if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
+        
+        // FIXED: Crash siren shows ONLY crash warning (separate from trend icons)
+        if (crashWarning) {
+            console.log(`✅ Adding crash siren for ${p.n}`);
+            html += `<span title="${crashWarning}" style="margin-left:4px; cursor:help; font-size:1.4em; color:#ef4444; filter: drop-shadow(0 0 4px #ef4444); animation: pulse 2s infinite;">🚨</span>`;
+        }
+        
+    } catch (err) { 
+        console.error("getTrendIcons error:", err);
+        return ""; 
     }
-
-    const parseTrend = (str) => {
-        if (!str || str.trim() === "") return null;
-        let parts = str.trim().split(' ');
-        return { icon: parts[0], text: parts.slice(1).join(' ') };
-    };
-
-    const v = parseTrend(p.vt);
-    if (v) html += `<span title="${v.text}" style="margin-left:4px; cursor:help;">${v.icon}</span>`;
-    const d = parseTrend(p.dt);
-    if (d) html += `<span title="${d.text}" style="margin-left:4px; cursor:help;">${d.icon}</span>`;
-    
     return html;
 }
+        async function fetchHistory() {
+            if (HISTORY_DATA.length > 0) {
+                console.log("📦 History already loaded:", HISTORY_DATA.length, "records");
+                return;
+            }
+            
+            try {
+                console.log("🔄 Fetching history from:", HISTORY_CSV_URL);
+                const response = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const text = await response.text();
+                console.log("📄 Raw CSV received, length:", text.length);
+                console.log("📄 First 500 chars:", text.substring(0, 500));
+                
+                const lines = text.trim().split('\n');
+                console.log("📊 Total lines in CSV:", lines.length);
+                console.log("📊 Header row:", lines[0]);
+                
+                if (lines.length < 2) {
+                    console.warn("⚠️ No history data rows (only header or empty)");
+                    return;
+                }
+                
+                // Parse with detailed logging
+                HISTORY_DATA = lines.slice(1).map((line, index) => {
+                    const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    const row = { 
+                        time: vals[0]?.trim() || '', 
+                        name: vals[1]?.trim() || '', 
+                        d: parseFloat(vals[2]) || 0,
+                        v: parseFloat(vals[5]) || 0
+                    };
+                    
+                    // Log first 3 rows for debugging
+                    if (index < 3) {
+                        console.log(`Row ${index + 1}:`, row);
+                    }
+                    
+                    return row;
+                }).filter(row => row.name); // Remove empty rows
+                
+                console.log("✅ History loaded successfully:", HISTORY_DATA.length, "records");
+                console.log("📊 Sample pets:", [...new Set(HISTORY_DATA.map(r => r.name))].slice(0, 10));
+                
+                // Test Giant Panda specifically
+                const pandaData = HISTORY_DATA.filter(row => row.name.toLowerCase().includes('panda'));
+                console.log("🐼 Giant Panda records found:", pandaData.length);
+                if (pandaData.length > 0) {
+                    console.log("🐼 Giant Panda data:", pandaData);
+                }
+                
+            } catch (e) { 
+                console.error("❌ History fetch failed:", e);
+                console.error("Error details:", e.message);
+                HISTORY_DATA = [];
+            }
+        }
+        function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
+        async function openGraph(name) {
+            await fetchHistory();
+            const petHistory = HISTORY_DATA.filter(p => p.name === name);
+            if (petHistory.length < 2) {
+                alert("Not enough historical data yet to generate a graph for " + name);
+                return;
+            }
+            document.getElementById('graphTitle').innerText = name.toUpperCase() + " HISTORY";
+            document.getElementById('graphOverlay').style.display = 'flex';
+            const ctx = document.getElementById('petChart').getContext('2d');
+            if (petChart) petChart.destroy();
+            petChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: petHistory.map(p => p.time),
+                    datasets: [
+                        {
+                            label: 'Value',
+                            data: petHistory.map(p => p.v),
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Demand',
+                            data: petHistory.map(p => p.d),
+                            borderColor: '#fbbf24',
+                            backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: {
+                        legend: { labels: { color: 'white', font: { weight: 'bold' } } }
+                    }
+                }
+            });
+        }
+        // CONTINUE WITH THE REST OF YOUR ORIGINAL FUNCTIONS HERE
+        // (handlePetContext, openInfo, closeInfo, playSfx, pushState, undo, parseCSV, etc.)
+        function handlePetContext(e, name) {
+            e.preventDefault();
+            if (e.shiftKey) {
+                openGraph(name);
+            } else {
+                openQtyModal(name);
+            }
+        }
 
-// Optimization: Single DOM write for list rendering
-function renderSide(s) {
-    const list = state[s];
-    const grid = document.getElementById(`grid${s}`);
-    let html = '';
-    let totalV = 0, totalD = 0;
+        function openInfo() { document.getElementById('infoOverlay').style.display = 'flex'; }
+        function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
 
-    for (const p of list) {
-        const currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-        const val = calculatePetVal(p, state.mode);
-        totalV += val; totalD += currentDemand;
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSfx(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            if (type === 'pop') {
+                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'win') {
+                osc.type = 'triangle';
+                [523, 659, 783].forEach((f, i) => osc.frequency.setValueAtTime(f, audioCtx.currentTime + (i * 0.1)));
+                gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
+            }
+        }
 
-        html += `
-            <div class="card" style="border-color: ${getRarityColor(p.cat)}">
-                <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
-                <div class="card-img-container" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')" ondblclick="duplicate('${s}', ${p.uid})">
-                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" loading="lazy">
-                </div>
-                <div class="card-name">${p.n}${TREND_HTML_CACHE.get(p.n) || ''}</div>
-                <div class="card-val">${val.toFixed(2)}</div>
-                <div class="card-demand" style="color: ${getDemandColor(currentDemand)}">Dem: ${currentDemand}</div>
-                <div class="toggles">
-                    <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
-                    <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('${s}',${p.uid},'m')">M</div>
-                    <div class="t-btn ${p.f_st?'active':''}" onclick="tog('${s}',${p.uid},'f')">F</div>
-                    <div class="t-btn ${p.r_st?'active':''}" onclick="tog('${s}',${p.uid},'r')">R</div>
-                </div>
-            </div>`;
-    }
+        function pushState() {
+            if (history.length > 50) history.shift();
+            history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
+        }
 
-    grid.innerHTML = html + `<div class="plus" onclick="openSearch('${s}')">+</div>`;
-    document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
-    document.getElementById(`cnt${s}`).innerText = list.length;
-    document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
-}
+        function undo() {
+            if (history.length === 0) return;
+            const last = JSON.parse(history.pop());
+            state.A = (last.A || []);
+            state.B = (last.B || []);
+            state.inv = (last.inv || []);
+            render();
+            renderInventory();
+            saveTrade();
+        }
 
-// Faster value calculation
-function calculatePetVal(p, mode) {
-    if (mode === 'frost') {
-        let base = p.f;
-        if (p.type === 'neon') base = p.nfr_f || (p.f * 3);
-        else if (p.type === 'mega') base = p.mfr_f || (p.f * 12);
-        return base + (p.f_st ? 0.01 : 0) + (p.r_st ? 0.01 : 0);
-    } 
-    
-    // Value mode optimized branch
-    if (p.type === 'neon') {
-        if (p.f_st && p.r_st) return p.nfr_v;
-        if (p.f_st) return p.n_f_v;
-        if (p.r_st) return p.n_r_v;
-        return p.n_v;
-    } 
-    if (p.type === 'mega') {
-        if (p.f_st && p.r_st) return p.mfr_v;
-        if (p.f_st) return p.m_f_v;
-        if (p.r_st) return p.m_r_v;
-        return p.m_v;
-    }
-    if (p.f_st && p.r_st) return p.fr_v;
-    if (p.f_st) return p.f_v;
-    if (p.r_st) return p.r_v;
-    return p.v;
-}
+        window.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
+        });
 
-// Optimized Search Render
-function renderDOM() {
-    const resultsGrid = document.getElementById('searchResults');
-    const chunk = searchState.currentMatches.slice(0, searchState.renderLimit);
-    
-    // Using a single string join for the entire grid
-    resultsGrid.innerHTML = chunk.map(p => `
-        <div class="search-item-card" onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}', 1)" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')" style="border-color: ${getRarityColor(p.cat)}">
-            <div class="search-item-name">${p.n}${TREND_HTML_CACHE.get(p.n) || ''}</div>
-            <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" class="search-item-img" loading="lazy" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
-            <div class="search-item-val">${(state.mode === 'frost' ? p.f : p.v).toFixed(2)}</div>
-            <div class="search-item-demand" style="color: ${getDemandColor(p.d)}">Dem: ${p.d}</div>
-        </div>
-    `).join('');
-}
+        function parseCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            return lines.slice(1).map(line => {
+                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                const obj = {};
+                headers.forEach((header, i) => {
+                    let val = values[i] ? values[i].trim().replace(/^"|"$/g, '') : '';
+                    if (!isNaN(parseFloat(val)) && isFinite(val) && val !== '') {
+                        obj[header] = parseFloat(val);
+                    } else {
+                        obj[header] = val;
+                    }
+                });
+                return obj;
+            });
+        }
 
-// ... Keep your UI helper functions (openInventory, toggle modes, etc.) 
-// but ensure they call these optimized render functions.
+        function saveTrade() {
+            const simplifiedState = {
+                A: state.A.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
+                B: state.B.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
+                inv: state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid }))
+            };
+            localStorage.setItem('tradeData', JSON.stringify(simplifiedState));
+        }
+
+        function restoreTrade() {
+            const saved = localStorage.getItem('tradeData');
+            if (!saved) return;
+            try {
+                const parsed = JSON.parse(saved);
+                const hydrate = (item) => {
+                    const freshData = ALL_PETS.find(p => p.n === item.n);
+                    if (!freshData) return null; 
+                    return { ...freshData, ...item };
+                };
+                state.A = (parsed.A || []).map(hydrate).filter(x => x);
+                state.B = (parsed.B || []).map(hydrate).filter(x => x);
+                state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
+                render();
+            } catch (e) {
+                console.error("Failed to restore trade", e);
+            }
+        }
+
+        async function loadPetData() {
+            try {
+                const response = await fetch(MASTER_CSV_URL + "&t=" + Date.now());
+                const csvText = await response.text();
+                const data = parseCSV(csvText);
+                
+                ALL_PETS = data.map(row => ({
+                    n: row.n || row.name || '',
+                    d: row.d || 0,
+                    nd: row.nd || 0,
+                    md: row.md || 0,
+                    f: row.f || 0,
+                    v: row.v || 0,
+                    f_v: row.f_v || 0,
+                    r_v: row.r_v || 0,
+                    fr_v: row.fr_v || 0,
+                    n_v: row.n_v || 0,
+                    n_f_v: row.n_f_v || 0, 
+                    n_r_v: row.n_r_v || 0, 
+                    nfr_v: row.nfr_v || 0,
+                    m_v: row.m_v || 0,
+                    m_f_v: row.m_f_v || 0, 
+                    m_r_v: row.m_r_v || 0, 
+                    mfr_v: row.mfr_v || 0,
+                    nfr_f: row.nfr_f || 0,
+                    mfr_f: row.mfr_f || 0,
+                    cat: (row.categories || row.rarity || '').toLowerCase(),
+                    vt: row['value trend'] || row['vt'] || '', 
+                    dt: row['demand trend'] || row['dt'] || ''
+                })).filter(p => p.n && p.n.length > 0);
+                
+                document.getElementById('loadingScreen').style.display = 'none';
+                fetchHistory(); 
+                restoreTrade();
+                render();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.querySelector('.loading-text').textContent = 'Error loading data.';
+            }
+        }
+
+        function openSearch(side) {
+            state.target = side;
+            document.getElementById('searchOverlay').classList.add('open');
+            searchState.renderLimit = 50;
+            filterAndRender(document.getElementById('mainSearch').value.toLowerCase());
+            setTimeout(() => document.getElementById('mainSearch').focus(), 50);
+        }
+
+        function closeSearch() { document.getElementById('searchOverlay').classList.remove('open'); }
+
+        function updateFilter() {
+            searchState.sortMode = document.getElementById('sortSelect').value;
+            searchState.rarityFilter = document.getElementById('rarityFilter').value.toLowerCase();
+            searchState.renderLimit = 50; 
+            filterAndRender(document.getElementById('mainSearch').value.toLowerCase());
+        }
+
+        document.getElementById('mainSearch').addEventListener('input', (e) => {
+            searchState.renderLimit = 50; 
+            filterAndRender(e.target.value.toLowerCase());
+        });
+
+        document.getElementById('searchResults').addEventListener('scroll', () => {
+            const box = document.getElementById('searchResults');
+            if (box.scrollTop + box.clientHeight >= box.scrollHeight - 50) {
+                if (searchState.renderLimit < searchState.currentMatches.length) {
+                    searchState.renderLimit += 50;
+                    renderDOM(); 
+                }
+            }
+        });
+
+        function filterAndRender(query) {
+            let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
+            if (searchState.rarityFilter !== 'none') {
+                matches = matches.filter(p => (p.cat || "").toLowerCase().includes(searchState.rarityFilter));
+            }
+            const mode = searchState.sortMode;
+            if (mode !== 'default') {
+                matches.sort((a, b) => {
+                    if (mode === 'valHigh') return (state.mode === 'frost' ? b.f : b.v) - (state.mode === 'frost' ? a.f : a.v);
+                    if (mode === 'valLow') return (state.mode === 'frost' ? a.f : a.v) - (state.mode === 'frost' ? b.f : b.v);
+                    if (mode === 'demHigh') return b.d - a.d;
+                    if (mode === 'demLow') return a.d - b.d;
+                    return 0;
+                });
+            }
+            searchState.currentMatches = matches;
+            renderDOM();
+        }
+
+        function renderDOM() {
+            const chunk = searchState.currentMatches.slice(0, searchState.renderLimit);
+            document.getElementById('searchResults').innerHTML = chunk.map(p => {
+                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
+                const val = state.mode === 'frost' ? p.f : p.v; 
+                const rarityColor = getRarityColor(p.cat);
+                const demandColor = getDemandColor(p.d);
+                return `
+                <div class="search-item-card" 
+                     onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}', 1)" 
+                     oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')"
+                     style="border-color: ${rarityColor}">
+                    <div class="search-item-name">${p.n}${getTrendIcons(p)}</div>
+                    <img src="${imgUrl}" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
+                    <div class="search-item-demand" style="color: ${demandColor}">Dem: ${p.d}</div>
+                </div>`;
+            }).join('');
+        }
 
         function openQtyModal(name) {
             selectedPetForQty = name;
@@ -1245,9 +1535,3 @@ function renderDOM() {
     </script>
 </body>
 </html>
-
-
-
-
-
-
