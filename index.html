@@ -326,7 +326,6 @@
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
     </div>
 
-    <!-- Analytics Overlay -->
     <div class="analytics-overlay" id="analyticsOverlay">
         <div class="analytics-container">
             <div class="history-header">
@@ -337,7 +336,6 @@
         </div>
     </div>
 
-    <!-- Quantity Modal -->
     <div class="qty-modal-overlay" id="qtyModal" onclick="closeQtyModal()">
         <div class="qty-modal" onclick="event.stopPropagation()">
             <h3 id="qtyTitle">How many?</h3>
@@ -349,7 +347,6 @@
         </div>
     </div>
 
-    <!-- History Overlay -->
     <div class="history-overlay" id="historyOverlay">
         <div class="history-container">
             <div class="history-header">
@@ -519,39 +516,80 @@
     </div>
 
     <script>
-        // CORE GLOBAL VARIABLES
+        // CRITICAL VARIABLES MOVED TO TOP
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         let ALL_PETS = [];
         let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
-        let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
         let history = []; 
         let tradeLog = []; 
-        let selectedPetForQty = null;
+        let selectedPetForQty = null; 
+        let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
 
-        // AUDIO CONTEXT
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Consolidated Helper for Trend Icons with Safe Tooltips
+        function getTrendIcons(p) {
+            if (!p || (!p.vt && !p.dt)) return "";
+            let html = "";
+            try {
+                const generateSentence = (str, label) => {
+                    if (!str || typeof str !== 'string' || str.trim() === "") return null;
+                    let parts = str.trim().split(' ');
+                    if (parts.length < 2) return null;
+                    
+                    let icon = parts[0]; 
+                    let sentences = [];
+                    for (let i = 1; i < parts.length; i++) {
+                        let segment = parts[i];
+                        if (!segment.includes(':')) continue;
+                        let [tierKey, val] = segment.split(':');
+                        let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
+                        let actionWord = val.includes('+') ? 'increased' : 'decreased';
+                        let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
+                        sentences.push(`${tierName} ${p.n} ${label} ${actionWord} ${amount}`);
+                    }
+                    return { icon, text: sentences.join(' | ') };
+                };
+
+                const vData = generateSentence(p.vt, "Value");
+                if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; filter: grayscale(20%);">${vData.icon}</span>`;
+                
+                const dData = generateSentence(p.dt, "Demand");
+                if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; filter: grayscale(20%);">${dData.icon}</span>`;
+                
+            } catch (err) { return ""; }
+            return html;
+        }
+
+        // SFX and Audio Logic
+        const getAudioCtx = (() => {
+            let ctx;
+            return () => {
+                if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (ctx.state === 'suspended') ctx.resume();
+                return ctx;
+            };
+        })();
+
         function playSfx(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
+            const ctx = getAudioCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
             osc.connect(gain);
-            gain.connect(audioCtx.destination);
+            gain.connect(ctx.destination);
             if (type === 'pop') {
-                osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(600, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
+                osc.stop(ctx.currentTime + 0.1);
             } else if (type === 'win') {
                 osc.type = 'triangle';
-                [523, 659, 783].forEach((f, i) => osc.frequency.setValueAtTime(f, audioCtx.currentTime + (i * 0.1)));
-                gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                [523, 659, 783].forEach((f, i) => osc.frequency.setValueAtTime(f, ctx.currentTime + (i * 0.1)));
+                gain.gain.setValueAtTime(0.04, ctx.currentTime);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.4);
+                osc.stop(ctx.currentTime + 0.4);
             }
         }
 
-        // UTILITIES
         function pushState() {
             if (history.length > 50) history.shift();
             history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
@@ -621,40 +659,6 @@
             }
         }
 
-        function getTrendIcons(p) {
-            if (!p) return "";
-            let html = "";
-            
-            const translate = (str, label) => {
-                if (!str || typeof str !== 'string' || str.trim() === "") return null;
-                let parts = str.trim().split(/\s+/);
-                let icon = parts[0]; 
-                let sentences = [];
-                for (let i = 1; i < parts.length; i++) {
-                    let segment = parts[i];
-                    if (!segment.includes(':')) continue;
-                    let [tierKey, val] = segment.split(':');
-                    let tier = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
-                    let action = val.includes('+') ? 'increased' : 'decreased';
-                    let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
-                    sentences.push(`${tier} ${p.n} ${label} ${action} ${amount}`);
-                }
-                return { icon, text: sentences.join(' | ') };
-            };
-
-            try {
-                const vData = translate(p.vt, "Value");
-                if (vData && vData.icon) {
-                    html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));">${vData.icon}</span>`;
-                }
-                const dData = translate(p.dt, "Demand");
-                if (dData && dData.icon) {
-                    html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));">${dData.icon}</span>`;
-                }
-            } catch(e) { return ""; }
-            return html;
-        }
-
         async function loadPetData() {
             try {
                 const response = await fetch(GOOGLE_SHEET_CSV_URL + "&t=" + Date.now());
@@ -663,12 +667,24 @@
                 
                 ALL_PETS = data.map(row => ({
                     n: row.n || row.name || '',
-                    d: row.d || 0, nd: row.nd || 0, md: row.md || 0,
-                    f: row.f || 0, v: row.v || 0, f_v: row.f_v || 0, r_v: row.r_v || 0,
-                    fr_v: row.fr_v || 0, n_v: row.n_v || 0, n_f_v: row.n_f_v || 0, 
-                    n_r_v: row.n_r_v || 0, nfr_v: row.nfr_v || 0, m_v: row.m_v || 0,
-                    m_f_v: row.m_f_v || 0, m_r_v: row.m_r_v || 0, mfr_v: row.mfr_v || 0,
-                    nfr_f: row.nfr_f || 0, mfr_f: row.mfr_f || 0,
+                    d: row.d || 0,
+                    nd: row.nd || 0,
+                    md: row.md || 0,
+                    f: row.f || 0,
+                    v: row.v || 0,
+                    f_v: row.f_v || 0,
+                    r_v: row.r_v || 0,
+                    fr_v: row.fr_v || 0,
+                    n_v: row.n_v || 0,
+                    n_f_v: row.n_f_v || 0, 
+                    n_r_v: row.n_r_v || 0, 
+                    nfr_v: row.nfr_v || 0,
+                    m_v: row.m_v || 0,
+                    m_f_v: row.m_f_v || 0, 
+                    m_r_v: row.m_r_v || 0, 
+                    mfr_v: row.mfr_v || 0,
+                    nfr_f: row.nfr_f || 0,
+                    mfr_f: row.mfr_f || 0,
                     cat: (row.categories || row.rarity || '').toLowerCase(),
                     vt: row['value trend'] || row['vt'] || '', 
                     dt: row['demand trend'] || row['dt'] || ''
@@ -683,7 +699,6 @@
             }
         }
 
-        // SEARCH & RENDER
         function openSearch(side) {
             state.target = side;
             document.getElementById('searchOverlay').classList.add('open');
@@ -715,20 +730,6 @@
                 }
             }
         });
-
-        function getRarityColor(rarity) {
-            if (rarity.includes('legendary')) return 'var(--rarity-legendary)';
-            if (rarity.includes('ultra')) return 'var(--rarity-ultra)';
-            if (rarity.includes('rare')) return 'var(--rarity-rare)';
-            if (rarity.includes('uncommon')) return 'var(--rarity-uncommon)';
-            return 'var(--rarity-common)';
-        }
-
-        function getDemandColor(d) {
-            if (d >= 7) return '#4caf50';
-            if (d >= 4) return '#ffeb3b';
-            return '#f44336';
-        }
 
         function filterAndRender(query) {
             let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
@@ -769,7 +770,6 @@
             }).join('');
         }
 
-        // MODALS
         function openQtyModal(name) {
             selectedPetForQty = name;
             document.getElementById('qtyTitle').innerText = `How many ${name}?`;
@@ -791,7 +791,6 @@
             closeQtyModal();
         }
 
-        // TRADE LOGIC
         function addItem(element, name, quantity = 1) {
             if (state.target !== 'inv' && state.target !== 'dream') {
                 if ((state[state.target] ? state[state.target].length : 0) + quantity > 18) {
@@ -842,7 +841,6 @@
             saveTrade(); 
         }
 
-        // INVENTORY
         function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
         function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
@@ -876,7 +874,6 @@
             }
         }
 
-        // ANALYTICS
         function openAnalytics() {
             const overlay = document.getElementById('analyticsOverlay');
             const body = document.getElementById('analyticsBody');
@@ -927,13 +924,7 @@
         }
 
         function closeAnalytics() { document.getElementById('analyticsOverlay').style.display = 'none'; }
-        
-        // HISTORY
-        function openHistory() {
-            const el = document.getElementById('historyOverlay');
-            el.style.display = 'flex';
-            renderHistoryLog();
-        }
+        function openHistory() { document.getElementById('historyOverlay').style.display = 'flex'; renderHistoryLog(); }
         function closeHistory() { document.getElementById('historyOverlay').style.display = 'none'; }
         
         function logCurrentTrade() {
@@ -978,7 +969,6 @@
             }).join('');
         }
 
-        // CALCULATIONS
         function calculatePetVal(p, mode) {
             let val = 0;
             if (mode === 'frost') {
@@ -999,17 +989,6 @@
                 }
             }
             return val;
-        }
-
-        function getFullName(p) {
-            let prefix = "";
-            if (p.type === 'neon') prefix = "Neon ";
-            else if (p.type === 'mega') prefix = "Mega ";
-            let suffix = "";
-            if (p.f_st && p.r_st) suffix = " (FR)";
-            else if (p.f_st) suffix = " (F)";
-            else if (p.r_st) suffix = " (R)";
-            return `${prefix}${p.n}${suffix}`;
         }
 
         function renderInventory() {
