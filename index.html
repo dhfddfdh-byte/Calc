@@ -609,117 +609,120 @@
             return '#f44336';
         }
         function getTrendIcons(p) {
-            if (!p || (!p.vt && !p.dt)) return "";
-            let html = "";
+    if (!p || (!p.vt && !p.dt)) return "";
+    let html = "";
+    try {
+        let crashWarning = "";
+        
+        // DEBUG: Check if history data exists
+        if (!Array.isArray(HISTORY_DATA) || HISTORY_DATA.length === 0) {
+            console.log("⚠️ No history data loaded yet for", p.n);
+        } else {
             try {
-                let crashWarning = "";
+                // Case-insensitive name matching
+                const petHistory = HISTORY_DATA.filter(row => 
+                    row.name && p.n && 
+                    row.name.toLowerCase().trim() === p.n.toLowerCase().trim()
+                );
+                console.log(`📊 ${p.n}: Found ${petHistory.length} history records`);
                 
-                // DEBUG: Check if history data exists
-                if (!Array.isArray(HISTORY_DATA) || HISTORY_DATA.length === 0) {
-                    console.log("⚠️ No history data loaded yet for", p.n);
-                } else {
-                    try {
-                        // Case-insensitive name matching
-                        const petHistory = HISTORY_DATA.filter(row => 
-                            row.name && p.n && 
-                            row.name.toLowerCase().trim() === p.n.toLowerCase().trim()
-                        );
-                        console.log(`📊 ${p.n}: Found ${petHistory.length} history records`);
-                        
-                        if (petHistory.length >= 2) {
-                            const currentData = petHistory[petHistory.length - 1];
-                            const lookbackLimit = Math.min(10, petHistory.length);
-                            const historicalData = petHistory.slice(-lookbackLimit);
-                            
-                            let maxDemand = Math.max(...historicalData.map(h => h.d));
-                            let maxValue = Math.max(...historicalData.map(h => h.v));
-                            
-                            const demandDrop = maxDemand - currentData.d;
-                            const valueDrop = maxValue - currentData.v;
-                            
-                            console.log(`${p.n} - Demand drop: ${demandDrop.toFixed(2)}, Value drop: ${valueDrop.toFixed(2)}`);
-                            
-                            let hasCrashed = false;
-                            let crashType = "";
-                            let crashAmount = 0;
-                            
-                            if (demandDrop > 0.3) {
-                                hasCrashed = true;
-                                crashType = "DEMAND";
-                                crashAmount = demandDrop;
-                            }
-                            
-                            if (valueDrop > 2.0) {
-                                hasCrashed = true;
-                                if (crashType) crashType += " & VALUE";
-                                else crashType = "VALUE";
-                                crashAmount = Math.max(crashAmount, valueDrop);
-                            }
-                            
-                            if (hasCrashed) {
-                                const isRecovering = petHistory.length >= 3 && 
-                                                   currentData.d > petHistory[petHistory.length - 2].d;
-                                
-                                console.log(`🚨 ${p.n} CRASH DETECTED! Type: ${crashType}, Amount: ${crashAmount.toFixed(2)}, Recovering: ${isRecovering}`);
-                                
-                                if (isRecovering) {
-                                    crashWarning = `🚨 MAJOR ${crashType} CRASH DETECTED! 🚨\n`;
-                                    crashWarning += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-                                    crashWarning += `⚠️ This pet recently crashed in ${crashType.toLowerCase()}!\n`;
-                                    crashWarning += `📉 Peak → Current Drop: ${crashAmount.toFixed(2)}\n\n`;
-                                    crashWarning += `📈 RECOVERY IN PROGRESS:\n`;
-                                    crashWarning += `The pet has started rising again, but be cautious.\n`;
-                                    crashWarning += `A crash this large often signals market instability.\n`;
-                                    crashWarning += `Trade with EXTREME caution.\n\n`;
-                                } else {
-                                    crashWarning = `🚨 MAJOR ${crashType} CRASH DETECTED! 🚨\n`;
-                                    crashWarning += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
-                                    crashWarning += `⚠️ This pet dropped significantly in ${crashType.toLowerCase()}!\n`;
-                                    crashWarning += `📉 Total Drop: ${crashAmount.toFixed(2)}\n`;
-                                    crashWarning += `❌ NO RECOVERY YET - AVOID TRADING!\n\n`;
-                                }
-                            }
-                        }
-                    } catch (histErr) {
-                        console.error("History check failed for", p.n, histErr);
-                    }
-                }
-                const generateSentence = (str, label) => {
-                    if (!str || typeof str !== 'string' || str.trim() === "") return null;
-                    let parts = str.trim().split(' ');
-                    if (parts.length < 2) return null;
+                if (petHistory.length >= 2) {
+                    const currentData = petHistory[petHistory.length - 1];
+                    const lookbackLimit = Math.min(10, petHistory.length);
+                    const historicalData = petHistory.slice(-lookbackLimit);
                     
-                    let icon = parts[0]; 
-                    let sentences = [];
-                    for (let i = 1; i < parts.length; i++) {
-                        let segment = parts[i];
-                        if (!segment.includes(':')) continue;
-                        let [tierKey, val] = segment.split(':');
-                        let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
-                        let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
-                        let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
-                        sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} BY ${amount}`);
+                    let maxDemand = Math.max(...historicalData.map(h => h.d));
+                    let maxValue = Math.max(...historicalData.map(h => h.v));
+                    
+                    const demandDrop = maxDemand - currentData.d;
+                    const valueDrop = maxValue - currentData.v;
+                    
+                    console.log(`${p.n} - Demand drop: ${demandDrop.toFixed(2)}, Value drop: ${valueDrop.toFixed(2)}`);
+                    
+                    let hasCrashed = false;
+                    let crashType = "";
+                    let crashAmount = 0;
+                    
+                    if (demandDrop > 0.3) {
+                        hasCrashed = true;
+                        crashType = "DEMAND";
+                        crashAmount = demandDrop;
                     }
-                    return { icon, text: sentences.join('\n') };
-                };
-                const vData = generateSentence(p.vt, "Value");
-                if (vData) html += `<span title="${crashWarning}${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
-                
-                const dData = generateSentence(p.dt, "Demand");
-                if (dData) html += `<span title="${crashWarning}${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
-                
-                // Show crash siren if detected
-                if (crashWarning) {
-                    console.log(`✅ Adding crash siren for ${p.n}`);
-                    html += `<span title="${crashWarning}" style="margin-left:4px; cursor:help; font-size:1.4em; color:#ef4444; filter: drop-shadow(0 0 4px #ef4444); animation: pulse 2s infinite;">🚨</span>`;
+                    
+                    if (valueDrop > 2.0) {
+                        hasCrashed = true;
+                        if (crashType) crashType += " & VALUE";
+                        else crashType = "VALUE";
+                        crashAmount = Math.max(crashAmount, valueDrop);
+                    }
+                    
+                    if (hasCrashed) {
+                        const isRecovering = petHistory.length >= 3 && 
+                                           currentData.d > petHistory[petHistory.length - 2].d;
+                        
+                        console.log(`🚨 ${p.n} CRASH DETECTED! Type: ${crashType}, Amount: ${crashAmount.toFixed(2)}, Recovering: ${isRecovering}`);
+                        
+                        if (isRecovering) {
+                            crashWarning = `🚨 MAJOR ${crashType} CRASH DETECTED! 🚨\n`;
+                            crashWarning += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                            crashWarning += `⚠️ This pet recently crashed in ${crashType.toLowerCase()}!\n`;
+                            crashWarning += `📉 Peak → Current Drop: ${crashAmount.toFixed(2)}\n\n`;
+                            crashWarning += `📈 RECOVERY IN PROGRESS:\n`;
+                            crashWarning += `The pet has started rising again, but be cautious.\n`;
+                            crashWarning += `A crash this large often signals market instability.\n`;
+                            crashWarning += `Trade with EXTREME caution.\n\n`;
+                        } else {
+                            crashWarning = `🚨 MAJOR ${crashType} CRASH DETECTED! 🚨\n`;
+                            crashWarning += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                            crashWarning += `⚠️ This pet dropped significantly in ${crashType.toLowerCase()}!\n`;
+                            crashWarning += `📉 Total Drop: ${crashAmount.toFixed(2)}\n`;
+                            crashWarning += `❌ NO RECOVERY YET - AVOID TRADING!\n\n`;
+                        }
+                    }
                 }
-                
-            } catch (err) { 
-                console.error("getTrendIcons error:", err);
-                return ""; 
+            } catch (histErr) {
+                console.error("History check failed for", p.n, histErr);
             }
-            return html;
         }
+        
+        const generateSentence = (str, label) => {
+            if (!str || typeof str !== 'string' || str.trim() === "") return null;
+            let parts = str.trim().split(' ');
+            if (parts.length < 2) return null;
+            
+            let icon = parts[0]; 
+            let sentences = [];
+            for (let i = 1; i < parts.length; i++) {
+                let segment = parts[i];
+                if (!segment.includes(':')) continue;
+                let [tierKey, val] = segment.split(':');
+                let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
+                let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
+                let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
+                sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} BY ${amount}`);
+            }
+            return { icon, text: sentences.join('\n') };
+        };
+        
+        // FIXED: Trend icons show ONLY their trend data (no crash warning)
+        const vData = generateSentence(p.vt, "Value");
+        if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
+        
+        const dData = generateSentence(p.dt, "Demand");
+        if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
+        
+        // FIXED: Crash siren shows ONLY crash warning (separate from trend icons)
+        if (crashWarning) {
+            console.log(`✅ Adding crash siren for ${p.n}`);
+            html += `<span title="${crashWarning}" style="margin-left:4px; cursor:help; font-size:1.4em; color:#ef4444; filter: drop-shadow(0 0 4px #ef4444); animation: pulse 2s infinite;">🚨</span>`;
+        }
+        
+    } catch (err) { 
+        console.error("getTrendIcons error:", err);
+        return ""; 
+    }
+    return html;
+}
         async function fetchHistory() {
             if (HISTORY_DATA.length > 0) {
                 console.log("📦 History already loaded:", HISTORY_DATA.length, "records");
@@ -1532,6 +1535,7 @@
     </script>
 </body>
 </html>
+
 
 
 
