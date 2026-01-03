@@ -134,6 +134,8 @@
 
         .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost); margin: 6px 0 2px 0; }
 
+        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost); margin: 6px 0 2px 0; }
+
         .card-demand {
             font-size: 0.8em; font-weight: 800; color: var(--demand-color); margin-bottom: 4px;
         }
@@ -277,6 +279,7 @@
         .similar-item.selected { border-color: var(--win); background: rgba(16, 185, 129, 0.05); }
         
         .ai-count-control { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
+        .ai-count-control label { font-size: 0.75em; color: var(--subtext); font-weight: 700; }
         .ai-count-control input { cursor: pointer; accent-color: var(--accent); }
 
         .history-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4500; }
@@ -518,7 +521,7 @@
     </div>
 
     <script>
-        // Global variables consolidated here
+        // CRITICAL: All global variables defined at top level for scope access
         const GOOGLE_SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?output=csv';
         let ALL_PETS = [];
         let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
@@ -527,7 +530,7 @@
         let selectedPetForQty = null; 
         let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
 
-        // Audio initialization wrapped in user gesture trigger
+        // Memoized audio context to avoid "blocked" errors
         const getAudioCtx = (() => {
             let ctx;
             return () => {
@@ -627,6 +630,7 @@
             }
         }
 
+        // Updated hover-sentence trend logic
         function getTrendIcons(p) {
             if (!p) return "";
             let html = "";
@@ -656,7 +660,7 @@
                 const dData = generateTooltip(p.dt, "Demand");
                 if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help;">${dData.icon}</span>`;
                 
-            } catch (err) { return ""; }
+            } catch (err) { return ""; } // Fail safe to prevent search crash
             return html;
         }
 
