@@ -593,7 +593,6 @@
         let selectedPetForQty = null; 
         let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
         let petChart = null;
-
         // Essential Helper Functions
         function getRarityColor(rarity) {
             if (!rarity) return 'var(--rarity-common)';
@@ -604,13 +603,11 @@
             if (r.includes('uncommon')) return 'var(--rarity-uncommon)';
             return 'var(--rarity-common)';
         }
-
         function getDemandColor(demand) {
             if (demand >= 7) return '#4caf50';
             if (demand >= 4) return '#ffeb3b';
             return '#f44336';
         }
-
         function getTrendIcons(p) {
             if (!p || (!p.vt && !p.dt)) return "";
             let html = "";
@@ -627,7 +624,6 @@
                             row.name && p.n && 
                             row.name.toLowerCase().trim() === p.n.toLowerCase().trim()
                         );
-
                         console.log(`📊 ${p.n}: Found ${petHistory.length} history records`);
                         
                         if (petHistory.length >= 2) {
@@ -688,7 +684,6 @@
                         console.error("History check failed for", p.n, histErr);
                     }
                 }
-
                 const generateSentence = (str, label) => {
                     if (!str || typeof str !== 'string' || str.trim() === "") return null;
                     let parts = str.trim().split(' ');
@@ -707,7 +702,6 @@
                     }
                     return { icon, text: sentences.join('\n') };
                 };
-
                 const vData = generateSentence(p.vt, "Value");
                 if (vData) html += `<span title="${crashWarning}${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
                 
@@ -726,7 +720,6 @@
             }
             return html;
         }
-
         async function fetchHistory() {
             if (HISTORY_DATA.length > 0) {
                 console.log("📦 History already loaded:", HISTORY_DATA.length, "records");
@@ -788,9 +781,7 @@
                 HISTORY_DATA = [];
             }
         }
-
         function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
-
         async function openGraph(name) {
             await fetchHistory();
             const petHistory = HISTORY_DATA.filter(p => p.name === name);
@@ -798,13 +789,10 @@
                 alert("Not enough historical data yet to generate a graph for " + name);
                 return;
             }
-
             document.getElementById('graphTitle').innerText = name.toUpperCase() + " HISTORY";
             document.getElementById('graphOverlay').style.display = 'flex';
-
             const ctx = document.getElementById('petChart').getContext('2d');
             if (petChart) petChart.destroy();
-
             petChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -843,10 +831,8 @@
                 }
             });
         }
-
         // CONTINUE WITH THE REST OF YOUR ORIGINAL FUNCTIONS HERE
         // (handlePetContext, openInfo, closeInfo, playSfx, pushState, undo, parseCSV, etc.)
-
         function handlePetContext(e, name) {
             e.preventDefault();
             if (e.shiftKey) {
@@ -1546,6 +1532,7 @@
     </script>
 </body>
 </html>
+
 
 
 
