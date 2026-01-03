@@ -202,21 +202,6 @@
         .save-trade-btn { background: #334155; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 700; font-size: 0.8em; margin-left: 5px; }
         .save-trade-btn:hover { background: var(--accent); }
 
-        #graphOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 5500; }
-        .graph-container { width: 95%; max-width: 800px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-        .graph-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #111827; }
-        .graph-body { padding: 30px; background: #0f172a; height: 400px; }
-
-        #infoOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.97); backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; z-index: 6000; }
-        .info-container { width: 95%; max-width: 600px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); box-shadow: 0 30px 70px rgba(0,0,0,0.8); overflow: hidden; }
-        .info-header { padding: 20px; background: #111827; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .info-body { padding: 30px; overflow-y: auto; max-height: 70vh; color: #cbd5e1; line-height: 1.6; }
-        .info-section { margin-bottom: 25px; }
-        .info-section h4 { color: var(--accent); margin-bottom: 10px; font-weight: 900; text-transform: uppercase; font-size: 0.9em; letter-spacing: 1px; }
-        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .info-label { font-weight: 700; color: white; }
-        .info-val { font-size: 0.9em; }
-
         .inv-suggest-container { padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(99, 102, 241, 0.03); border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; }
         .inv-suggest-title { font-size: 0.8em; font-weight: 900; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 5px; }
         .suggest-pill-row { display: flex; flex-direction: column; gap: 8px; }
@@ -284,6 +269,26 @@
         .results-grid::-webkit-scrollbar { width: 10px; }
         .results-grid::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; border: 2px solid #161e2e; }
 
+        .win-c { color: var(--win); } .lose-c { color: var(--lose); } .trap-c { color: var(--trap); } .fair-c { color: white; }
+        @media (max-width: 768px) { .v-text { font-size: 2.5em; } .verdict-box { bottom: 15px; padding: 20px; } }
+
+        /* Feature: History Graph Overlay */
+        #graphOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 5500; }
+        .graph-container { width: 95%; max-width: 800px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+        .graph-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #111827; }
+        .graph-body { padding: 30px; background: #0f172a; height: 400px; }
+
+        /* Feature: Information Overlay */
+        #infoOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.97); backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; z-index: 6000; }
+        .info-container { width: 95%; max-width: 600px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); box-shadow: 0 30px 70px rgba(0,0,0,0.8); overflow: hidden; }
+        .info-header { padding: 20px; background: #111827; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .info-body { padding: 30px; overflow-y: auto; max-height: 70vh; color: #cbd5e1; line-height: 1.6; }
+        .info-section { margin-bottom: 25px; }
+        .info-section h4 { color: var(--accent); margin-bottom: 10px; font-weight: 900; text-transform: uppercase; font-size: 0.9em; letter-spacing: 1px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .info-label { font-weight: 700; color: white; }
+        .info-val { font-size: 0.9em; }
+
         .similar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 5000; }
         .similar-container { width: 90%; max-width: 600px; background: #1a2333; border-radius: 20px; border: 1px solid var(--border); padding: 20px; max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; }
         .similar-item { display: flex; align-items: center; gap: 15px; background: var(--card); padding: 12px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; border: 1.5px solid transparent; transition: 0.2s; }
@@ -307,10 +312,7 @@
         .dream-progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; }
         .dream-active-badge { background: var(--accent); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.8em; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 
-        .stat-card { background: var(--panel); padding: 20px; border-radius: 18px; border: 1px solid var(--border); margin-bottom: 20px; }
-        .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
-        .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
-
+        /* Feature 1: Analytics Portfolio */
         .analytics-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4600; }
         .analytics-container { width: 95%; max-width: 700px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
         .analytics-body { padding: 30px; overflow-y: auto; }
@@ -322,6 +324,7 @@
         .bar-fill { height: 100%; border-radius: 5px; transition: width 0.5s ease; }
         .bar-stat { width: 60px; text-align: right; font-size: 0.8em; font-weight: 800; color: white; }
 
+        /* Feature 3: Quantity Modal */
         .qty-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 6000; }
         .qty-modal { background: #1a2333; border: 1px solid var(--border); padding: 25px; border-radius: 20px; width: 300px; text-align: center; }
         .qty-modal h3 { color: white; margin-bottom: 20px; font-size: 1.1em; }
@@ -386,6 +389,7 @@
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
     </div>
 
+    <!-- Analytics Overlay -->
     <div class="analytics-overlay" id="analyticsOverlay">
         <div class="analytics-container">
             <div class="history-header">
@@ -396,6 +400,7 @@
         </div>
     </div>
 
+    <!-- Quantity Modal -->
     <div class="qty-modal-overlay" id="qtyModal" onclick="closeQtyModal()">
         <div class="qty-modal" onclick="event.stopPropagation()">
             <h3 id="qtyTitle">How many?</h3>
@@ -407,6 +412,7 @@
         </div>
     </div>
 
+    <!-- History Overlay -->
     <div class="history-overlay" id="historyOverlay">
         <div class="history-container">
             <div class="history-header">
@@ -610,24 +616,15 @@
             if (!p || (!p.vt && !p.dt)) return "";
             let html = "";
             try {
-                let alertMsg = "";
-                // SAFE CHECK: Only run if history data actually exists and is an array
-                if (Array.isArray(HISTORY_DATA) && HISTORY_DATA.length > 0) {
-                    try {
-                        const petHistory = HISTORY_DATA.filter(row => row.name === p.n);
-                        if (petHistory.length >= 2) {
-                            const last = petHistory[petHistory.length - 1];
-                            const prev = petHistory[petHistory.length - 2];
-                            const dDrop = prev.d - last.d;
-                            const vDrop = prev.v - last.v;
-                            if (dDrop > 0.3 || vDrop > 1.0) {
-                                // IMPROVED: HIGH VISIBILITY BOLD WARNING
-                                alertMsg = "🚨 ALERT: THIS PET RECENTLY DROPPED IN VALUE/DEMAND BY A LOT! 🚨\n";
-                                alertMsg += "--------------------------------------------------\n\n";
-                            }
+                let volatilityMsg = "";
+                if (HISTORY_DATA.length > 0) {
+                    const petHistory = HISTORY_DATA.filter(row => row.name === p.n);
+                    if (petHistory.length >= 2) {
+                        const last = petHistory[petHistory.length - 1];
+                        const prev = petHistory[petHistory.length - 2];
+                        if (prev.d - last.d > 0.3) {
+                            volatilityMsg = " | (This pet recently dropped in value by a lot.)";
                         }
-                    } catch (histErr) {
-                        console.log("History check failed for", p.n, histErr);
                     }
                 }
 
@@ -643,51 +640,40 @@
                         if (!segment.includes(':')) continue;
                         let [tierKey, val] = segment.split(':');
                         let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
-                        let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
+                        let actionWord = val.includes('+') ? 'increased' : 'decreased';
                         let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
-                        sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} BY ${amount}`);
+                        sentences.push(`${tierName} ${p.n} ${label} ${actionWord} ${amount}`);
                     }
-                    return { icon, text: sentences.join('\n') };
+                    return { icon, text: sentences.join(' | ') + volatilityMsg };
                 };
 
                 const vData = generateSentence(p.vt, "Value");
-                if (vData) html += `<span title="${alertMsg}${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
+                if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; filter: grayscale(20%);">${vData.icon}</span>`;
                 
                 const dData = generateSentence(p.dt, "Demand");
-                if (dData) html += `<span title="${alertMsg}${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
+                if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; filter: grayscale(20%);">${dData.icon}</span>`;
                 
-            } catch (err) { 
-                console.error("getTrendIcons error:", err);
-                return ""; 
-            }
+            } catch (err) { return ""; }
             return html;
         }
 
+        // Feature: History Chart Functions
         async function fetchHistory() {
             if (HISTORY_DATA.length > 0) return; 
             try {
                 const response = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
-                if (!response.ok) throw new Error("History fetch failed");
                 const text = await response.text();
                 const lines = text.trim().split('\n');
-                if (lines.length < 2) {
-                    console.log("No history data yet");
-                    return;
-                }
                 HISTORY_DATA = lines.slice(1).map(line => {
                     const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     return { 
-                        time: vals[0]?.trim() || '', 
-                        name: vals[1]?.trim() || '', 
+                        time: vals[0].trim(), 
+                        name: vals[1].trim(), 
                         d: parseFloat(vals[2]) || 0,
                         v: parseFloat(vals[5]) || 0
                     };
-                }).filter(row => row.name); // Remove empty rows
-                console.log("✅ History loaded:", HISTORY_DATA.length, "records");
-            } catch (e) { 
-                console.error("❌ History fetch failed:", e);
-                HISTORY_DATA = []; // Ensure it's still an array
-            }
+                });
+            } catch (e) { console.error("History fetch failed", e); }
         }
 
         function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
@@ -745,6 +731,7 @@
             });
         }
 
+        // Logic to handle context menu: Shift + RightClick = Graph | RightClick = Qty Modal
         function handlePetContext(e, name) {
             e.preventDefault();
             if (e.shiftKey) {
@@ -1163,6 +1150,17 @@
                 }
             }
             return val;
+        }
+
+        function getFullName(p) {
+            let prefix = "";
+            if (p.type === 'neon') prefix = "Neon ";
+            else if (p.type === 'mega') prefix = "Mega ";
+            let suffix = "";
+            if (p.f_st && p.r_st) suffix = " (FR)";
+            else if (p.f_st) suffix = " (F)";
+            else if (p.r_st) suffix = " (R)";
+            return `${prefix}${p.n}${suffix}`;
         }
 
         function renderInventory() {
