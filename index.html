@@ -42,7 +42,7 @@
 
         .loading-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); display: none; flex-direction: column;
+            background: var(--bg); display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 9999;
         }
 
@@ -55,17 +55,6 @@
         @keyframes spin { to { transform: rotate(360deg); } }
 
         .loading-text { margin-top: 20px; font-size: 1.2em; color: var(--subtext); }
-
-        /* Trade Outcome Colors & Animations */
-        .win-c { color: var(--win) !important; text-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
-        .lose-c { color: var(--lose) !important; text-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-        .trap-c { color: var(--trap) !important; text-shadow: 0 0 15px rgba(245, 158, 11, 0.4); animation: pulse 2s infinite; }
-        .fair-c { color: white !important; }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.05); }
-        }
 
         .nav-bar {
             width: 100%;
@@ -244,7 +233,6 @@
         .inv-body { display: flex; flex: 1; overflow: hidden; }
         .inv-list { flex: 1.5; padding: 25px; overflow-y: auto; border-right: 1.5px solid var(--border); }
         .inv-stats { flex: 1.2; padding: 30px; background: #0f172a; overflow-y: auto; }
-
         .stat-card { background: var(--panel); padding: 20px; border-radius: 18px; border: 1px solid var(--border); margin-bottom: 20px; }
         .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
         .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
@@ -319,6 +307,10 @@
         .dream-progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; }
         .dream-active-badge { background: var(--accent); color: white; padding: 5px 10px; border-radius: 8px; font-size: 0.8em; font-weight: 800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 
+        .stat-card { background: var(--panel); padding: 20px; border-radius: 18px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .stat-label { font-size: 0.85em; color: var(--subtext); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+        .stat-value { font-size: 2em; font-weight: 950; color: white; margin-top: 5px; }
+
         .analytics-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4600; }
         .analytics-container { width: 95%; max-width: 700px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
         .analytics-body { padding: 30px; overflow-y: auto; }
@@ -337,13 +329,17 @@
         .qty-input:focus { border-color: var(--accent); }
         .qty-actions { display: flex; gap: 10px; justify-content: center; }
     
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(1.2); }
+    }
     </style>
 </head>
 <body>
 
     <div class="loading-screen" id="loadingScreen">
         <div class="loading-spinner"></div>
-        <div class="loading-text" id="loadingText">Loading pet data from Google Sheets...</div>
+        <div class="loading-text">Loading pet data from Google Sheets...</div>
     </div>
 
     <!-- Feature: History Graph Overlay -->
@@ -585,6 +581,7 @@
     </div>
 
    <script>
+        // CRITICAL DATA VARIABLES DEFINED AT TOP
         const MASTER_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=697881438&single=true&output=csv';
         const HISTORY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=1671406739&single=true&output=csv';
         
@@ -596,106 +593,205 @@
         let selectedPetForQty = null; 
         let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
         let petChart = null;
-        let isLoading = false;
-
-        // Intersection Observer for Visible-Only Crash Detection
-        const visibilityObserver = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const petName = entry.target.getAttribute('data-pet-name');
-                    if (petName && HISTORY_DATA.length > 0) {
-                        applyCrashAlert(entry.target, petName);
+        // Essential Helper Functions
+        function getRarityColor(rarity) {
+            if (!rarity) return 'var(--rarity-common)';
+            const r = rarity.toLowerCase();
+            if (r.includes('legendary')) return 'var(--rarity-legendary)';
+            if (r.includes('ultra')) return 'var(--rarity-ultra)';
+            if (r.includes('rare')) return 'var(--rarity-rare)';
+            if (r.includes('uncommon')) return 'var(--rarity-uncommon)';
+            return 'var(--rarity-common)';
+        }
+        function getDemandColor(demand) {
+            if (demand >= 7) return '#4caf50';
+            if (demand >= 4) return '#ffeb3b';
+            return '#f44336';
+        }
+        function getTrendIcons(p) {
+    if (!p || (!p.vt && !p.dt)) return "";
+    let html = "";
+    try {
+        let crashWarning = "";
+        
+        // DEBUG: Check if history data exists
+        if (!Array.isArray(HISTORY_DATA) || HISTORY_DATA.length === 0) {
+            console.log("⚠️ No history data loaded yet for", p.n);
+        } else {
+            try {
+                // Case-insensitive name matching
+                const petHistory = HISTORY_DATA.filter(row => 
+                    row.name && p.n && 
+                    row.name.toLowerCase().trim() === p.n.toLowerCase().trim()
+                );
+                console.log(`📊 ${p.n}: Found ${petHistory.length} history records`);
+                
+                if (petHistory.length >= 2) {
+                    const currentData = petHistory[petHistory.length - 1];
+                    const lookbackLimit = Math.min(10, petHistory.length);
+                    const historicalData = petHistory.slice(-lookbackLimit);
+                    
+                    let maxDemand = Math.max(...historicalData.map(h => h.d));
+                    let maxValue = Math.max(...historicalData.map(h => h.v));
+                    
+                    const demandDrop = maxDemand - currentData.d;
+                    const valueDrop = maxValue - currentData.v;
+                    
+                    console.log(`${p.n} - Demand drop: ${demandDrop.toFixed(2)}, Value drop: ${valueDrop.toFixed(2)}`);
+                    
+                    let hasCrashed = false;
+                    let crashType = "";
+                    let crashAmount = 0;
+                    
+                    if (demandDrop > 0.3) {
+                        hasCrashed = true;
+                        crashType = "DEMAND";
+                        crashAmount = demandDrop;
+                    }
+                    
+                    if (valueDrop > 2.0) {
+                        hasCrashed = true;
+                        if (crashType) crashType += " & VALUE";
+                        else crashType = "VALUE";
+                        crashAmount = Math.max(crashAmount, valueDrop);
+                    }
+                    
+                    if (hasCrashed) {
+                        const isRecovering = petHistory.length >= 3 && 
+                                           currentData.d > petHistory[petHistory.length - 2].d;
+                        
+                        console.log(`🚨 ${p.n} CRASH DETECTED! Type: ${crashType}, Amount: ${crashAmount.toFixed(2)}, Recovering: ${isRecovering}`);
+                        
+                        if (isRecovering) {
+                            crashWarning = `🚨 MAJOR ${crashType} CRASH DETECTED! 🚨\n`;
+                            crashWarning += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                            crashWarning += `⚠️ This pet recently crashed in ${crashType.toLowerCase()}!\n`;
+                            crashWarning += `📉 Peak → Current Drop: ${crashAmount.toFixed(2)}\n\n`;
+                            crashWarning += `📈 RECOVERY IN PROGRESS:\n`;
+                            crashWarning += `The pet has started rising again, but be cautious.\n`;
+                            crashWarning += `A crash this large often signals market instability.\n`;
+                            crashWarning += `Trade with EXTREME caution.\n\n`;
+                        } else {
+                            crashWarning = `🚨 MAJOR ${crashType} CRASH DETECTED! 🚨\n`;
+                            crashWarning += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
+                            crashWarning += `⚠️ This pet dropped significantly in ${crashType.toLowerCase()}!\n`;
+                            crashWarning += `📉 Total Drop: ${crashAmount.toFixed(2)}\n`;
+                            crashWarning += `❌ NO RECOVERY YET - AVOID TRADING!\n\n`;
+                        }
                     }
                 }
-            });
-        }, { threshold: 0.1 });
-
-        async function ensureHistoryLoaded() {
-            if (HISTORY_DATA.length > 0) return;
-            await fetchHistory();
-        }
-
-        async function ensureDataLoaded() {
-            if (ALL_PETS.length > 0) return true;
-            if (isLoading) return false;
-            isLoading = true;
-            document.getElementById('loadingScreen').style.display = 'flex';
-            await loadPetData();
-            isLoading = false;
-            return true;
-        }
-
-        function getTrendIcons(p) {
-            if (!p || (!p.vt && !p.dt)) return "";
-            let html = "";
-            const generateSentence = (str, label) => {
-                if (!str || typeof str !== 'string' || str.trim() === "") return null;
-                let parts = str.trim().split(' ');
-                if (parts.length < 2) return null;
-                let icon = parts[0]; 
-                let sentences = [];
-                for (let i = 1; i < parts.length; i++) {
-                    let segment = parts[i];
-                    if (!segment.includes(':')) continue;
-                    let [tierKey, val] = segment.split(':');
-                    let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
-                    let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
-                    let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
-                    sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} BY ${amount}`);
-                }
-                return { icon, text: sentences.join('\n') };
-            };
-            const vData = generateSentence(p.vt, "Value");
-            if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
-            const dData = generateSentence(p.dt, "Demand");
-            if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
-            html += `<span class="crash-siren-container" data-pet-name="${p.n}"></span>`;
-            return html;
-        }
-
-        function applyCrashAlert(element, name) {
-            const container = element.querySelector('.crash-siren-container');
-            if (!container || container.innerHTML !== "") return;
-
-            const petHistory = HISTORY_DATA.filter(row => row.name.toLowerCase() === name.toLowerCase());
-            if (petHistory.length < 2) return;
-
-            const current = petHistory[petHistory.length - 1];
-            const historical = petHistory.slice(-10);
-            const maxD = Math.max(...historical.map(h => h.d));
-            const maxV = Math.max(...historical.map(h => h.v));
-            const dDrop = maxD - current.d;
-            const vDrop = maxV - current.v;
-
-            if (dDrop > 0.3 || vDrop > 2.0) {
-                let msg = `🚨 MAJOR CRASH DETECTED! 🚨\nPet has dropped significantly in the last 10 updates.\nDrop: ${dDrop.toFixed(2)} Dem / ${vDrop.toFixed(2)} Val.`;
-                container.innerHTML = `<span title="${msg}" style="margin-left:4px; cursor:help; font-size:1.4em; color:#ef4444; filter: drop-shadow(0 0 4px #ef4444); animation: pulse 2s infinite;">🚨</span>`;
+            } catch (histErr) {
+                console.error("History check failed for", p.n, histErr);
             }
         }
-
-        async function fetchHistory() {
-            try {
-                const response = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
-                const text = await response.text();
-                const lines = text.trim().split('\n');
-                HISTORY_DATA = lines.slice(1).map(line => {
-                    const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    return { time: vals[0], name: vals[1], d: parseFloat(vals[2]) || 0, v: parseFloat(vals[5]) || 0 };
-                }).filter(r => r.name);
-            } catch (e) { console.error(e); }
-        }
-
-        function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
         
+        const generateSentence = (str, label) => {
+            if (!str || typeof str !== 'string' || str.trim() === "") return null;
+            let parts = str.trim().split(' ');
+            if (parts.length < 2) return null;
+            
+            let icon = parts[0]; 
+            let sentences = [];
+            for (let i = 1; i < parts.length; i++) {
+                let segment = parts[i];
+                if (!segment.includes(':')) continue;
+                let [tierKey, val] = segment.split(':');
+                let tierName = (tierKey === 'Ne' ? 'Neon' : (tierKey === 'M' ? 'Mega' : 'Normal'));
+                let actionWord = val.includes('+') ? 'INCREASED' : 'DECREASED';
+                let amount = val.replace(/[+-]/g, "").replace(/[VD]$/g, "");
+                sentences.push(`• ${tierName} ${p.n} ${label} ${actionWord} BY ${amount}`);
+            }
+            return { icon, text: sentences.join('\n') };
+        };
+        
+        // FIXED: Trend icons show ONLY their trend data (no crash warning)
+        const vData = generateSentence(p.vt, "Value");
+        if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
+        
+        const dData = generateSentence(p.dt, "Demand");
+        if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
+        
+        // FIXED: Crash siren shows ONLY crash warning (separate from trend icons)
+        if (crashWarning) {
+            console.log(`✅ Adding crash siren for ${p.n}`);
+            html += `<span title="${crashWarning}" style="margin-left:4px; cursor:help; font-size:1.4em; color:#ef4444; filter: drop-shadow(0 0 4px #ef4444); animation: pulse 2s infinite;">🚨</span>`;
+        }
+        
+    } catch (err) { 
+        console.error("getTrendIcons error:", err);
+        return ""; 
+    }
+    return html;
+}
+        async function fetchHistory() {
+            if (HISTORY_DATA.length > 0) {
+                console.log("📦 History already loaded:", HISTORY_DATA.length, "records");
+                return;
+            }
+            
+            try {
+                console.log("🔄 Fetching history from:", HISTORY_CSV_URL);
+                const response = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const text = await response.text();
+                console.log("📄 Raw CSV received, length:", text.length);
+                console.log("📄 First 500 chars:", text.substring(0, 500));
+                
+                const lines = text.trim().split('\n');
+                console.log("📊 Total lines in CSV:", lines.length);
+                console.log("📊 Header row:", lines[0]);
+                
+                if (lines.length < 2) {
+                    console.warn("⚠️ No history data rows (only header or empty)");
+                    return;
+                }
+                
+                // Parse with detailed logging
+                HISTORY_DATA = lines.slice(1).map((line, index) => {
+                    const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    const row = { 
+                        time: vals[0]?.trim() || '', 
+                        name: vals[1]?.trim() || '', 
+                        d: parseFloat(vals[2]) || 0,
+                        v: parseFloat(vals[5]) || 0
+                    };
+                    
+                    // Log first 3 rows for debugging
+                    if (index < 3) {
+                        console.log(`Row ${index + 1}:`, row);
+                    }
+                    
+                    return row;
+                }).filter(row => row.name); // Remove empty rows
+                
+                console.log("✅ History loaded successfully:", HISTORY_DATA.length, "records");
+                console.log("📊 Sample pets:", [...new Set(HISTORY_DATA.map(r => r.name))].slice(0, 10));
+                
+                // Test Giant Panda specifically
+                const pandaData = HISTORY_DATA.filter(row => row.name.toLowerCase().includes('panda'));
+                console.log("🐼 Giant Panda records found:", pandaData.length);
+                if (pandaData.length > 0) {
+                    console.log("🐼 Giant Panda data:", pandaData);
+                }
+                
+            } catch (e) { 
+                console.error("❌ History fetch failed:", e);
+                console.error("Error details:", e.message);
+                HISTORY_DATA = [];
+            }
+        }
+        function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
         async function openGraph(name) {
-            document.getElementById('loadingScreen').style.display = 'flex';
-            document.getElementById('loadingText').innerText = "Loading history data...";
-            await ensureHistoryLoaded();
-            document.getElementById('loadingScreen').style.display = 'none';
-
+            await fetchHistory();
             const petHistory = HISTORY_DATA.filter(p => p.name === name);
-            if (petHistory.length < 2) { alert("Insufficient history data."); return; }
-
+            if (petHistory.length < 2) {
+                alert("Not enough historical data yet to generate a graph for " + name);
+                return;
+            }
             document.getElementById('graphTitle').innerText = name.toUpperCase() + " HISTORY";
             document.getElementById('graphOverlay').style.display = 'flex';
             const ctx = document.getElementById('petChart').getContext('2d');
@@ -705,17 +801,48 @@
                 data: {
                     labels: petHistory.map(p => p.time),
                     datasets: [
-                        { label: 'Value', data: petHistory.map(p => p.v), borderColor: '#38bdf8', borderWidth: 3, fill: false },
-                        { label: 'Demand', data: petHistory.map(p => p.d), borderColor: '#fbbf24', borderWidth: 3, fill: false }
+                        {
+                            label: 'Value',
+                            data: petHistory.map(p => p.v),
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Demand',
+                            data: petHistory.map(p => p.d),
+                            borderColor: '#fbbf24',
+                            backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.3
+                        }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: {
+                        legend: { labels: { color: 'white', font: { weight: 'bold' } } }
+                    }
+                }
             });
         }
-
+        // CONTINUE WITH THE REST OF YOUR ORIGINAL FUNCTIONS HERE
+        // (handlePetContext, openInfo, closeInfo, playSfx, pushState, undo, parseCSV, etc.)
         function handlePetContext(e, name) {
             e.preventDefault();
-            if (e.shiftKey) { openGraph(name); } else { openQtyModal(name); }
+            if (e.shiftKey) {
+                openGraph(name);
+            } else {
+                openQtyModal(name);
+            }
         }
 
         function openInfo() { document.getElementById('infoOverlay').style.display = 'flex'; }
@@ -726,34 +853,44 @@
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
-            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
             if (type === 'pop') {
                 osc.frequency.setValueAtTime(600, audioCtx.currentTime);
                 osc.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.1);
                 gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
             } else if (type === 'win') {
                 osc.type = 'triangle';
                 [523, 659, 783].forEach((f, i) => osc.frequency.setValueAtTime(f, audioCtx.currentTime + (i * 0.1)));
                 gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.4);
             }
         }
 
         function pushState() {
-            if (history.length > 30) history.shift();
+            if (history.length > 50) history.shift();
             history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
         }
 
         function undo() {
             if (history.length === 0) return;
             const last = JSON.parse(history.pop());
-            state.A = (last.A || []); state.B = (last.B || []); state.inv = (last.inv || []);
-            render(); renderInventory(); saveTrade();
+            state.A = (last.A || []);
+            state.B = (last.B || []);
+            state.inv = (last.inv || []);
+            render();
+            renderInventory();
+            saveTrade();
         }
 
         window.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+            if (e.ctrlKey && e.key === 'z') {
+                e.preventDefault();
+                undo();
+            }
         });
 
         function parseCSV(text) {
@@ -764,7 +901,11 @@
                 const obj = {};
                 headers.forEach((header, i) => {
                     let val = values[i] ? values[i].trim().replace(/^"|"$/g, '') : '';
-                    if (!isNaN(parseFloat(val)) && isFinite(val) && val !== '') { obj[header] = parseFloat(val); } else { obj[header] = val; }
+                    if (!isNaN(parseFloat(val)) && isFinite(val) && val !== '') {
+                        obj[header] = parseFloat(val);
+                    } else {
+                        obj[header] = val;
+                    }
                 });
                 return obj;
             });
@@ -779,21 +920,23 @@
             localStorage.setItem('tradeData', JSON.stringify(simplifiedState));
         }
 
-        async function restoreTrade() {
+        function restoreTrade() {
             const saved = localStorage.getItem('tradeData');
             if (!saved) return;
-            await ensureDataLoaded();
             try {
                 const parsed = JSON.parse(saved);
                 const hydrate = (item) => {
                     const freshData = ALL_PETS.find(p => p.n === item.n);
-                    return freshData ? { ...freshData, ...item } : null;
+                    if (!freshData) return null; 
+                    return { ...freshData, ...item };
                 };
                 state.A = (parsed.A || []).map(hydrate).filter(x => x);
                 state.B = (parsed.B || []).map(hydrate).filter(x => x);
                 state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
                 render();
-            } catch (e) { console.error(e); }
+            } catch (e) {
+                console.error("Failed to restore trade", e);
+            }
         }
 
         async function loadPetData() {
@@ -801,22 +944,43 @@
                 const response = await fetch(MASTER_CSV_URL + "&t=" + Date.now());
                 const csvText = await response.text();
                 const data = parseCSV(csvText);
+                
                 ALL_PETS = data.map(row => ({
                     n: row.n || row.name || '',
-                    d: row.d || 0, nd: row.nd || 0, md: row.md || 0, f: row.f || 0, v: row.v || 0,
-                    f_v: row.f_v || 0, r_v: row.r_v || 0, fr_v: row.fr_v || 0, n_v: row.n_v || 0,
-                    n_f_v: row.n_f_v || 0, n_r_v: row.n_r_v || 0, nfr_v: row.nfr_v || 0,
-                    m_v: row.m_v || 0, m_f_v: row.m_f_v || 0, m_r_v: row.m_r_v || 0,
-                    mfr_v: row.mfr_v || 0, nfr_f: row.nfr_f || 0, mfr_f: row.mfr_f || 0,
+                    d: row.d || 0,
+                    nd: row.nd || 0,
+                    md: row.md || 0,
+                    f: row.f || 0,
+                    v: row.v || 0,
+                    f_v: row.f_v || 0,
+                    r_v: row.r_v || 0,
+                    fr_v: row.fr_v || 0,
+                    n_v: row.n_v || 0,
+                    n_f_v: row.n_f_v || 0, 
+                    n_r_v: row.n_r_v || 0, 
+                    nfr_v: row.nfr_v || 0,
+                    m_v: row.m_v || 0,
+                    m_f_v: row.m_f_v || 0, 
+                    m_r_v: row.m_r_v || 0, 
+                    mfr_v: row.mfr_v || 0,
+                    nfr_f: row.nfr_f || 0,
+                    mfr_f: row.mfr_f || 0,
                     cat: (row.categories || row.rarity || '').toLowerCase(),
-                    vt: row['value trend'] || row['vt'] || '', dt: row['demand trend'] || row['dt'] || ''
+                    vt: row['value trend'] || row['vt'] || '', 
+                    dt: row['demand trend'] || row['dt'] || ''
                 })).filter(p => p.n && p.n.length > 0);
+                
                 document.getElementById('loadingScreen').style.display = 'none';
-            } catch (error) { console.error(error); }
+                fetchHistory(); 
+                restoreTrade();
+                render();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.querySelector('.loading-text').textContent = 'Error loading data.';
+            }
         }
 
-        async function openSearch(side) {
-            await ensureDataLoaded();
+        function openSearch(side) {
             state.target = side;
             document.getElementById('searchOverlay').classList.add('open');
             searchState.renderLimit = 50;
@@ -842,7 +1006,8 @@
             const box = document.getElementById('searchResults');
             if (box.scrollTop + box.clientHeight >= box.scrollHeight - 50) {
                 if (searchState.renderLimit < searchState.currentMatches.length) {
-                    searchState.renderLimit += 50; renderDOM(); 
+                    searchState.renderLimit += 50;
+                    renderDOM(); 
                 }
             }
         });
@@ -852,9 +1017,9 @@
             if (searchState.rarityFilter !== 'none') {
                 matches = matches.filter(p => (p.cat || "").toLowerCase().includes(searchState.rarityFilter));
             }
-            if (searchState.sortMode !== 'default') {
+            const mode = searchState.sortMode;
+            if (mode !== 'default') {
                 matches.sort((a, b) => {
-                    const mode = searchState.sortMode;
                     if (mode === 'valHigh') return (state.mode === 'frost' ? b.f : b.v) - (state.mode === 'frost' ? a.f : a.v);
                     if (mode === 'valLow') return (state.mode === 'frost' ? a.f : a.v) - (state.mode === 'frost' ? b.f : b.v);
                     if (mode === 'demHigh') return b.d - a.d;
@@ -864,20 +1029,26 @@
             }
             searchState.currentMatches = matches;
             renderDOM();
-            ensureHistoryLoaded(); 
         }
 
         function renderDOM() {
             const chunk = searchState.currentMatches.slice(0, searchState.renderLimit);
-            const grid = document.getElementById('searchResults');
-            grid.innerHTML = chunk.map(p => `
-                <div class="search-item-card" data-pet-name="${p.n}" onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}', 1)" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')" style="border-color: ${getRarityColor(p.cat)}">
+            document.getElementById('searchResults').innerHTML = chunk.map(p => {
+                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
+                const val = state.mode === 'frost' ? p.f : p.v; 
+                const rarityColor = getRarityColor(p.cat);
+                const demandColor = getDemandColor(p.d);
+                return `
+                <div class="search-item-card" 
+                     onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}', 1)" 
+                     oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')"
+                     style="border-color: ${rarityColor}">
                     <div class="search-item-name">${p.n}${getTrendIcons(p)}</div>
-                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" class="search-item-img" loading="lazy" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
-                    <div class="search-item-val">${(state.mode === 'frost' ? p.f : p.v).toFixed(2)}</div>
-                    <div class="search-item-demand" style="color: ${getDemandColor(p.d)}">Dem: ${p.d}</div>
-                </div>`).join('');
-            grid.querySelectorAll('.search-item-card').forEach(el => visibilityObserver.observe(el));
+                    <img src="${imgUrl}" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
+                    <div class="search-item-demand" style="color: ${demandColor}">Dem: ${p.d}</div>
+                </div>`;
+            }).join('');
         }
 
         function openQtyModal(name) {
@@ -888,18 +1059,24 @@
             setTimeout(() => document.getElementById('qtyInput').focus(), 50);
         }
 
-        function closeQtyModal() { document.getElementById('qtyModal').style.display = 'none'; selectedPetForQty = null; }
+        function closeQtyModal() {
+            document.getElementById('qtyModal').style.display = 'none';
+            selectedPetForQty = null;
+        }
 
         function confirmQty() {
             const count = parseInt(document.getElementById('qtyInput').value);
-            if (count > 0 && selectedPetForQty) addItem(null, selectedPetForQty, count);
+            if (count > 0 && selectedPetForQty) {
+                addItem(null, selectedPetForQty, count);
+            }
             closeQtyModal();
         }
 
         function addItem(element, name, quantity = 1) {
             if (state.target !== 'inv' && state.target !== 'dream') {
                 if ((state[state.target] ? state[state.target].length : 0) + quantity > 18) {
-                    alert("Trade limit reached!"); return;
+                    alert("Trade limit reached! Adopt Me only allows 18 items per trade.");
+                    return;
                 }
             }
             const pet = ALL_PETS.find(x => x.n === name);
@@ -911,9 +1088,19 @@
                 else if (state.target === 'dream') { state.dreamPet = newPet; } 
                 else { state[state.target].push(newPet); }
             }
-            if (state.target === 'inv') { renderInventory(); } 
-            else if (state.target === 'dream') { renderInventory(); closeSearch(); } 
-            else { render(); closeSearch(); }
+            if (state.target === 'inv') {
+                renderInventory();
+                if (element) {
+                    element.classList.add('added');
+                    setTimeout(() => element.classList.remove('added'), 500);
+                }
+            } else if (state.target === 'dream') {
+                renderInventory();
+                closeSearch();
+            } else {
+                render();
+                closeSearch(); 
+            }
             playSfx('pop'); saveTrade(); 
         }
 
@@ -921,49 +1108,91 @@
             if (state[s].length >= 18 && s !== 'inv') return;
             pushState();
             const original = state[s].find(x => x.uid === uid);
-            if (original) state[s].push({ ...original, uid: Math.random() });
+            if (!original) return;
+            const copy = { ...original, uid: Math.random() };
+            state[s].push(copy);
             if (s === 'inv') renderInventory(); else render();
             playSfx('pop'); saveTrade(); 
         }
 
         function remove(s, uid) { 
-            pushState(); state[s] = state[s].filter(x => x.uid !== uid); 
+            pushState();
+            state[s] = state[s].filter(x => x.uid !== uid); 
             if (s === 'inv') renderInventory(); else render();
             saveTrade(); 
         }
 
-        async function openInventory() { 
-            await ensureDataLoaded();
-            document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); 
-            ensureHistoryLoaded(); 
-        }
+        function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
         function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
         function exportInv() {
-            const data = btoa(unescape(encodeURIComponent(JSON.stringify(state.inv)))); 
-            navigator.clipboard.writeText(data).then(() => alert("Copied!"));
+            const data = JSON.stringify(state.inv);
+            const encoded = btoa(unescape(encodeURIComponent(data))); 
+            navigator.clipboard.writeText(encoded).then(() => {
+                alert("Inventory code copied to clipboard!");
+            });
         }
 
         function importInv() {
-            const code = prompt("Paste code:");
+            const code = prompt("Paste your inventory code here:");
             if (!code) return;
             try {
-                state.inv = JSON.parse(decodeURIComponent(escape(atob(code)))).map(i => ({...i, uid: Math.random()}));
-                renderInventory(); saveTrade();
-            } catch (e) { alert("Invalid."); }
+                const decoded = decodeURIComponent(escape(atob(code)));
+                const data = JSON.parse(decoded);
+                const validData = data.filter(item => ALL_PETS.some(p => p.n === item.n));
+                if (validData.length > 0) {
+                    pushState();
+                    state.inv = validData.map(item => ({...item, uid: Math.random()}));
+                    renderInventory();
+                    alert(`Successfully imported ${validData.length} items!`);
+                    saveTrade();
+                } else {
+                    alert("Invalid data found. No items imported.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error importing data. Code might be invalid.");
+            }
         }
 
         function openAnalytics() {
+            const overlay = document.getElementById('analyticsOverlay');
             const body = document.getElementById('analyticsBody');
-            document.getElementById('analyticsOverlay').style.display = 'flex';
-            if (state.inv.length === 0) return body.innerHTML = "Empty.";
-            const total = state.inv.length;
+            overlay.style.display = 'flex';
             const rarities = {};
+            const categories = {};
+            let total = state.inv.length;
+            if (total === 0) {
+                body.innerHTML = '<div style="text-align:center; color:#94a3b8;">Inventory is empty. Add pets to see analytics.</div>';
+                return;
+            }
             state.inv.forEach(p => {
-                const r = p.cat.includes('legendary') ? 'Legendary' : p.cat.includes('ultra') ? 'Ultra' : 'Other';
-                rarities[r] = (rarities[r] || 0) + 1;
+                const r = (p.cat || 'unknown').toLowerCase();
+                let rKey = 'Common';
+                if(r.includes('legendary')) rKey = 'Legendary';
+                else if(r.includes('ultra')) rKey = 'Ultra-Rare';
+                else if(r.includes('rare')) rKey = 'Rare';
+                else if(r.includes('uncommon')) rKey = 'Uncommon';
+                rarities[rKey] = (rarities[rKey] || 0) + 1;
+                let cKey = 'Randoms';
+                if(r.includes('preppy')) cKey = 'Preppy';
+                else if(r.includes('high tier')) cKey = 'High Tier';
+                else if(r.includes('exotic')) cKey = 'Exotic';
+                else if(r.includes('classy')) cKey = 'Classy';
+                categories[cKey] = (categories[cKey] || 0) + 1;
             });
-            body.innerHTML = Object.entries(rarities).map(([k,v]) => `<div class="bar-row"><div class="bar-label">${k}</div><div class="bar-track"><div class="bar-fill" style="width: ${(v/total*100)}%; background: var(--accent);"></div></div></div>`).join('');
+            const generateBars = (data, colorMap) => {
+                return Object.entries(data)
+                    .sort((a,b) => b[1] - a[1])
+                    .map(([key, count]) => {
+                        const pct = ((count / total) * 100).toFixed(1);
+                        const color = colorMap[key] || '#6366f1'; 
+                        return `<div class="bar-row"><div class="bar-label">${key}</div><div class="bar-track"><div class="bar-fill" style="width: ${pct}%; background: ${color};"></div></div><div class="bar-stat">${count} (${pct}%)</div></div>`;
+                    }).join('');
+            };
+            const rColors = { 'Legendary': 'var(--rarity-legendary)', 'Ultra-Rare': 'var(--rarity-ultra)', 'Rare': 'var(--rarity-rare)', 'Uncommon': 'var(--rarity-uncommon)', 'Common': 'var(--rarity-common)' };
+            const cColors = { 'High Tier': '#a855f7', 'Preppy': '#ec4899', 'Exotic': '#06b6d4', 'Classy': '#f59e0b', 'Randoms': '#64748b' };
+            body.innerHTML = `<div class="analytics-section"><h4>Rarity Breakdown</h4>${generateBars(rarities, rColors)}</div><div class="analytics-section"><h4>Category Breakdown</h4>${generateBars(categories, cColors)}</div>`;
         }
 
         function closeAnalytics() { document.getElementById('analyticsOverlay').style.display = 'none'; }
@@ -972,118 +1201,262 @@
         
         function logCurrentTrade() {
             if (state.A.length === 0 && state.B.length === 0) return;
-            tradeLog.push({ timestamp: new Date().toLocaleTimeString(), A: [...state.A], B: [...state.B], verdict: document.getElementById('verdict').innerText });
-            alert("Saved!");
+            if (tradeLog.length >= 10) tradeLog.shift();
+            const snapshot = {
+                timestamp: new Date().toLocaleTimeString(),
+                A: JSON.parse(JSON.stringify(state.A)),
+                B: JSON.parse(JSON.stringify(state.B)),
+                verdict: document.getElementById('verdict').innerText
+            };
+            tradeLog.push(snapshot);
+            alert("Trade Saved to History!");
+        }
+
+        function restoreFromLog(index) {
+            const entry = tradeLog[index];
+            if (!entry) return;
+            state.A = JSON.parse(JSON.stringify(entry.A));
+            state.B = JSON.parse(JSON.stringify(entry.B));
+            closeHistory();
+            render();
+            playSfx('pop');
         }
 
         function renderHistoryLog() {
             const list = document.getElementById('historyList');
-            list.innerHTML = tradeLog.length === 0 ? "No history." : tradeLog.reverse().map((e, i) => `<div class="history-item">${e.timestamp} - ${e.verdict}</div>`).join('');
+            if (tradeLog.length === 0) {
+                list.innerHTML = '<div style="text-align: center; color: var(--subtext);">No history yet. Calculate trades to save them!</div>';
+                return;
+            }
+            list.innerHTML = tradeLog.slice().reverse().map((entry, idx) => {
+                const originalIdx = tradeLog.length - 1 - idx;
+                return `<div class="history-item" onclick="restoreFromLog(${originalIdx})"><div class="history-time">${entry.timestamp}</div><div class="history-details"><span>${entry.A.length} Items vs ${entry.B.length} Items</span><span style="color: ${entry.verdict.includes('WIN') ? 'var(--win)' : (entry.verdict.includes('LOSE') ? 'var(--lose)' : 'white')}">${entry.verdict}</span></div></div>`;
+            }).join('');
         }
 
         function calculatePetVal(p, mode) {
+            let val = 0;
             if (mode === 'frost') {
-                let v = (p.type === 'neon') ? p.nfr_f || (p.f * 3) : (p.type === 'mega') ? p.mfr_f || (p.f * 12) : p.f;
-                return v + (p.f_st ? 0.01 : 0) + (p.r_st ? 0.01 : 0);
+                if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
+                else if (p.type === 'mega') val = p.mfr_f || (p.f * 12);
+                else val = p.f;
+                if (p.f_st) val += 0.01; if (p.r_st) val += 0.01;
+            } else {
+                if (p.type === 'neon') {
+                    if (p.f_st && p.r_st) val = p.nfr_v; 
+                    else if (p.f_st) val = p.n_f_v; else if (p.r_st) val = p.n_r_v; else val = p.n_v;                    
+                } else if (p.type === 'mega') {
+                    if (p.f_st && p.r_st) val = p.mfr_v; 
+                    else if (p.f_st) val = p.m_f_v; else if (p.r_st) val = p.m_r_v; else val = p.m_v;                    
+                } else {
+                    if (p.f_st && p.r_st) val = p.fr_v;  
+                    else if (p.f_st) val = p.f_v; else if (p.r_st) val = p.r_v; else val = p.v;                      
+                }
             }
-            if (p.type === 'neon') return (p.f_st && p.r_st) ? p.nfr_v : p.n_v;
-            if (p.type === 'mega') return (p.f_st && p.r_st) ? p.mfr_v : p.m_v;
-            return (p.f_st && p.r_st) ? p.fr_v : p.v;
+            return val;
         }
 
         function renderInventory() {
+            const list = state.inv;
             const grid = document.getElementById('invGrid');
             grid.innerHTML = '';
             let totalV = 0, totalD = 0;
             const groups = {};
-            state.inv.forEach(p => {
+            list.forEach(p => {
                 const key = `${p.n}|${p.type}|${p.f_st}|${p.r_st}`;
-                if (!groups[key]) groups[key] = []; groups[key].push(p);
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(p);
                 totalV += calculatePetVal(p, 'value');
-                totalD += p.d;
+                totalD += p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
             });
             Object.entries(groups).forEach(([key, stack]) => {
-                const p = stack[0], count = stack.length, valTotal = calculatePetVal(p, 'value') * count, uids = JSON.stringify(stack.map(i => i.uid));
+                const p = stack[0], count = stack.length;
+                const currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
+                const valTotal = calculatePetVal(p, 'value') * count;
+                const stackUidsString = JSON.stringify(stack.map(item => item.uid));
+                const rarityColor = getRarityColor(p.cat);
+                const demandColor = getDemandColor(currentDemand);
                 grid.innerHTML += `
-                    <div class="card" data-pet-name="${p.n}" style="border-color: ${getRarityColor(p.cat)}">
+                    <div class="card" style="border-color: ${rarityColor}">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
-                        <div class="del" onclick="removeStack('inv', ${uids})">✕</div>
-                        <div class="card-img-container" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')" ondblclick="duplicate('inv', ${p.uid})">
-                             <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" loading="lazy">
+                        <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
+                        <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
+                        <div class="card-img-container" 
+                             oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')"
+                             ondblclick="duplicate('inv', ${p.uid})" title="Right click for Qty | Shift + Right click for Graph">
+                             <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
                         </div>
                         <div class="card-name">${p.n}${getTrendIcons(p)}</div>
                         <div class="card-val">${valTotal.toFixed(2)}</div>
+                        <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
                         <div class="toggles">
-                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="togStack('inv',${uids},'n')">N</div>
-                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="togStack('inv',${uids},'m')">M</div>
+                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="togStack('inv',${stackUidsString},'n')">N</div>
+                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="togStack('inv',${stackUidsString},'m')">M</div>
+                            <div class="t-btn ${p.f_st?'active':''}" onclick="togStack('inv',${stackUidsString},'f')">F</div>
+                            <div class="t-btn ${p.r_st?'active':''}" onclick="togStack('inv',${stackUidsString},'r')">R</div>
                         </div>
                     </div>`;
             });
-            document.getElementById('invTotalValue').innerText = totalV.toFixed(2);
-            document.getElementById('invAvgDemand').innerText = state.inv.length > 0 ? (totalD / state.inv.length).toFixed(1) : "0.0";
-            grid.querySelectorAll('.card').forEach(el => visibilityObserver.observe(el));
-            updateAISuggestions(state.inv);
+            const finalVal = totalV.toFixed(2);
+            document.getElementById('invTotalValue').innerText = finalVal;
+            document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
+            const v = parseFloat(finalVal);
+            document.getElementById('mile-1').classList.toggle('active', v >= 1);
+            document.getElementById('mile-2').classList.toggle('active', v >= 10);
+            document.getElementById('mile-3').classList.toggle('active', v >= 50);
+            document.getElementById('mile-4').classList.toggle('active', v >= 100);
+            document.getElementById('mile-5').classList.toggle('active', v >= 155);
+            updateAISuggestions(list);
         }
 
-        function removeStack(s, uids) { pushState(); state[s] = state[s].filter(x => !uids.includes(x.uid)); renderInventory(); saveTrade(); }
+        function removeStack(s, uids) { pushState(); state[s] = state[s].filter(x => x.uid !== uids[0]); renderInventory(); saveTrade(); }
         function togStack(s, uids, type) {
             pushState(); uids.forEach(uid => {
                 const p = state[s].find(x => x.uid === uid);
-                if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon'; else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
+                if (!p) return;
+                if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
+                else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
+                else if (type === 'f') p.f_st = !p.f_st;
+                else if (type === 'r') p.r_st = !p.r_st;
             });
             saveTrade(); renderInventory();
         }
 
-        function findSimilarToTotal() { showSimilarPopup(parseFloat(document.getElementById('invTotalValue').innerText)); }
+        function findSimilarToTotal() { const totalVal = parseFloat(document.getElementById('invTotalValue').innerText); showSimilarPopup(totalVal); }
+        function findSimilarToPet(val) { showSimilarPopup(val); }
         function showSimilarPopup(val) {
-            const overlay = document.getElementById('similarOverlay'), list = document.getElementById('similarList');
+            const overlay = document.getElementById('similarOverlay');
+            const list = document.getElementById('similarList');
             overlay.style.display = 'flex';
-            list.innerHTML = ALL_PETS.filter(p => p.v >= val * 0.90 && p.v <= val * 1.15).slice(0, 20).map(p => `<div class="similar-item" onclick="addItem(null, '${p.n}', 1); closeSimilarPopup()">${p.n} - ${p.v.toFixed(2)}</div>`).join('');
+            const matches = ALL_PETS.filter(p => p.v >= val * 0.90 && p.v <= val * 1.15).sort((a, b) => b.d - a.d).slice(0, 30);
+            list.innerHTML = matches.map(p => {
+                const isSelected = state.aiTargetPets.some(x => x.n === p.n);
+                return `<div class="similar-item ${isSelected ? 'selected' : ''}" onclick="toggleAiTarget(this, '${p.n.replace(/'/g, "\\'")}')"><img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" style="width: 40px; height: 40px; object-fit: contain;"><div style="flex: 1;"><div style="font-weight: 800; font-size: 0.9em;">${p.n}</div><div style="font-size: 0.7em; color: var(--subtext);">Value: ${p.v.toFixed(2)} | Demand: ${p.d}</div></div><input type="checkbox" ${isSelected ? 'checked' : ''} style="pointer-events: none;"></div>`;
+            }).join('');
         }
-        function closeSimilarPopup() { document.getElementById('similarOverlay').style.display = 'none'; }
+        function toggleAiTarget(element, name) {
+            const pet = ALL_PETS.find(x => x.n === name);
+            const index = state.aiTargetPets.findIndex(x => x.n === name);
+            if (index > -1) state.aiTargetPets.splice(index, 1);
+            else state.aiTargetPets.push(pet);
+            element.classList.toggle('selected');
+            element.querySelector('input').checked = !element.querySelector('input').checked;
+        }
+        function closeSimilarPopup() { document.getElementById('similarOverlay').style.display = 'none'; renderInventory(); }
 
         function setAiStrategy(mode) {
-            state.aiMode = mode; 
+            state.aiMode = mode;
+            state.aiTargetPets = []; 
             document.getElementById('aiTogNormal').classList.toggle('active', mode === 'normal');
             document.getElementById('aiTogVelocity').classList.toggle('active', mode === 'velocity');
             renderInventory();
         }
 
-        function updateStrategyCount(val) { state.strategyLimit = parseInt(val); document.getElementById('strategyCountVal').innerText = val; renderInventory(); }
+        function updateStrategyCount(val) {
+            state.strategyLimit = parseInt(val);
+            document.getElementById('strategyCountVal').innerText = val;
+            renderInventory();
+        }
+
         function clearDreamPet() { state.dreamPet = null; renderInventory(); }
 
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
-            if (inventory.length === 0) return box.innerHTML = "Add pets...";
-            box.innerHTML = "Generating strategy...";
+            const dreamContainer = document.getElementById('dreamPetContainer');
+            if (state.dreamPet) {
+                dreamContainer.innerHTML = `<div class="dream-active-badge"><span>Target: ${state.dreamPet.n}</span><span style="cursor: pointer;" onclick="clearDreamPet()">✕</span></div>`;
+                const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
+                const freshDream = ALL_PETS.find(x => x.n === state.dreamPet.n);
+                const dreamVal = freshDream ? freshDream.v : state.dreamPet.v; 
+                const pct = Math.min((totalInvVal / dreamVal) * 100, 100).toFixed(1);
+                let suggestions = `<div class="ai-summary"><b>Dream Progress:</b> ${pct}%<div class="dream-progress-bg"><div class="dream-progress-fill" style="width: ${pct}%"></div></div></div>`;
+                let bestCombos = [];
+                const shuffled = [...inventory].sort(() => Math.random() - 0.5);
+                for(let i=0; i<100; i++) {
+                    let combo = []; let sum = 0; const attempt = shuffled.sort(() => Math.random() - 0.5); 
+                    for(let p of attempt) {
+                        let val = calculatePetVal(p, 'value');
+                        if (sum + val <= dreamVal * 1.1) { combo.push(p); sum += val; }
+                    }
+                    if(combo.length > 0) { bestCombos.push({ offer: combo, sum: sum, diff: Math.abs(dreamVal - sum) }); }
+                }
+                bestCombos.sort((a,b) => a.diff - b.diff);
+                bestCombos = bestCombos.filter((v,i,a)=>a.findIndex(t=>(t.sum===v.sum))===i).slice(0, 5);
+                box.innerHTML = suggestions + bestCombos.map(r => {
+                    const diffVal = (dreamVal - r.sum).toFixed(2);
+                    return `<div class="ai-suggestion" style="border-left-color: var(--rarity-legendary);">Offer: ${r.offer.map(p => (p.type === 'neon' ? 'Neon ' : (p.type === 'mega' ? 'Mega ' : '')) + p.n).join(' + ')}<br><div class="ai-stats-row"><span class="ai-stat-pill" style="background:#334155; color:white;">Total: ${r.sum.toFixed(2)}</span><span class="ai-stat-pill" style="color: ${diffVal > 0 ? 'var(--lose)' : 'var(--win)'}">Remaining: ${diffVal}</span></div></div>`;
+                }).join('');
+                return;
+            } else { dreamContainer.innerHTML = `<button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>`; }
+            if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to inventory...</div>`; return; }
+            const shuffled = [...inventory].sort(() => Math.random() - 0.5);
+            const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
+            const remaining = (155.0 - totalInvVal).toFixed(1);
+            let suggestions = `<div class="ai-summary"><b>Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon.</div>`;
+            let results = [];
+            let usedPetUids = new Set();
+            const findTarget = (val) => {
+                if (state.aiTargetPets.length > 0) return state.aiTargetPets[Math.floor(Math.random() * state.aiTargetPets.length)];
+                let marginMin = state.aiMode === 'velocity' ? 0.80 : 1.01;
+                let marginMax = state.aiMode === 'velocity' ? 1.10 : 1.25;
+                return ALL_PETS.filter(p => p.v > val * marginMin && p.v < val * marginMax).sort((a,b) => b.d - a.d)[0];
+            };
+            for(let i = 0; i < 50 && results.length < state.strategyLimit; i++) {
+                let bundle = []; let available = shuffled.filter(p => !usedPetUids.has(p.uid));
+                if (available.length < 1) break;
+                let limit = (state.aiMode === 'velocity') ? 10 : 4;
+                bundle = available.slice(0, Math.min(available.length, limit));
+                if (bundle.length > 0) {
+                    let bundleVal = bundle.reduce((s, p) => s + calculatePetVal(p, 'value'), 0);
+                    let bundleDem = (bundle.reduce((s, p) => s + p.d, 0) / bundle.length);
+                    let target = findTarget(bundleVal);
+                    if (target) {
+                        bundle.forEach(p => usedPetUids.add(p.uid));
+                        let vDiff = (target.v - bundleVal).toFixed(2);
+                        let dDiff = (target.d - bundleDem).toFixed(1);
+                        let winPct = ((target.v / bundleVal) - 1) * 100;
+                        results.push({ offer: bundle, target: target, vDiff: vDiff, dDiff: dDiff, winPct: winPct.toFixed(1) });
+                    }
+                }
+            }
+            box.innerHTML = suggestions + results.map(r => `<div class="ai-suggestion">Offer: ${r.offer.map(p => (p.type === 'neon' ? 'Neon ' : (p.type === 'mega' ? 'Mega ' : '')) + p.n).join(' + ')}<br>Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span><div class="ai-stats-row"><span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">Profit: ${r.vDiff} (${r.winPct}%)</span><span class="ai-stat-pill pill-dem" style="color:${getDemandColor(parseFloat(r.dDiff) + 5)}">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span></div></div>`).join('');
         }
 
         function renderSide(s) {
+            const list = state[s];
             const grid = document.getElementById(`grid${s}`);
             grid.innerHTML = '';
             let totalV = 0, totalD = 0;
-            state[s].forEach(p => {
+            list.forEach(p => {
+                let currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
                 let val = calculatePetVal(p, state.mode);
-                totalV += val; totalD += p.d;
+                totalV += val; totalD += currentDemand;
+                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
+                const rarityColor = getRarityColor(p.cat);
+                const demandColor = getDemandColor(currentDemand);
                 grid.innerHTML += `
-                    <div class="card" data-pet-name="${p.n}" style="border-color: ${getRarityColor(p.cat)}">
+                    <div class="card" style="border-color: ${rarityColor}">
                         <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
-                        <div class="card-img-container" oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')" ondblclick="duplicate('${s}', ${p.uid})">
-                            <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" loading="lazy">
+                        <div class="card-img-container" 
+                             oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')"
+                             ondblclick="duplicate('${s}', ${p.uid})" title="Right click for Qty | Shift + Right click for Graph">
+                            <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                         </div>
                         <div class="card-name">${p.n}${getTrendIcons(p)}</div>
                         <div class="card-val">${val.toFixed(2)}</div>
+                        <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
                         <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
                             <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('${s}',${p.uid},'m')">M</div>
+                            <div class="t-btn ${p.f_st?'active':''}" onclick="tog('${s}',${p.uid},'f')">F</div>
+                            <div class="t-btn ${p.r_st?'active':''}" onclick="tog('${s}',${p.uid},'r')">R</div>
                         </div>
                     </div>`;
             });
             grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
             document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
-            document.getElementById(`cnt${s}`).innerText = state[s].length;
-            document.getElementById(`dem${s}`).innerText = state[s].length > 0 ? (totalD / state[s].length).toFixed(1) : "0.0";
-            grid.querySelectorAll('.card').forEach(el => visibilityObserver.observe(el));
+            document.getElementById(`cnt${s}`).innerText = list.length;
+            document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
         }
 
         function calculate() {
@@ -1095,62 +1468,24 @@
             const gaugeNeedle = document.getElementById('gaugeNeedle');
             const gaugeBar = document.getElementById('gaugeBar');
             let isTrap = false;
-
-            if (vA === 0 && vB === 0) { 
-                verdict.innerText = "--"; 
-                verdict.className = "v-text"; 
-                gaugeNeedle.style.left = "50%"; 
-                gaugeBar.classList.remove('trap-active'); 
-                vSub.innerText = "Add pets to calculate trade results";
-                return; 
-            }
-
+            if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; gaugeNeedle.style.left = "50%"; gaugeBar.classList.remove('trap-active'); return; }
             const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
             const demGap = demA - demB;
             let needlePos = 50 + (pDiff / 0.15 * 50);
-            needlePos = Math.max(0, Math.min(100, needlePos));
+            if (needlePos < 0) needlePos = 0; if (needlePos > 100) needlePos = 100;
             gaugeNeedle.style.left = `${needlePos}%`;
-
-            if (Math.abs(diff) < 0.01) { 
-                verdict.innerText = "FAIR"; 
-                verdict.className = "v-text fair-c"; 
-                vSub.innerText = "The trade is perfectly balanced in value. No one gain or loses raw wealth."; 
-            }
+            if (Math.abs(diff) < 0.01) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "The trade is perfectly balanced in value. No one gain or loses raw wealth."; }
             else if (diff > 0) {
-                if (demGap >= 3 && pDiff < 0.4) { 
-                    verdict.innerText = "TRAP"; 
-                    verdict.className = "v-text trap-c"; 
-                    vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`; 
-                    isTrap = true; 
-                }
+                if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`; isTrap = true; }
                 else {
-                    const hasSpecial = state.B.some(p => { 
-                        const c = (p.cat || "").toLowerCase(); 
-                        return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); 
-                    });
-                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { 
-                        verdict.innerText = "TRAP"; 
-                        verdict.className = "v-text trap-c"; 
-                        vSub.innerText = "VALUE BAIT: They are offering low-demand 'trash' pets. You need a much higher overpay (1.5x+) to make this even remotely fair."; 
-                        isTrap = true; 
-                    } 
-                    else { 
-                        verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; 
-                        verdict.className = "v-text win-c"; 
-                        let demTxt = demB > demA ? "and you are gaining trading speed (Demand Up)!" : "but be aware you are losing a bit of trading speed."; 
-                        vSub.innerText = `You are gaining ${(pDiff * 100).toFixed(1)}% in raw value ${demTxt}`; 
-                        playSfx('win'); 
-                    }
+                    const hasSpecial = state.B.some(p => { const c = (p.cat || "").toLowerCase(); return c.includes('legendary') || c.includes('preppy') || c.includes('exotic'); });
+                    if (demB > 0 && demB <= 3 && !hasSpecial && pDiff < 1.5) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = "VALUE BAIT: They are offering low-demand 'trash' pets. You need a much higher overpay (1.5x+) to make this even remotely fair."; isTrap = true; } 
+                    else { verdict.innerText = pDiff >= 0.15 ? "BIG WIN" : "WIN"; verdict.className = "v-text win-c"; let demTxt = demB > demA ? "and you are gaining trading speed (Demand Up)!" : "but be aware you are losing a bit of trading speed."; vSub.innerText = `You are gaining ${(pDiff * 100).toFixed(1)}% in raw value ${demTxt}`; playSfx('win'); }
                 }
             } else {
-                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; 
-                verdict.className = "v-text lose-c";
-                if (demB >= demA + 2) { 
-                    vSub.innerText = `STRATEGIC OVERPAY: You lose value, but gain massive trading velocity (+${(demB - demA).toFixed(1)} Dem). This is a good move to clear stagnant pets.`; 
-                }
-                else { 
-                    vSub.innerText = `You are losing ${(Math.abs(pDiff) * 100).toFixed(1)}% of your value with no significant demand gain. This is a bad deal.`; 
-                }
+                verdict.innerText = pDiff <= -0.15 ? "BIG LOSE" : "LOSE"; verdict.className = "v-text lose-c";
+                if (demB >= demA + 2) { vSub.innerText = `STRATEGIC OVERPAY: You lose value, but gain massive trading velocity (+${(demB - demA).toFixed(1)} Dem). This is a good move to clear stagnant pets.`; }
+                else { vSub.innerText = `You are losing ${(Math.abs(pDiff) * 100).toFixed(1)}% of your value with no significant demand gain. This is a bad deal.`; }
             }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
             if (isTrap) gaugeBar.classList.add('trap-active'); else gaugeBar.classList.remove('trap-active');
@@ -1160,26 +1495,43 @@
         function setMode(m) { state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost'); document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); }
         function tog(s, uid, type) {
             pushState(); const p = state[s].find(x => x.uid === uid);
-            if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon'; else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
-            saveTrade(); render();
+            if (!p) return;
+            if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
+            else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
+            else if (type === 'f') p.f_st = !p.f_st;
+            else if (type === 'r') p.r_st = !p.r_st;
+            saveTrade(); if (s === 'inv') renderInventory(); else render();
         }
 
         function updateTradeSuggestions() {
-            const container = document.getElementById('sideASuggestions'), list = document.getElementById('suggestList'), targetVal = parseFloat(document.getElementById('totB').innerText);
+            const container = document.getElementById('sideASuggestions');
+            const list = document.getElementById('suggestList');
+            const targetVal = parseFloat(document.getElementById('totB').innerText);
             if (targetVal <= 0 || state.inv.length === 0) { container.style.display = 'none'; return; }
-            container.style.display = 'block'; list.innerHTML = 'Calculating...';
+            container.style.display = 'block'; list.innerHTML = '';
+            let pool = [...state.inv].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < 3; i++) {
+                let bundle = [], sum = 0;
+                for (let p of pool) {
+                    let v = calculatePetVal(p, state.mode);
+                    if (sum + v <= targetVal * 1.15) { bundle.push(p); sum += v; }
+                    if (sum >= targetVal * 0.9) break;
+                }
+                if (bundle.length > 0) {
+                    list.innerHTML += `<div class="suggest-pill" onclick='applySuggestion(${JSON.stringify(bundle.map(b=>b.uid))})'><div class="suggest-items-text">${bundle.map(b=>b.n).join(' + ')}</div><div class="suggest-val-text">${sum.toFixed(2)}</div></div>`;
+                }
+            }
         }
 
-        function getRarityColor(rarity) {
-            const r = (rarity || "").toLowerCase();
-            if (r.includes('legendary')) return 'var(--rarity-legendary)';
-            if (r.includes('ultra')) return 'var(--rarity-ultra)';
-            return 'var(--rarity-common)';
+        function applySuggestion(uids) {
+            pushState(); uids.forEach(uid => {
+                const item = state.inv.find(x => x.uid === uid);
+                if (item) state.A.push({...item, uid: Math.random()});
+            });
+            render(); saveTrade();
         }
 
-        function getDemandColor(demand) { return demand >= 7 ? '#4caf50' : demand >= 4 ? '#ffeb3b' : '#f44336'; }
-
-        restoreTrade();
+        loadPetData();
     </script>
 </body>
 </html>
