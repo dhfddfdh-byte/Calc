@@ -140,10 +140,11 @@
         }
         .card-img-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        .card-name {
-            font-size: 0.7em; font-weight: 800; text-align: center; height: 2.4em;
-            line-height: 1.2; color: #cbd5e1; overflow: hidden; text-overflow: ellipsis;
-        }
+       .card-name {
+    font-size: 0.7em; font-weight: 800; text-align: center; min-height: 2.4em;
+    line-height: 1.2; color: #cbd5e1; overflow: visible; word-wrap: break-word;
+    max-width: 100%;
+}
 
         .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost); margin: 6px 0 2px 0; }
 
@@ -289,7 +290,7 @@
         .search-item-card { background: #262c3d; border-radius: 18px; padding: 15px 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: all 0.2s; border: 1.5px solid transparent; }
         .search-item-card:hover { background: #334155; transform: translateY(-4px); border-color: var(--accent); }
         .search-item-card.added { border-color: var(--win) !important; background: rgba(16, 185, 129, 0.1); }
-        .search-item-name { font-size: 0.75em; font-weight: 800; color: #94a3b8; text-align: center; margin-bottom: 10px; height: 2.5em; overflow: hidden; }
+        .search-item-name { font-size: 0.75em; font-weight: 800; color: #94a3b8; text-align: center; margin-bottom: 10px; min-height: 2.5em; overflow: visible; word-wrap: break-word; max-width: 100%; }
         .search-item-img { width: 85px; height: 85px; object-fit: contain; margin-bottom: 10px; }
         .search-item-val { font-weight: 900; font-size: 1.2em; color: white; }
         .search-item-demand { font-size: 0.9em; font-weight: 800; color: var(--demand-color); margin-top: 2px; text-shadow: 0 0 5px rgba(251, 191, 36, 0.3); }
@@ -1183,3 +1184,4 @@
     </script>
 </body>
 </html>
+
