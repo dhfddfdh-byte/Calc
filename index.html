@@ -969,65 +969,88 @@ gap: 15px;
             }
         }
         function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
-        async function openGraph(name) {
-            await fetchHistory();
-            const petHistory = HISTORY_DATA.filter(p => p.name === name);
-            if (petHistory.length < 2) {
-                alert("Not enough historical data yet to generate a graph for " + name);
-                return;
-            }
-            document.getElementById('graphTitle').innerText = name.toUpperCase() + " HISTORY";
-            document.getElementById('graphOverlay').style.display = 'flex';
-            const ctx = document.getElementById('petChart').getContext('2d');
-            if (petChart) petChart.destroy();
-            petChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: petHistory.map(p => p.time),
-                    datasets: [
-                        {
-                            label: 'Value',
-                            data: petHistory.map(p => p.v),
-                            borderColor: '#38bdf8',
-                            backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.3
-                        },
-                        {
-                            label: 'Demand',
-                            data: petHistory.map(p => p.d),
-                            borderColor: '#fbbf24',
-                            backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                            borderWidth: 3,
-                            fill: true,
-                            tension: 0.3
-                        }
-                    ]
+        async function openGraph(petData) {
+    await fetchHistory();
+    
+    // Extract name and type from the petData object
+    const name = petData.n;
+    const type = petData.type || 'reg';
+    const isFly = petData.f_st || false;
+    const isRide = petData.r_st || false;
+    
+    // Determine which column to use for demand based on type
+    let demandKey = 'd'; // default (normal)
+    if (type === 'neon') demandKey = 'nd';
+    else if (type === 'mega') demandKey = 'md';
+    
+    // Filter history for this specific pet
+    const petHistory = HISTORY_DATA.filter(p => p.name === name);
+    
+    if (petHistory.length < 2) {
+        alert("Not enough historical data yet to generate a graph for " + name);
+        return;
+    }
+    
+    // Create title with version info
+    let versionText = type === 'neon' ? 'NEON ' : (type === 'mega' ? 'MEGA ' : 'NORMAL ');
+    if (isFly && isRide) versionText += 'FLY RIDE ';
+    else if (isFly) versionText += 'FLY ';
+    else if (isRide) versionText += 'RIDE ';
+    
+    document.getElementById('graphTitle').innerText = versionText + name.toUpperCase();
+    document.getElementById('graphOverlay').style.display = 'flex';
+    
+    const ctx = document.getElementById('petChart').getContext('2d');
+    if (petChart) petChart.destroy();
+    
+    petChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: petHistory.map(p => p.time),
+            datasets: [
+                {
+                    label: 'Value',
+                    data: petHistory.map(p => p.v),
+                    borderColor: '#38bdf8',
+                    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
-                    },
-                    plugins: {
-                        legend: { labels: { color: 'white', font: { weight: 'bold' } } }
-                    }
+                {
+                    label: 'Demand',
+                    data: petHistory.map(p => p[demandKey] || p.d),
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3
                 }
-            });
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+            },
+            plugins: {
+                legend: { labels: { color: 'white', font: { weight: 'bold' } } }
+            }
         }
+    });
+}
         // CONTINUE WITH THE REST OF YOUR ORIGINAL FUNCTIONS HERE
         // (handlePetContext, openInfo, closeInfo, playSfx, pushState, undo, parseCSV, etc.)
-        function handlePetContext(e, name) {
-            e.preventDefault();
-            if (e.shiftKey) {
-                openGraph(name);
-            } else {
-                openQtyModal(name);
-            }
-        }
+        function handlePetContext(e, petData) {
+    e.preventDefault();
+    if (e.shiftKey) {
+        openGraph(petData);
+    } else {
+        openQtyModal(petData.n);
+    }
+}
 
         function openInfo() { document.getElementById('infoOverlay').style.display = 'flex'; }
         function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
@@ -1225,7 +1248,7 @@ gap: 15px;
                 return `
                 <div class="search-item-card" 
                      onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}', 1)" 
-                     oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')"
+                     oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
                      style="border-color: ${rarityColor}">
                     <div class="search-item-name">${p.n}${getTrendIcons(p)}</div>
                     <img src="${imgUrl}" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
@@ -1466,7 +1489,7 @@ gap: 15px;
                         <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
                         <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
                         <div class="card-img-container" 
-                             oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')"
+                             oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
                              ondblclick="duplicate('inv', ${p.uid})" title="Right click for Qty | Shift + Right click for Graph">
                              <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
                         </div>
@@ -1622,7 +1645,7 @@ gap: 15px;
                     <div class="card" style="border-color: ${rarityColor}">
                         <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
                         <div class="card-img-container" 
-                             oncontextmenu="handlePetContext(event, '${p.n.replace(/'/g, "\\'")}')"
+                             oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
                              ondblclick="duplicate('${s}', ${p.uid})" title="Right click for Qty | Shift + Right click for Graph">
                             <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                         </div>
@@ -1719,6 +1742,7 @@ gap: 15px;
     </script>
 </body>
 </html>
+
 
 
 
