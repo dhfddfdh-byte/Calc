@@ -908,66 +908,62 @@ gap: 15px;
     return html;
 }
         async function fetchHistory() {
-            if (HISTORY_DATA.length > 0) {
-                console.log("📦 History already loaded:", HISTORY_DATA.length, "records");
-                return;
+    if (HISTORY_DATA.length > 0) {
+        console.log("📦 History already loaded:", HISTORY_DATA.length, "records");
+        return;
+    }
+    
+    try {
+        console.log("🔄 Fetching history from:", HISTORY_CSV_URL);
+        const response = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const text = await response.text();
+        console.log("📄 Raw CSV received, length:", text.length);
+        
+        const lines = text.trim().split('\n');
+        console.log("📊 Total lines in CSV:", lines.length);
+        
+        if (lines.length < 2) {
+            console.warn("⚠️ No history data rows (only header or empty)");
+            return;
+        }
+        
+        // Get headers to map columns correctly
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        console.log("📊 Headers:", headers);
+        
+        // Parse with ALL columns preserved
+        HISTORY_DATA = lines.slice(1).map((line, index) => {
+            const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            const row = {};
+            
+            headers.forEach((header, i) => {
+                const val = vals[i]?.trim() || '';
+                // Convert numbers, keep strings as-is
+                row[header] = (!isNaN(parseFloat(val)) && isFinite(val) && val !== '') 
+                    ? parseFloat(val) 
+                    : val;
+            });
+            
+            // Log first row for debugging
+            if (index === 0) {
+                console.log("📊 Sample row:", row);
             }
             
-            try {
-                console.log("🔄 Fetching history from:", HISTORY_CSV_URL);
-                const response = await fetch(HISTORY_CSV_URL + "&t=" + Date.now());
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-                const text = await response.text();
-                console.log("📄 Raw CSV received, length:", text.length);
-                console.log("📄 First 500 chars:", text.substring(0, 500));
-                
-                const lines = text.trim().split('\n');
-                console.log("📊 Total lines in CSV:", lines.length);
-                console.log("📊 Header row:", lines[0]);
-                
-                if (lines.length < 2) {
-                    console.warn("⚠️ No history data rows (only header or empty)");
-                    return;
-                }
-                
-                // Parse with detailed logging
-                HISTORY_DATA = lines.slice(1).map((line, index) => {
-                    const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    const row = { 
-                        time: vals[0]?.trim() || '', 
-                        name: vals[1]?.trim() || '', 
-                        d: parseFloat(vals[2]) || 0,
-                        v: parseFloat(vals[5]) || 0
-                    };
-                    
-                    // Log first 3 rows for debugging
-                    if (index < 3) {
-                        console.log(`Row ${index + 1}:`, row);
-                    }
-                    
-                    return row;
-                }).filter(row => row.name); // Remove empty rows
-                
-                console.log("✅ History loaded successfully:", HISTORY_DATA.length, "records");
-                console.log("📊 Sample pets:", [...new Set(HISTORY_DATA.map(r => r.name))].slice(0, 10));
-                
-                // Test Giant Panda specifically
-                const pandaData = HISTORY_DATA.filter(row => row.name.toLowerCase().includes('panda'));
-                console.log("🐼 Giant Panda records found:", pandaData.length);
-                if (pandaData.length > 0) {
-                    console.log("🐼 Giant Panda data:", pandaData);
-                }
-                
-            } catch (e) { 
-                console.error("❌ History fetch failed:", e);
-                console.error("Error details:", e.message);
-                HISTORY_DATA = [];
-            }
-        }
+            return row;
+        }).filter(row => row.name || row['pet name']); // Support both column names
+        
+        console.log("✅ History loaded successfully:", HISTORY_DATA.length, "records");
+        
+    } catch (e) { 
+        console.error("❌ History fetch failed:", e);
+        HISTORY_DATA = [];
+    }
+}
         function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
         async function openGraph(petData) {
     await fetchHistory();
@@ -978,16 +974,38 @@ gap: 15px;
     const isFly = petData.f_st || false;
     const isRide = petData.r_st || false;
     
-    // Determine which column to use for demand based on type
-    let demandKey = 'd'; // default (normal)
-    if (type === 'neon') demandKey = 'nd';
-    else if (type === 'mega') demandKey = 'md';
+    // Determine which columns to use based on type and potions
+    let demandKey = 'd';
+    let valueKey = 'v';
     
-    // Filter history for this specific pet
-    const petHistory = HISTORY_DATA.filter(p => p.name === name);
+    if (type === 'neon') {
+        demandKey = 'nd';
+        if (isFly && isRide) valueKey = 'nfr_v';
+        else if (isFly) valueKey = 'n_f_v';
+        else if (isRide) valueKey = 'n_r_v';
+        else valueKey = 'n_v';
+    } else if (type === 'mega') {
+        demandKey = 'md';
+        if (isFly && isRide) valueKey = 'mfr_v';
+        else if (isFly) valueKey = 'm_f_v';
+        else if (isRide) valueKey = 'm_r_v';
+        else valueKey = 'm_v';
+    } else {
+        // Normal
+        if (isFly && isRide) valueKey = 'fr_v';
+        else if (isFly) valueKey = 'f_v';
+        else if (isRide) valueKey = 'r_v';
+        else valueKey = 'v';
+    }
+    
+    // Filter history for this specific pet (case insensitive)
+    const petHistory = HISTORY_DATA.filter(p => {
+        const histName = (p.name || p['pet name'] || '').toLowerCase().trim();
+        return histName === name.toLowerCase().trim();
+    });
     
     if (petHistory.length < 2) {
-        alert("Not enough historical data yet to generate a graph for " + name);
+        alert(`Not enough historical data for ${name}.\n\nFound ${petHistory.length} record(s).`);
         return;
     }
     
@@ -1003,14 +1021,22 @@ gap: 15px;
     const ctx = document.getElementById('petChart').getContext('2d');
     if (petChart) petChart.destroy();
     
+    // Extract the correct data using the determined keys
+    const demandData = petHistory.map(p => p[demandKey] || p.d || 0);
+    const valueData = petHistory.map(p => p[valueKey] || p.v || 0);
+    
+    console.log(`📊 Graphing ${name} (${versionText})`);
+    console.log(`📊 Using demand key: ${demandKey}, value key: ${valueKey}`);
+    console.log(`📊 Sample values - Demand: ${demandData[0]}, Value: ${valueData[0]}`);
+    
     petChart = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: petHistory.map(p => p.time),
+            labels: petHistory.map(p => p.timestamp || p.time || ''),
             datasets: [
                 {
-                    label: 'Value',
-                    data: petHistory.map(p => p.v),
+                    label: `Value (${versionText.trim()})`,
+                    data: valueData,
                     borderColor: '#38bdf8',
                     backgroundColor: 'rgba(56, 189, 248, 0.1)',
                     borderWidth: 3,
@@ -1018,8 +1044,8 @@ gap: 15px;
                     tension: 0.3
                 },
                 {
-                    label: 'Demand',
-                    data: petHistory.map(p => p[demandKey] || p.d),
+                    label: `Demand (${type === 'neon' ? 'Neon' : type === 'mega' ? 'Mega' : 'Normal'})`,
+                    data: demandData,
                     borderColor: '#fbbf24',
                     backgroundColor: 'rgba(251, 191, 36, 0.1)',
                     borderWidth: 3,
@@ -1032,11 +1058,27 @@ gap: 15px;
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                y: { 
+                    grid: { color: '#334155' }, 
+                    ticks: { color: '#94a3b8' },
+                    beginAtZero: false
+                },
+                x: { 
+                    grid: { display: false }, 
+                    ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 } 
+                }
             },
             plugins: {
-                legend: { labels: { color: 'white', font: { weight: 'bold' } } }
+                legend: { 
+                    labels: { color: 'white', font: { weight: 'bold', size: 14 } } 
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}`;
+                        }
+                    }
+                }
             }
         }
     });
@@ -1742,6 +1784,7 @@ gap: 15px;
     </script>
 </body>
 </html>
+
 
 
 
