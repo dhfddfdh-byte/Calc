@@ -977,27 +977,21 @@
     const isRide = petData.r_st || false;
     
     // Determine which columns to use based on type and potions
+    // Determine which columns to use based ONLY on type (Neon/Mega/Normal)
+    // Ignore Fly/Ride variants - always use base version
     let demandKey = 'd';
     let valueKey = 'v';
     
     if (type === 'neon') {
         demandKey = 'nd';
-        if (isFly && isRide) valueKey = 'nfr_v';
-        else if (isFly) valueKey = 'n_f_v';
-        else if (isRide) valueKey = 'n_r_v';
-        else valueKey = 'n_v';
+        valueKey = 'n_v';
     } else if (type === 'mega') {
         demandKey = 'md';
-        if (isFly && isRide) valueKey = 'mfr_v';
-        else if (isFly) valueKey = 'm_f_v';
-        else if (isRide) valueKey = 'm_r_v';
-        else valueKey = 'm_v';
+        valueKey = 'm_v';
     } else {
-        // Normal
-        if (isFly && isRide) valueKey = 'fr_v';
-        else if (isFly) valueKey = 'f_v';
-        else if (isRide) valueKey = 'r_v';
-        else valueKey = 'v';
+        // Normal (base version, no fly/ride)
+        demandKey = 'd';
+        valueKey = 'v';
     }
     
     // Filter history for this specific pet (case insensitive)
@@ -1012,10 +1006,17 @@
     }
     
     // Create title with version info
+    // Create title with version info (ONLY Neon/Mega/Normal - ignore Fly/Ride)
     let versionText = type === 'neon' ? 'NEON ' : (type === 'mega' ? 'MEGA ' : 'NORMAL ');
-    if (isFly && isRide) versionText += 'F R ';
-    else if (isFly) versionText += 'F ';
-    else if (isRide) versionText += 'R ';
+    
+    // Override valueKey to use base values (ignore fly/ride variants)
+    if (type === 'neon') {
+        valueKey = 'n_v';
+    } else if (type === 'mega') {
+        valueKey = 'm_v';
+    } else {
+        valueKey = 'v';
+    }
     
     document.getElementById('graphTitle').innerText = versionText + name.toUpperCase();
     document.getElementById('graphOverlay').style.display = 'flex';
@@ -2036,6 +2037,7 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
     </script>
 </body>
 </html>
+
 
 
 
