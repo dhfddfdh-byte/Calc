@@ -1032,43 +1032,271 @@
     console.log(`📊 Sample values - Demand: ${demandData[0]}, Value: ${valueData[0]}`);
     
     // Generate trend analysis
+    // Generate trend analysis - analyze ENTIRE graph trend
+    // Generate ADVANCED trend analysis - ALL ISSUES FIXED
+    
+    // EDGE CASE: Not enough data
+    if (valueData.length < 3) {
+        document.getElementById('trendAnalysis').innerHTML = `<strong style="color: var(--accent);">📊 Trend Analysis:</strong><br>Insufficient data (only ${valueData.length} datapoint${valueData.length === 1 ? '' : 's'}). Need at least 3 datapoints for reliable analysis.<br><br><strong style="color: var(--frost);">Recommendation:</strong> ⚠️ Cannot provide recommendation - insufficient historical data.`;
+        return;
+    }
+    
+    // EDGE CASE: All values are 0 or invalid
+    if (valueData.every(v => v === 0) || valueData.every(v => isNaN(v))) {
+        document.getElementById('trendAnalysis').innerHTML = `<strong style="color: var(--accent);">📊 Trend Analysis:</strong><br>No valid value data found for this pet variant.<br><br><strong style="color: var(--frost);">Recommendation:</strong> ❌ Cannot analyze - pet not properly tracked in database.`;
+        return;
+    }
+    
+    const dataPointCount = valueData.length;
     const firstValue = valueData[0];
     const lastValue = valueData[valueData.length - 1];
     const minValue = Math.min(...valueData);
     const maxValue = Math.max(...valueData);
+    const firstDemand = demandData[0];
+    const lastDemand = demandData[demandData.length - 1];
     const avgDemand = demandData.reduce((a, b) => a + b, 0) / demandData.length;
-    const currentDemand = demandData[demandData.length - 1];
-    const valueChange = lastValue - firstValue;
-    const valueChangePercent = ((valueChange / firstValue) * 100).toFixed(1);
-    const volatilityRange = maxValue - minValue;
-    const volatilityPercent = ((volatilityRange / firstValue) * 100).toFixed(1);
+    const peakDemand = Math.max(...demandData);
+    const lowestDemand = Math.min(...demandData);
     
-    let trendText = '';
-    let recommendation = '';
+    // OVERALL TREND (entire dataset)
+    const overallValueChange = lastValue - firstValue;
+    const overallValueChangePercent = ((overallValueChange / firstValue) * 100);
+    const overallDemandChange = lastDemand - firstDemand;
+    const overallDemandChangePercent = firstDemand > 0 ? ((overallDemandChange / firstDemand) * 100) : 0;
     
-    // Analyze trend
-    if (Math.abs(valueChangePercent) < 5 && volatilityPercent > 20) {
-        trendText = `High volatility with ${volatilityRange.toFixed(2)} value range (${volatilityPercent}% swing). Currently at ${lastValue.toFixed(2)} with demand at ${currentDemand.toFixed(1)}.`;
-        recommendation = '⚠️ Risky trade - unpredictable value swings.';
-    } else if (valueChange > 0) {
-        trendText = `Upward trend showing ${valueChange > 0 ? '+' : ''}${valueChange.toFixed(2)} value change (${valueChangePercent > 0 ? '+' : ''}${valueChangePercent}% ${valueChange > 0 ? 'gain' : 'loss'}). Current demand: ${currentDemand.toFixed(1)}.`;
-        if (currentDemand >= 7 && valueChangePercent > 10) {
-            recommendation = '✅ Excellent trade opportunity - strong growth with high demand.';
-        } else if (currentDemand >= 5) {
-            recommendation = '✅ Good trade opportunity - solid growth trend.';
-        } else {
-            recommendation = '⚠️ Caution - rising value but low demand may limit resale.';
-        }
-    } else {
-        trendText = `Downward trend showing ${valueChange.toFixed(2)} value drop (${valueChangePercent}% loss). Demand is ${currentDemand >= 5 ? 'moderate' : 'low'} at ${currentDemand.toFixed(1)}.`;
-        if (currentDemand < 4) {
-            recommendation = '❌ Avoid trading for this pet - falling value with weak demand.';
-        } else {
-            recommendation = '⚠️ High risk - declining value, trade only if you need this specific pet.';
+    // RECENT TREND (last 25% of data vs previous 75%)
+    const splitPoint = Math.floor(dataPointCount * 0.75);
+    const recentValues = valueData.slice(splitPoint);
+    const olderValues = valueData.slice(0, splitPoint);
+    const recentAvg = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
+    const olderAvg = olderValues.reduce((a, b) => a + b, 0) / olderValues.length;
+    const recentTrendChange = ((recentAvg - olderAvg) / olderAvg) * 100;
+    
+    const recentDemands = demandData.slice(splitPoint);
+    const olderDemands = demandData.slice(0, splitPoint);
+    const recentDemandAvg = recentDemands.reduce((a, b) => a + b, 0) / recentDemands.length;
+    const olderDemandAvg = olderDemands.reduce((a, b) => a + b, 0) / olderDemands.length;
+    const recentDemandTrendChange = olderDemandAvg > 0 ? ((recentDemandAvg - olderDemandAvg) / olderDemandAvg) * 100 : 0;
+    
+    // MOMENTUM DETECTION (is trend accelerating or decelerating?)
+    let momentum = 'neutral';
+    if (dataPointCount >= 6) {
+        const third = Math.floor(dataPointCount / 3);
+        const early = valueData.slice(0, third);
+        const mid = valueData.slice(third, third * 2);
+        const late = valueData.slice(third * 2);
+        const earlyAvg = early.reduce((a, b) => a + b, 0) / early.length;
+        const midAvg = mid.reduce((a, b) => a + b, 0) / mid.length;
+        const lateAvg = late.reduce((a, b) => a + b, 0) / late.length;
+        const earlySlope = midAvg - earlyAvg;
+        const lateSlope = lateAvg - midAvg;
+        if (Math.abs(lateSlope) > Math.abs(earlySlope) * 1.3) {
+            momentum = lateSlope > 0 ? 'accelerating upward' : 'accelerating downward';
+        } else if (Math.abs(lateSlope) < Math.abs(earlySlope) * 0.7) {
+            momentum = 'decelerating';
         }
     }
     
-    document.getElementById('trendAnalysis').innerHTML = `<strong style="color: var(--accent);">📊 Trend Analysis:</strong><br>${trendText}<br><br><strong style="color: var(--frost);">Recommendation:</strong> ${recommendation}`;
+    // VOLATILITY ANALYSIS
+    const volatilityRange = maxValue - minValue;
+    const volatilityPercent = ((volatilityRange / firstValue) * 100);
+    let valueFluctuations = 0;
+    let upMoves = 0;
+    let downMoves = 0;
+    for (let i = 1; i < valueData.length; i++) {
+        const change = valueData[i] - valueData[i-1];
+        valueFluctuations += Math.abs(change);
+        if (change > 0) upMoves++;
+        else if (change < 0) downMoves++;
+    }
+    const avgFluctuation = valueFluctuations / (valueData.length - 1);
+    const isVolatile = volatilityPercent > 20 || avgFluctuation > firstValue * 0.05;
+    const volatilityBias = upMoves > downMoves * 1.3 ? 'upward' : downMoves > upMoves * 1.3 ? 'downward' : 'neutral';
+    
+    // PEAK DETECTION
+    const isNearPeak = lastValue >= maxValue * 0.95;
+    const isNearBottom = lastValue <= minValue * 1.05;
+    
+    // TIME CONTEXT (try to extract from timestamps)
+    let timeSpan = 'unknown timeframe';
+    const timestamps = petHistory.map(p => p.timestamp || p.time || '');
+    if (timestamps.length >= 2 && timestamps[0] && timestamps[timestamps.length - 1]) {
+        const firstTime = timestamps[0];
+        const lastTime = timestamps[timestamps.length - 1];
+        timeSpan = `from ${firstTime} to ${lastTime}`;
+    }
+    
+    // CONFIDENCE SCORE
+    let confidence = 'LOW';
+    if (dataPointCount >= 20) confidence = 'HIGH';
+    else if (dataPointCount >= 10) confidence = 'MEDIUM';
+    
+    // BUILD TREND TEXT
+    let trendText = '';
+    
+    // Overall trend
+    let overallDirection = overallValueChangePercent > 10 ? 'Strong upward' : 
+                          overallValueChangePercent > 5 ? 'Moderate upward' :
+                          overallValueChangePercent > 2 ? 'Slight upward' :
+                          overallValueChangePercent < -10 ? 'Sharp downward' :
+                          overallValueChangePercent < -5 ? 'Moderate downward' :
+                          overallValueChangePercent < -2 ? 'Slight downward' : 'Stable';
+    
+    trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): ${firstValue.toFixed(2)} → ${lastValue.toFixed(2)} (<span style="color: ${overallValueChangePercent >= 0 ? 'var(--win)' : 'var(--lose)}';">${overallValueChangePercent > 0 ? '+' : ''}${overallValueChangePercent.toFixed(1)}%</span>). `;
+    
+    // Recent trend comparison
+    if (Math.abs(recentTrendChange - overallValueChangePercent) > 5) {
+        if (recentTrendChange > 0 && overallValueChangePercent < 0) {
+            trendText += `<strong style="color: var(--win);">🔄 RECOVERING:</strong> Recent trend is <span style="color: var(--win);">+${recentTrendChange.toFixed(1)}%</span> despite overall decline. `;
+        } else if (recentTrendChange < -5 && overallValueChangePercent > 0) {
+            trendText += `<strong style="color: var(--lose);">⚠️ WEAKENING:</strong> Recent trend is <span style="color: var(--lose);">${recentTrendChange.toFixed(1)}%</span> despite overall growth. `;
+        } else if (recentTrendChange > overallValueChangePercent + 5) {
+            trendText += `<strong style="color: var(--win);">📈 MOMENTUM BUILDING:</strong> Recent performance (<span style="color: var(--win);">+${recentTrendChange.toFixed(1)}%</span>) stronger than overall trend. `;
+        }
+    }
+    
+    // Demand analysis with ABSOLUTE level priority
+    let demandStatus = lastDemand >= 8 ? 'excellent' : lastDemand >= 6 ? 'strong' : lastDemand >= 4 ? 'moderate' : lastDemand >= 2 ? 'weak' : 'very poor';
+    trendText += `Demand is <strong style="color: ${getDemandColor(lastDemand)};">${demandStatus} (${lastDemand.toFixed(1)})</strong>`;
+    
+    if (Math.abs(overallDemandChangePercent) > 10) {
+        trendText += `, ${overallDemandChangePercent > 0 ? 'up' : 'down'} ${Math.abs(overallDemandChangePercent).toFixed(1)}% from ${firstDemand.toFixed(1)}`;
+    }
+    trendText += '. ';
+    
+    // Peak/bottom warnings
+    if (isNearPeak) {
+        trendText += `<strong style="color: var(--trap);">⚠️ AT/NEAR ALL-TIME HIGH</strong> (${lastValue.toFixed(2)} vs peak ${maxValue.toFixed(2)}). `;
+    }
+    if (isNearBottom) {
+        trendText += `<strong>Currently near historical low</strong> (${lastValue.toFixed(2)} vs bottom ${minValue.toFixed(2)}). `;
+    }
+    
+    // Volatility
+    if (isVolatile) {
+        trendText += `<strong style="color: var(--trap);">High volatility</strong> (${volatilityPercent.toFixed(1)}% range) with ${volatilityBias} bias. `;
+    }
+    
+    // Momentum
+    if (momentum !== 'neutral') {
+        trendText += `Trend is <strong>${momentum}</strong>. `;
+    }
+    
+    // RECOMMENDATION LOGIC (COMPREHENSIVE)
+    let recommendation = '';
+    let recommendColor = 'white';
+    
+    // PRIORITY 1: Check for declining value (any drop > 5%)
+    if (overallValueChangePercent < -5 || recentTrendChange < -7) {
+        // Falling value = DO NOT TRADE
+        if (recentTrendChange > 3 && overallValueChangePercent < -5) {
+            // Exception: Strong recovery happening
+            recommendation = '⚠️ CAUTION - Value declined overall but recovering recently. Monitor for 1-2 more weeks before trading.';
+            recommendColor = 'var(--trap)';
+        } else if (overallDemandChangePercent < -15) {
+            recommendation = '❌ DO NOT TRADE - Both value and demand are crashing. Dead pet, avoid completely.';
+            recommendColor = 'var(--lose)';
+        } else if (recentDemandTrendChange > 20 && lastDemand >= 6) {
+            recommendation = '⚠️ HIGH RISK - Value falling but demand surging. Wait for value to stabilize before considering.';
+            recommendColor = 'var(--trap)';
+        } else {
+            recommendation = '❌ DO NOT TRADE - Value is declining. Avoid until clear reversal confirmed.';
+            recommendColor = 'var(--lose)';
+        }
+    }
+    // PRIORITY 2: Near peak warning (even if rising)
+    else if (isNearPeak && overallValueChangePercent > 0) {
+        if (lastDemand >= 8 && momentum === 'accelerating upward') {
+            recommendation = '⚠️ RISKY BUT STRONG - At peak value with high demand and momentum. Could continue rising but risky entry. Advanced traders only.';
+            recommendColor = 'var(--trap)';
+        } else {
+            recommendation = '⚠️ AVOID - At or near all-time high. High risk of correction. Wait for pullback.';
+            recommendColor = 'var(--trap)';
+        }
+    }
+    // PRIORITY 3: Stable/declining with low absolute demand
+    else if (lastDemand < 3 && overallValueChangePercent < 5) {
+        recommendation = '❌ AVOID - Very low demand makes this pet nearly impossible to trade. Poor investment.';
+        recommendColor = 'var(--lose)';
+    }
+    // PRIORITY 4: Rising value scenarios
+    else if (overallValueChangePercent > 10 || recentTrendChange > 12) {
+        if (lastDemand >= 7) {
+            if (momentum === 'accelerating upward') {
+                recommendation = '🔥🔥 EXCEPTIONAL BUY - Strong upward momentum, high demand, accelerating trend. Top-tier opportunity!';
+                recommendColor = 'var(--win)';
+            } else {
+                recommendation = '🔥 EXCELLENT BUY - Rising value with high demand. Very strong trading opportunity.';
+                recommendColor = 'var(--win)';
+            }
+        } else if (lastDemand >= 4) {
+            if (overallDemandChangePercent > 15) {
+                recommendation = '✅ GOOD BUY - Value rising and demand improving. Solid growth potential.';
+                recommendColor = 'var(--win)';
+            } else {
+                recommendation = '✅ Decent buy - Value growing but demand is average. Good for patient traders.';
+                recommendColor = 'var(--win)';
+            }
+        } else {
+            recommendation = '⚠️ VALUE TRAP - Price rising but demand is poor. Hard to resell. Only buy if you want to keep it.';
+            recommendColor = 'var(--trap)';
+        }
+    }
+    // PRIORITY 5: Moderate growth
+    else if (overallValueChangePercent >= 5) {
+        if (lastDemand >= 7) {
+            recommendation = '✅ Good buy - Steady growth with strong demand. Safe investment.';
+            recommendColor = 'var(--win)';
+        } else if (lastDemand >= 4) {
+            recommendation = '✅ Decent option - Moderate growth and demand. Reasonable choice.';
+            recommendColor = 'var(--win)';
+        } else {
+            recommendation = '⚠️ Caution - Value rising but low demand limits trading options.';
+            recommendColor = 'var(--trap)';
+        }
+    }
+    // PRIORITY 6: Stable/minor changes
+    else if (overallValueChangePercent >= -2 && overallValueChangePercent <= 5) {
+        if (isVolatile) {
+            if (volatilityBias === 'upward') {
+                recommendation = '⚠️ HIGH VOLATILITY - Unstable but trending upward overall. Risky, for experienced traders only.';
+                recommendColor = 'var(--trap)';
+            } else if (volatilityBias === 'downward') {
+                recommendation = '❌ AVOID - Highly volatile with downward bias. Too unpredictable.';
+                recommendColor = 'var(--lose)';
+            } else {
+                recommendation = '⚠️ UNPREDICTABLE - Chaotic price swings with no clear direction. Gambling territory.';
+                recommendColor = 'var(--trap)';
+            }
+        } else if (lastDemand >= 7) {
+            recommendation = '✅ Stable hold - Consistent value with strong demand. Safe for long-term holding.';
+            recommendColor = 'var(--win)';
+        } else if (lastDemand >= 4) {
+            recommendation = '➡️ Neutral - Stable but unremarkable. Decent for collection, not for profit.';
+            recommendColor = 'white';
+        } else {
+            recommendation = '⚠️ Stagnant - No growth and weak demand. Better opportunities exist elsewhere.';
+            recommendColor = 'var(--trap)';
+        }
+    }
+    // PRIORITY 7: Minor decline (between -2% and -5%)
+    else {
+        if (recentTrendChange > 2) {
+            recommendation = '⚠️ Monitor closely - Slight overall decline but recent trend improving. Wait 1-2 weeks for confirmation.';
+            recommendColor = 'var(--trap)';
+        } else if (lastDemand >= 7) {
+            recommendation = '⚠️ Risky - Minor value decline with strong demand. Could stabilize but uncertain.';
+            recommendColor = 'var(--trap)';
+        } else {
+            recommendation = '❌ Avoid - Declining value with weak demand. Not recommended.';
+            recommendColor = 'var(--lose)';
+        }
+    }
+    
+    // Add confidence score
+    trendText += `<br><br><em style="color: var(--subtext); font-size: 0.85em;">Analysis confidence: <strong>${confidence}</strong> (based on ${dataPointCount} datapoint${dataPointCount === 1 ? '' : 's'})</em>`;
+    
+    document.getElementById('trendAnalysis').innerHTML = `<strong style="color: var(--accent);">📊 Trend Analysis:</strong><br>${trendText}<br><br><strong style="color: var(--frost);">Recommendation:</strong> <span style="color: ${recommendColor};">${recommendation}</span>`;
     
     petChart = new Chart(ctx, {
         type: 'line',
@@ -1825,6 +2053,7 @@
     </script>
 </body>
 </html>
+
 
 
 
