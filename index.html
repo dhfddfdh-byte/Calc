@@ -1031,22 +1031,6 @@
     console.log(`📊 Using demand key: ${demandKey}, value key: ${valueKey}`);
     console.log(`📊 Sample values - Demand: ${demandData[0]}, Value: ${valueData[0]}`);
     
-    // Generate trend analysis
-    // Generate trend analysis - analyze ENTIRE graph trend
-    // Generate ADVANCED trend analysis - ALL ISSUES FIXED
-    
-    // EDGE CASE: Not enough data
-    if (valueData.length < 3) {
-        document.getElementById('trendAnalysis').innerHTML = `<strong style="color: var(--accent);">📊 Trend Analysis:</strong><br>Insufficient data (only ${valueData.length} datapoint${valueData.length === 1 ? '' : 's'}). Need at least 3 datapoints for reliable analysis.<br><br><strong style="color: var(--frost);">Recommendation:</strong> ⚠️ Cannot provide recommendation - insufficient historical data.`;
-        return;
-    }
-    
-    // EDGE CASE: All values are 0 or invalid
-    if (valueData.every(v => v === 0) || valueData.every(v => isNaN(v))) {
-        document.getElementById('trendAnalysis').innerHTML = `<strong style="color: var(--accent);">📊 Trend Analysis:</strong><br>No valid value data found for this pet variant.<br><br><strong style="color: var(--frost);">Recommendation:</strong> ❌ Cannot analyze - pet not properly tracked in database.`;
-        return;
-    }
-    
     const dataPointCount = valueData.length;
     const firstValue = valueData[0];
     const lastValue = valueData[valueData.length - 1];
@@ -2053,6 +2037,7 @@
     </script>
 </body>
 </html>
+
 
 
 
