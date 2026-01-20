@@ -1126,8 +1126,7 @@
                           overallValueChangePercent < -5 ? 'Moderate downward' :
                           overallValueChangePercent < -2 ? 'Slight downward' : 'Stable';
     
-    trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): ${firstValue.toFixed(2)} → ${lastValue.toFixed(2)} (<span style="color: ${overallValueChangePercent >= 0 ? 'var(--win)' : 'var(--lose)}';">${overallValueChangePercent > 0 ? '+' : ''}${overallValueChangePercent.toFixed(1)}%</span>). `;
-    
+trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): ${firstValue.toFixed(2)} → ${lastValue.toFixed(2)} (<span style="color: ${overallValueChangePercent >= 0 ? 'var(--win)' : 'var(--lose)'};">${overallValueChangePercent > 0 ? '+' : ''}${overallValueChangePercent.toFixed(1)}%</span>). `;    
     // Recent trend comparison
     if (Math.abs(recentTrendChange - overallValueChangePercent) > 5) {
         if (recentTrendChange > 0 && overallValueChangePercent < 0) {
@@ -2037,6 +2036,7 @@
     </script>
 </body>
 </html>
+
 
 
 
