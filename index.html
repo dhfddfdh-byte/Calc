@@ -72,10 +72,10 @@
             background: var(--card);
         }
         .container {
-            width: 100%; max-width: 1150px; display: flex; gap: 25px;
-            flex-wrap: wrap; margin-top: 40px;
-            margin-bottom: 280px; 
-        }
+    width: 100%; max-width: 1150px; display: flex; gap: 25px;
+    flex-direction: row; margin-top: 40px;
+    margin-bottom: 280px; 
+}
         .trade-panel {
             flex: 1; background: var(--panel); border-radius: 24px;
             border: 1.5px solid var(--border); min-width: 340px; min-height: 520px;
@@ -290,28 +290,29 @@
         
         /* Mobile Devices (phones) */
         @media screen and (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
+    body {
+        padding: 10px;
+    }
 
-            .nav-bar {
-                flex-wrap: wrap;
-                gap: 5px;
-            }
+    .nav-bar {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
 
-            .nav-btn {
-                padding: 8px 12px;
-                font-size: 0.85em;
-            }
+    .nav-btn {
+        padding: 8px 12px;
+        font-size: 0.85em;
+    }
 
-            .container {
-                margin-top:
-20px;
-margin-bottom: 200px;
-gap: 15px;
-}
+    .container {
+        margin-top: 20px;
+        margin-bottom: 200px;
+        gap: 15px;
+        flex-direction: row;
+    }
         .trade-panel {
     min-width: 340px;
+    flex: 1;
 }
 
         .grid {
@@ -536,6 +537,7 @@ gap: 15px;
             <div class="graph-body">
                 <canvas id="petChart"></canvas>
             </div>
+            <div style="padding: 20px; background: #0f172a; border-top: 1px solid var(--border); color: #cbd5e1; line-height: 1.6;" id="trendAnalysis"></div>
         </div>
     </div>
 
@@ -1011,9 +1013,9 @@ gap: 15px;
     
     // Create title with version info
     let versionText = type === 'neon' ? 'NEON ' : (type === 'mega' ? 'MEGA ' : 'NORMAL ');
-    if (isFly && isRide) versionText += 'FLY RIDE ';
-    else if (isFly) versionText += 'FLY ';
-    else if (isRide) versionText += 'RIDE ';
+    if (isFly && isRide) versionText += 'F R ';
+    else if (isFly) versionText += 'F ';
+    else if (isRide) versionText += 'R ';
     
     document.getElementById('graphTitle').innerText = versionText + name.toUpperCase();
     document.getElementById('graphOverlay').style.display = 'flex';
@@ -1028,6 +1030,45 @@ gap: 15px;
     console.log(`📊 Graphing ${name} (${versionText})`);
     console.log(`📊 Using demand key: ${demandKey}, value key: ${valueKey}`);
     console.log(`📊 Sample values - Demand: ${demandData[0]}, Value: ${valueData[0]}`);
+    
+    // Generate trend analysis
+    const firstValue = valueData[0];
+    const lastValue = valueData[valueData.length - 1];
+    const minValue = Math.min(...valueData);
+    const maxValue = Math.max(...valueData);
+    const avgDemand = demandData.reduce((a, b) => a + b, 0) / demandData.length;
+    const currentDemand = demandData[demandData.length - 1];
+    const valueChange = lastValue - firstValue;
+    const valueChangePercent = ((valueChange / firstValue) * 100).toFixed(1);
+    const volatilityRange = maxValue - minValue;
+    const volatilityPercent = ((volatilityRange / firstValue) * 100).toFixed(1);
+    
+    let trendText = '';
+    let recommendation = '';
+    
+    // Analyze trend
+    if (Math.abs(valueChangePercent) < 5 && volatilityPercent > 20) {
+        trendText = `High volatility with ${volatilityRange.toFixed(2)} value range (${volatilityPercent}% swing). Currently at ${lastValue.toFixed(2)} with demand at ${currentDemand.toFixed(1)}.`;
+        recommendation = '⚠️ Risky trade - unpredictable value swings.';
+    } else if (valueChange > 0) {
+        trendText = `Upward trend showing ${valueChange > 0 ? '+' : ''}${valueChange.toFixed(2)} value change (${valueChangePercent > 0 ? '+' : ''}${valueChangePercent}% ${valueChange > 0 ? 'gain' : 'loss'}). Current demand: ${currentDemand.toFixed(1)}.`;
+        if (currentDemand >= 7 && valueChangePercent > 10) {
+            recommendation = '✅ Excellent trade opportunity - strong growth with high demand.';
+        } else if (currentDemand >= 5) {
+            recommendation = '✅ Good trade opportunity - solid growth trend.';
+        } else {
+            recommendation = '⚠️ Caution - rising value but low demand may limit resale.';
+        }
+    } else {
+        trendText = `Downward trend showing ${valueChange.toFixed(2)} value drop (${valueChangePercent}% loss). Demand is ${currentDemand >= 5 ? 'moderate' : 'low'} at ${currentDemand.toFixed(1)}.`;
+        if (currentDemand < 4) {
+            recommendation = '❌ Avoid trading for this pet - falling value with weak demand.';
+        } else {
+            recommendation = '⚠️ High risk - declining value, trade only if you need this specific pet.';
+        }
+    }
+    
+    document.getElementById('trendAnalysis').innerHTML = `<strong style="color: var(--accent);">📊 Trend Analysis:</strong><br>${trendText}<br><br><strong style="color: var(--frost);">Recommendation:</strong> ${recommendation}`;
     
     petChart = new Chart(ctx, {
         type: 'line',
@@ -1784,6 +1825,7 @@ gap: 15px;
     </script>
 </body>
 </html>
+
 
 
 
