@@ -284,6 +284,29 @@
             50% { opacity: 0.6; transform: scale(1.2); }
         }
 
+        /* ===== NEW FEATURE STYLES ===== */
+        .verdict-extras { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+        .trade-type-tag { font-size: 0.75em; font-weight: 900; padding: 4px 14px; border-radius: 20px; display: inline-block; letter-spacing: 0.5px; }
+        .tag-upgrade { background: rgba(99,102,241,0.18); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.4); }
+        .tag-downgrade { background: rgba(239,68,68,0.18); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
+        .tag-penalty { background: rgba(245,158,11,0.18); color: #fcd34d; border: 1.5px solid rgba(245,158,11,0.5); }
+        .tag-played { background: rgba(239,68,68,0.22); color: #f87171; border: 2px solid #ef4444; font-size: 0.8em; font-weight: 900; padding: 5px 14px; border-radius: 20px; animation: pulse 2s infinite; }
+        .speed-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; font-size: 0.75em; font-weight: 900; }
+        .speed-pill { padding: 3px 10px; border-radius: 12px; }
+        .speed-fast { background: rgba(16,185,129,0.15); color: #34d399; }
+        .speed-mod  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+        .speed-slow { background: rgba(239,68,68,0.15);   color: #f87171; }
+        .flip-row { font-size: 0.78em; font-weight: 800; color: var(--subtext); }
+        .flip-high { color: #34d399; }
+        .flip-med  { color: #fbbf24; }
+        .flip-low  { color: #f87171; }
+        /* Trending search section */
+        .trending-section { padding: 12px 25px 0; border-bottom: 1px solid var(--border); background: rgba(99,102,241,0.04); }
+        .trending-title { font-size: 0.7em; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .trending-pills { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 10px; }
+        .trending-pill { background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.35); border-radius: 20px; padding: 5px 11px; font-size: 0.7em; font-weight: 800; cursor: pointer; color: #c7d2fe; transition: 0.2s; display: flex; align-items: center; gap: 4px; }
+        .trending-pill:hover { background: rgba(99,102,241,0.28); border-color: var(--accent); }
+
         /* ========================================
            MOBILE RESPONSIVE STYLES
            ======================================== */
@@ -759,6 +782,7 @@
         <div id="verdict" class="v-text">--</div>
         <div id="vDiff" class="v-diff">Difference: 0.000 (0.0%)</div>
         <div id="vSub" class="v-sub">Add pets to calculate trade results</div>
+        <div id="verdictExtras" class="verdict-extras"></div>
         <div class="switches">
             <button class="sw-btn active" id="btnFrost" onclick="setMode('frost')">Frost</button>
             <button class="sw-btn" id="btnValue" onclick="setMode('value')">Value</button>
@@ -1166,114 +1190,129 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
         trendText += `Trend is <strong>${momentum}</strong>. `;
     }
     
-    // RECOMMENDATION LOGIC (COMPREHENSIVE)
+    // ===================================================
+    // Feature 7: Overhauled Trend Analysis & Recommendations
+    // ===================================================
     let recommendation = '';
     let recommendColor = 'white';
-    
-    // PRIORITY 1: Check for declining value (any drop > 5%)
-    if (overallValueChangePercent < -5 || recentTrendChange < -7) {
-        // Falling value = DO NOT TRADE
-        if (recentTrendChange > 3 && overallValueChangePercent < -5) {
-            // Exception: Strong recovery happening
-            recommendation = '⚠️ CAUTION - Value declined overall but recovering recently. Monitor for 1-2 more weeks before trading.';
-            recommendColor = 'var(--trap)';
-        } else if (overallDemandChangePercent < -15) {
-            recommendation = '❌ DO NOT TRADE - Both value and demand are crashing. Dead pet, avoid completely.';
-            recommendColor = 'var(--lose)';
-        } else if (recentDemandTrendChange > 20 && lastDemand >= 6) {
-            recommendation = '⚠️ HIGH RISK - Value falling but demand surging. Wait for value to stabilize before considering.';
-            recommendColor = 'var(--trap)';
-        } else {
-            recommendation = '❌ DO NOT TRADE - Value is declining. Avoid until clear reversal confirmed.';
-            recommendColor = 'var(--lose)';
-        }
-    }
-    // PRIORITY 2: Near peak warning (even if rising)
-    else if (isNearPeak && overallValueChangePercent > 0) {
-        if (lastDemand >= 8 && momentum === 'accelerating upward') {
-            recommendation = '⚠️ RISKY BUT STRONG - At peak value with high demand and momentum. Could continue rising but risky entry. Advanced traders only.';
-            recommendColor = 'var(--trap)';
-        } else {
-            recommendation = '⚠️ AVOID - At or near all-time high. High risk of correction. Wait for pullback.';
-            recommendColor = 'var(--trap)';
-        }
-    }
-    // PRIORITY 3: Stable/declining with low absolute demand
-    else if (lastDemand < 3 && overallValueChangePercent < 5) {
-        recommendation = '❌ AVOID - Very low demand makes this pet nearly impossible to trade. Poor investment.';
-        recommendColor = 'var(--lose)';
-    }
-    // PRIORITY 4: Rising value scenarios
-    else if (overallValueChangePercent > 10 || recentTrendChange > 12) {
+
+    // Determine category tier for context-aware advice
+    const catStr = (petData.cat || '').toLowerCase();
+    const isHighTier = catStr.includes('high tier') || catStr.includes('preppy') || catStr.includes('exotic');
+    const isRandom   = catStr.includes('random') || catStr.includes('common') || catStr.includes('uncommon');
+
+    // Noise threshold — ignore tiny fluctuations
+    const isSmallFluctuation = Math.abs(overallValueChangePercent) < 3 && Math.abs(overallDemandChange) < 0.5;
+
+    // Determine if we have enough data to call a genuine high/low
+    const genuineHistoricalHigh = dataPointCount >= 10 && isNearPeak;
+    const genuineHistoricalLow  = dataPointCount >= 10 && isNearBottom;
+    const limitedData           = dataPointCount < 5;
+
+    if (limitedData) {
+        // Not enough data — don't make dramatic claims
         if (lastDemand >= 7) {
-            if (momentum === 'accelerating upward') {
-                recommendation = '🔥🔥 EXCEPTIONAL BUY - Strong upward momentum, high demand, accelerating trend. Top-tier opportunity!';
-                recommendColor = 'var(--win)';
-            } else {
-                recommendation = '🔥 EXCELLENT BUY - Rising value with high demand. Very strong trading opportunity.';
-                recommendColor = 'var(--win)';
-            }
+            recommendation = '📊 Limited data — not enough history for confident analysis. Demand looks solid right now.';
+            recommendColor = 'var(--subtext)';
         } else if (lastDemand >= 4) {
-            if (overallDemandChangePercent > 15) {
-                recommendation = '✅ GOOD BUY - Value rising and demand improving. Solid growth potential.';
-                recommendColor = 'var(--win)';
-            } else {
-                recommendation = '✅ Decent buy - Value growing but demand is average. Good for patient traders.';
-                recommendColor = 'var(--win)';
-            }
+            recommendation = '📊 Limited data — only ' + dataPointCount + ' point(s) available. Current demand is average. Trade carefully.';
+            recommendColor = 'var(--subtext)';
         } else {
-            recommendation = '⚠️ VALUE TRAP - Price rising but demand is poor. Hard to resell. Only buy if you want to keep it.';
+            recommendation = '📊 Limited data with low demand. Insufficient history to judge trend — approach with caution.';
             recommendColor = 'var(--trap)';
         }
-    }
-    // PRIORITY 5: Moderate growth
-    else if (overallValueChangePercent >= 5) {
+    } else if (isSmallFluctuation) {
+        // Minor noise, don't over-react
         if (lastDemand >= 7) {
-            recommendation = '✅ Good buy - Steady growth with strong demand. Safe investment.';
+            recommendation = '✅ Short-term fluctuation in a high-demand pet — long-term stable. Good time to trade for or hold.';
             recommendColor = 'var(--win)';
         } else if (lastDemand >= 4) {
-            recommendation = '✅ Decent option - Moderate growth and demand. Reasonable choice.';
-            recommendColor = 'var(--win)';
-        } else {
-            recommendation = '⚠️ Caution - Value rising but low demand limits trading options.';
-            recommendColor = 'var(--trap)';
-        }
-    }
-    // PRIORITY 6: Stable/minor changes
-    else if (overallValueChangePercent >= -2 && overallValueChangePercent <= 5) {
-        if (isVolatile) {
-            if (volatilityBias === 'upward') {
-                recommendation = '⚠️ HIGH VOLATILITY - Unstable but trending upward overall. Risky, for experienced traders only.';
-                recommendColor = 'var(--trap)';
-            } else if (volatilityBias === 'downward') {
-                recommendation = '❌ AVOID - Highly volatile with downward bias. Too unpredictable.';
-                recommendColor = 'var(--lose)';
-            } else {
-                recommendation = '⚠️ UNPREDICTABLE - Chaotic price swings with no clear direction. Gambling territory.';
-                recommendColor = 'var(--trap)';
-            }
-        } else if (lastDemand >= 7) {
-            recommendation = '✅ Stable hold - Consistent value with strong demand. Safe for long-term holding.';
-            recommendColor = 'var(--win)';
-        } else if (lastDemand >= 4) {
-            recommendation = '➡️ Neutral - Stable but unremarkable. Decent for collection, not for profit.';
+            recommendation = '➡️ Minor noise — value and demand are essentially flat. Neutral outlook; neither rush to trade nor avoid.';
             recommendColor = 'white';
         } else {
-            recommendation = '⚠️ Stagnant - No growth and weak demand. Better opportunities exist elsewhere.';
+            recommendation = '⚠️ Stable but weak demand. Low trading velocity — consider whether you can move this pet before acquiring.';
             recommendColor = 'var(--trap)';
         }
-    }
-    // PRIORITY 7: Minor decline (between -2% and -5%)
-    else {
-        if (recentTrendChange > 2) {
-            recommendation = '⚠️ Monitor closely - Slight overall decline but recent trend improving. Wait 1-2 weeks for confirmation.';
+    } else if (genuineHistoricalHigh) {
+        // Confirmed near peak across many data points
+        if (isHighTier && lastDemand >= 7 && momentum === 'accelerating upward') {
+            recommendation = '⚠️ High-Tier pet at confirmed multi-week peak with strong demand. Could continue rising, but risk of correction is real. Advanced traders only — consider holding rather than trading away.';
             recommendColor = 'var(--trap)';
-        } else if (lastDemand >= 7) {
-            recommendation = '⚠️ Risky - Minor value decline with strong demand. Could stabilize but uncertain.';
+        } else if (isHighTier) {
+            recommendation = '⚠️ High-Tier pet at genuine historical high (' + dataPointCount + ' data points). Consider holding rather than trading away — re-entry after a dip may be costly.';
             recommendColor = 'var(--trap)';
         } else {
-            recommendation = '❌ Avoid - Declining value with weak demand. Not recommended.';
+            recommendation = '⚠️ At confirmed historical high. High risk of pullback. Wait for a dip before acquiring.';
+            recommendColor = 'var(--trap)';
+        }
+    } else if (genuineHistoricalLow) {
+        // Confirmed near bottom
+        if (lastDemand >= 5 && recentTrendChange > 0) {
+            recommendation = '✅ Short-term dip, long-term stable — this is a reasonable time to trade for. Demand is healthy and recent trend is recovering.';
+            recommendColor = 'var(--win)';
+        } else if (lastDemand >= 5) {
+            recommendation = '⚠️ Near confirmed historical low. Demand is ok, but value has not started recovering yet — wait 1–2 more data cycles for confirmation.';
+            recommendColor = 'var(--trap)';
+        } else {
+            recommendation = '❌ Near historical low with weak demand. Both value and interest are depressed — avoid until signs of recovery.';
             recommendColor = 'var(--lose)';
+        }
+    } else if (overallValueChangePercent > 10 && recentTrendChange > 5) {
+        // Strong, sustained multi-day uptrend
+        if (isHighTier && lastDemand >= 7) {
+            recommendation = '🔥 Strong multi-day uptrend in a High-Tier pet with high demand — consider holding rather than trading away. If acquiring, great long-term pick.';
+            recommendColor = 'var(--win)';
+        } else if (lastDemand >= 6) {
+            recommendation = '🔥 Sustained uptrend with solid demand. Good acquisition target — momentum is real, not a blip.';
+            recommendColor = 'var(--win)';
+        } else {
+            recommendation = '⚠️ Value rising but demand is below average. Could be value trap — verify demand before committing.';
+            recommendColor = 'var(--trap)';
+        }
+    } else if (overallValueChangePercent < -8 && recentTrendChange < -3) {
+        // Confirmed sustained decline
+        if (recentDemandTrendChange > 15 && lastDemand >= 6) {
+            recommendation = '⚠️ Value is dropping but demand recently spiked. Conflicting signals — monitor for 1–2 weeks before deciding.';
+            recommendColor = 'var(--trap)';
+        } else if (isHighTier) {
+            recommendation = '⚠️ High-Tier pet in a confirmed multi-week downtrend. Do not panic-trade — these often stabilise. Wait for value to flatten before deciding.';
+            recommendColor = 'var(--trap)';
+        } else {
+            recommendation = '❌ Sustained value decline with no reversal in sight. Avoid acquiring. Trade away if you already own it.';
+            recommendColor = 'var(--lose)';
+        }
+    } else if (overallValueChangePercent < -5 && recentTrendChange > 4) {
+        // Declined overall but recently recovering
+        recommendation = '⚠️ Short-term dip with recent recovery signals — watch for 1 more week to confirm reversal before trading for.';
+        recommendColor = 'var(--trap)';
+    } else if (isVolatile) {
+        if (volatilityBias === 'upward' && lastDemand >= 6) {
+            recommendation = '⚠️ Volatile but upward-biased with decent demand. Higher risk, but real upside. Only for experienced traders.';
+            recommendColor = 'var(--trap)';
+        } else if (volatilityBias === 'downward') {
+            recommendation = '❌ High volatility with downward bias. Unpredictable and risky — avoid unless you have a specific strategy.';
+            recommendColor = 'var(--lose)';
+        } else {
+            recommendation = '⚠️ Chaotic price action with no clear direction. Risky entry point — wait for the pattern to settle.';
+            recommendColor = 'var(--trap)';
+        }
+    } else if (lastDemand >= 7 && Math.abs(overallValueChangePercent) <= 5) {
+        recommendation = '✅ Stable value with strong demand — a reliable, liquid pet. Safe to hold or trade; easy to move when needed.';
+        recommendColor = 'var(--win)';
+    } else if (lastDemand < 3) {
+        recommendation = '❌ Very low demand regardless of price action. Hard to find interested traders — poor liquidity. Avoid unless you intend to keep it.';
+        recommendColor = 'var(--lose)';
+    } else {
+        // Fallback moderate cases
+        if (overallValueChangePercent >= 3) {
+            recommendation = '✅ Modest, steady growth with average demand. Decent choice for patient traders; not a high-velocity pick.';
+            recommendColor = 'var(--win)';
+        } else if (overallValueChangePercent >= -3) {
+            recommendation = '➡️ Value is flat with moderate demand. Neutral outlook — fine to hold, no urgent action needed.';
+            recommendColor = 'white';
+        } else {
+            recommendation = '⚠️ Slight decline in value with low-moderate demand. Not alarming, but not ideal. Monitor before committing.';
+            recommendColor = 'var(--trap)';
         }
     }
     
@@ -1528,6 +1567,9 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
                     if (mode === 'demLow') return a.d - b.d;
                     return 0;
                 });
+            } else {
+                // Feature 6: Smart sort by demand → recent trend → category
+                matches = smartSortPets(matches, query);
             }
             searchState.currentMatches = matches;
             renderDOM();
@@ -1535,7 +1577,32 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
 
         function renderDOM() {
             const chunk = searchState.currentMatches.slice(0, searchState.renderLimit);
-            document.getElementById('searchResults').innerHTML = chunk.map(p => {
+            const query = document.getElementById('mainSearch').value.toLowerCase();
+            const resultsEl = document.getElementById('searchResults');
+
+            // Feature 6: Trending Now section injected above the grid
+            const trendingOuter = resultsEl.parentNode.querySelector('.trending-section-outer');
+            if (query === '' && searchState.sortMode === 'default' && searchState.rarityFilter === 'none') {
+                const trendingPets = getTrendingPets(5);
+                if (trendingPets.length > 0) {
+                    const pills = trendingPets.map(p => {
+                        const icon = (p.dt && p.dt.includes('🔥')) ? '🔥' : '📈';
+                        return `<div class="trending-pill" onclick="addItem(null,'${p.n.replace(/'/g,"\\'")}',1)">${icon} ${p.n} <span style="opacity:0.6">· ${p.d}</span></div>`;
+                    }).join('');
+                    if (!trendingOuter) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'trending-section-outer';
+                        wrapper.innerHTML = `<div class="trending-section"><div class="trending-title">⚡ Trending Now</div><div class="trending-pills">${pills}</div></div>`;
+                        resultsEl.parentNode.insertBefore(wrapper, resultsEl);
+                    } else {
+                        trendingOuter.querySelector('.trending-pills').innerHTML = pills;
+                    }
+                }
+            } else {
+                if (trendingOuter) trendingOuter.remove();
+            }
+
+            resultsEl.innerHTML = chunk.map(p => {
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 const val = state.mode === 'frost' ? p.f : p.v; 
                 const rarityColor = getRarityColor(p.cat);
@@ -1991,6 +2058,7 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
             }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
             if (isTrap) gaugeBar.classList.add('trap-active'); else gaugeBar.classList.remove('trap-active');
+            updateVerdictExtras();
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
@@ -2033,17 +2101,153 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
             render(); saveTrade();
         }
 
+        // ===================================================
+        // NEW FEATURES — Added on top of original code
+        // ===================================================
+
+        // Feature 1 & 2 & 3 & 4 & 5: Verdict Extras
+        function getTradeSpeed(avgDemand) {
+            if (avgDemand > 7)  return { label: 'Fast',     cls: 'speed-fast', emoji: '⚡' };
+            if (avgDemand >= 4) return { label: 'Moderate', cls: 'speed-mod',  emoji: '⏱️' };
+            return                     { label: 'Slow',     cls: 'speed-slow', emoji: '🐢' };
+        }
+
+        function getFlipScore(sideList) {
+            if (!sideList || sideList.length === 0) return null;
+            // One high-demand pet scores higher than many low-demand ones
+            const avgDem = sideList.reduce((s, p) => {
+                const d = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
+                return s + d;
+            }, 0) / sideList.length;
+            // Penalise for having many pets (harder to flip a stack)
+            const countPenalty = Math.max(0, (sideList.length - 1) * 0.5);
+            const raw = avgDem - countPenalty;
+            let label, cls;
+            if (raw >= 6.5) { label = '🔥 High Flip Potential'; cls = 'flip-high'; }
+            else if (raw >= 4) { label = '〽️ Moderate Flip Potential'; cls = 'flip-med'; }
+            else { label = '🧊 Low Flip Potential'; cls = 'flip-low'; }
+            return { label, cls, raw };
+        }
+
+        function updateVerdictExtras() {
+            const box = document.getElementById('verdictExtras');
+            const vA = parseFloat(document.getElementById('totA').innerText) || 0;
+            const vB = parseFloat(document.getElementById('totB').innerText) || 0;
+            if (vA === 0 && vB === 0) { box.innerHTML = ''; return; }
+
+            const listA = state.A, listB = state.B;
+            const cntA = listA.length, cntB = listB.length;
+            let html = '';
+
+            // --- Feature 1: Upgrade / Downgrade Detection ---
+            if (cntA > 0 && cntB > 0) {
+                const avgDemA = listA.reduce((s,p) => s + (p.d || 0), 0) / cntA;
+                const avgDemB = listB.reduce((s,p) => s + (p.d || 0), 0) / cntB;
+                if (cntA >= 2 && cntB === 1) {
+                    // Many-for-one → upgrade attempt
+                    html += `<span class="trade-type-tag tag-upgrade">🆙 UPGRADE ATTEMPT — Many-for-One</span>`;
+                } else if (cntA === 1 && cntB >= 2) {
+                    // One-for-many → downgrade
+                    if (avgDemB < 4) {
+                        html += `<span class="trade-type-tag tag-downgrade">⬇️ DOWNGRADE — Splitting into low-demand stack</span>`;
+                    } else {
+                        html += `<span class="trade-type-tag tag-downgrade">⬇️ DOWNGRADE — One-for-Many</span>`;
+                    }
+                }
+
+                // --- Feature 2: Multi-Add Penalty ---
+                const bigSide   = cntA >= 3 ? { list: listA, label: 'You Give' } : (cntB >= 3 ? { list: listB, label: 'They Give' } : null);
+                const smallSide = cntA >= 3 ? cntB : (cntB >= 3 ? cntA : 0);
+                if (bigSide && bigSide.list.length >= 3 && smallSide < bigSide.list.length) {
+                    const avgDem = bigSide.list.reduce((s,p) => s + (p.d||0), 0) / bigSide.list.length;
+                    if (avgDem < 6) {
+                        html += `<span class="trade-type-tag tag-penalty">⚠️ STACK PENALTY — ${bigSide.label} has ${bigSide.list.length} pets (low-demand adds are hard to move)</span>`;
+                    }
+                }
+
+                // --- Feature 5: Getting Played Alert ---
+                const lowDemThreshold = 4;
+                const receivingCount = cntB;
+                const lowDemReceiving = listB.filter(p => (p.d || 0) < lowDemThreshold).length;
+                // Check for ice-for-fire pattern using trend data
+                const givingFire   = listA.some(p => p.dt && p.dt.includes('🔥'));
+                const receivingIce = listB.some(p => p.dt && p.dt.includes('❄️'));
+                let playedReasons = [];
+                if (receivingCount >= 4 && lowDemReceiving >= 3 && cntB > cntA) {
+                    playedReasons.push(`receiving ${receivingCount} pets, ${lowDemReceiving} have low demand`);
+                }
+                if (givingFire && receivingIce) {
+                    playedReasons.push('giving rising-demand (🔥) for declining-demand (❄️) pets');
+                }
+                if (playedReasons.length > 0) {
+                    html += `<span class="trade-type-tag tag-played">🚩 GETTING PLAYED — ${playedReasons.join(' & ')}</span>`;
+                }
+            }
+
+            // --- Feature 4: Trade Speed Estimate ---
+            const rawDemA = document.getElementById('demA').innerText.replace('Avg Demand: ', '') || '0';
+            const rawDemB = document.getElementById('demB').innerText.replace('Avg Demand: ', '') || '0';
+            const avgDA = parseFloat(rawDemA) || 0;
+            const avgDB = parseFloat(rawDemB) || 0;
+            if (cntA > 0 || cntB > 0) {
+                const sA = getTradeSpeed(avgDA), sB = getTradeSpeed(avgDB);
+                html += `<div class="speed-row">
+                    <span class="speed-pill ${sA.cls}">${sA.emoji} You Give: ${sA.label}</span>
+                    <span class="speed-pill ${sB.cls}">${sB.emoji} You Receive: ${sB.label}</span>
+                </div>`;
+            }
+
+            // --- Feature 3: Flip Potential Score (Side B = what you receive) ---
+            if (cntB > 0) {
+                const fp = getFlipScore(listB);
+                if (fp) {
+                    html += `<div class="flip-row">Flip Potential: <span class="${fp.cls}">${fp.label}</span></div>`;
+                }
+            }
+
+            box.innerHTML = html;
+        }
+
+        // ===================================================
+        // Feature 6: Smarter search helpers
+        // ===================================================
+        function getTrendingPets(limit = 5) {
+            // Score by upward momentum from trend data
+            return [...ALL_PETS]
+                .map(p => {
+                    let score = 0;
+                    if (p.vt && p.vt.includes('📈')) score += 3;
+                    if (p.dt && p.dt.includes('🔥')) score += 3;
+                    if (p.vt && p.vt.includes('📉')) score -= 2;
+                    if (p.dt && p.dt.includes('❄️')) score -= 2;
+                    score += (p.d || 0) * 0.3;
+                    return { p, score };
+                })
+                .filter(x => x.score > 0)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, limit)
+                .map(x => x.p);
+        }
+
+        function smartSortPets(list, query) {
+            const HIGH_CATS = ['high tier', 'preppy'];
+            return list.slice().sort((a, b) => {
+                // 1. Demand score
+                const dDiff = (b.d || 0) - (a.d || 0);
+                if (Math.abs(dDiff) >= 1) return dDiff;
+                // 2. Recent trend momentum
+                const mA = ((a.vt||'').includes('📈') ? 2 : 0) + ((a.dt||'').includes('🔥') ? 2 : 0);
+                const mB = ((b.vt||'').includes('📈') ? 2 : 0) + ((b.dt||'').includes('🔥') ? 2 : 0);
+                if (mA !== mB) return mB - mA;
+                // 3. Category preference
+                const catA = HIGH_CATS.some(c => (a.cat||'').includes(c)) ? 1 : 0;
+                const catB = HIGH_CATS.some(c => (b.cat||'').includes(c)) ? 1 : 0;
+                if (catA !== catB) return catB - catA;
+                return 0;
+            });
+        }
+
         loadPetData();
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
