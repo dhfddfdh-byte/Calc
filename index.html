@@ -285,9 +285,22 @@
         }
 
         /* ===== NEW FEATURE STYLES ===== */
-        .verdict-extras { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+        .verdict-extras {
+            position: fixed;
+            left: 18px;
+            bottom: 30px;
+            width: 220px;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            z-index: 999;
+            pointer-events: none;
+        }
+        .verdict-extras > * { pointer-events: auto; }
+        @media screen and (max-width: 900px) {
+            .verdict-extras { display: none; }
+        }
         .trade-type-tag { font-size: 0.75em; font-weight: 900; padding: 4px 14px; border-radius: 20px; display: inline-block; letter-spacing: 0.5px; }
-        .tag-upgrade { background: rgba(99,102,241,0.18); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.4); }
         .tag-downgrade { background: rgba(239,68,68,0.18); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
         .tag-penalty { background: rgba(245,158,11,0.18); color: #fcd34d; border: 1.5px solid rgba(245,158,11,0.5); }
         .tag-played { background: rgba(239,68,68,0.22); color: #f87171; border: 2px solid #ef4444; font-size: 0.8em; font-weight: 900; padding: 5px 14px; border-radius: 20px; animation: pulse 2s infinite; }
@@ -782,7 +795,6 @@
         <div id="verdict" class="v-text">--</div>
         <div id="vDiff" class="v-diff">Difference: 0.000 (0.0%)</div>
         <div id="vSub" class="v-sub">Add pets to calculate trade results</div>
-        <div id="verdictExtras" class="verdict-extras"></div>
         <div class="switches">
             <button class="sw-btn active" id="btnFrost" onclick="setMode('frost')">Frost</button>
             <button class="sw-btn" id="btnValue" onclick="setMode('value')">Value</button>
@@ -1126,65 +1138,148 @@
     const isNearPeak = lastValue >= maxValue * 0.95;
     const isNearBottom = lastValue <= minValue * 1.05;
     
-    // TIME CONTEXT (try to extract from timestamps)
-    let timeSpan = 'unknown timeframe';
-    const timestamps = petHistory.map(p => p.timestamp || p.time || '');
-    if (timestamps.length >= 2 && timestamps[0] && timestamps[timestamps.length - 1]) {
-        const firstTime = timestamps[0];
-        const lastTime = timestamps[timestamps.length - 1];
-        timeSpan = `from ${firstTime} to ${lastTime}`;
+    // ── REAL DATE/TIME PARSING ────────────────────────────────
+    // Tries multiple common date formats from the CSV timestamps
+    function parseTimestamp(raw) {
+        if (!raw || typeof raw !== 'string') return null;
+        const s = raw.trim();
+        // Try native parse first (ISO, MM/DD/YYYY, etc.)
+        let d = new Date(s);
+        if (!isNaN(d)) return d;
+        // Try DD/MM/YYYY
+        const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if (dmy) { d = new Date(`${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`); if (!isNaN(d)) return d; }
+        // Try Month DD (e.g. "Jan 5" or "January 5")
+        const monthDay = s.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})?$/);
+        if (monthDay) { d = new Date(`${monthDay[1]} ${monthDay[2]} ${monthDay[3] || new Date().getFullYear()}`); if (!isNaN(d)) return d; }
+        return null;
+    }
+
+    const rawTimestamps = petHistory.map(p => p.timestamp || p.time || p.date || '');
+    const parsedDates   = rawTimestamps.map(parseTimestamp);
+    const validDates    = parsedDates.filter(d => d !== null);
+    const hasRealDates  = validDates.length >= 2;
+
+    let totalDaysSpan     = null;
+    let avgDaysBetweenPoints = null;
+    let isSparseData      = false;
+    let timeSpan          = 'unknown timeframe';
+    let perDayValueChange = null;   // absolute value change per day
+    let recentDaysWindow  = null;   // how many calendar days the "recent" slice covers
+
+    if (hasRealDates) {
+        const firstDate = validDates[0];
+        const lastDate  = validDates[validDates.length - 1];
+        const MS_PER_DAY = 86400000;
+        totalDaysSpan = Math.round((lastDate - firstDate) / MS_PER_DAY);
+        avgDaysBetweenPoints = dataPointCount > 1 ? totalDaysSpan / (dataPointCount - 1) : 0;
+        isSparseData = avgDaysBetweenPoints > 14; // more than 2 weeks between updates = sparse
+
+        // Per-day rate of value change
+        if (totalDaysSpan > 0) {
+            perDayValueChange = overallValueChange / totalDaysSpan;
+        }
+
+        // How many days does the "recent" slice cover?
+        const splitDateIdx = Math.floor(validDates.length * 0.75);
+        if (splitDateIdx < validDates.length) {
+            recentDaysWindow = Math.round((lastDate - validDates[splitDateIdx]) / MS_PER_DAY);
+        }
+
+        // Human-readable span
+        if (totalDaysSpan < 7) timeSpan = `past ${totalDaysSpan} day${totalDaysSpan !== 1 ? 's' : ''}`;
+        else if (totalDaysSpan < 30) timeSpan = `past ${Math.round(totalDaysSpan / 7)} week${Math.round(totalDaysSpan / 7) !== 1 ? 's' : ''}`;
+        else if (totalDaysSpan < 365) timeSpan = `past ${Math.round(totalDaysSpan / 30)} month${Math.round(totalDaysSpan / 30) !== 1 ? 's' : ''}`;
+        else timeSpan = `past ${(totalDaysSpan / 365).toFixed(1)} year${totalDaysSpan > 500 ? 's' : ''}`;
+    } else {
+        // No parseable dates — fall back to point-count language
+        timeSpan = `across ${dataPointCount} recorded update${dataPointCount !== 1 ? 's' : ''}`;
+    }
+
+    // CONFIDENCE SCORE — now based on days & density, not just count
+    let confidence = 'LOW';
+    let confidenceNote = '';
+    if (hasRealDates) {
+        if (totalDaysSpan >= 60 && dataPointCount >= 8 && !isSparseData) {
+            confidence = 'HIGH';
+            confidenceNote = `${dataPointCount} points over ${totalDaysSpan} days`;
+        } else if (totalDaysSpan >= 21 && dataPointCount >= 5) {
+            confidence = 'MEDIUM';
+            confidenceNote = `${dataPointCount} points over ${totalDaysSpan} days`;
+            if (isSparseData) confidenceNote += ' (sparse — avg ' + Math.round(avgDaysBetweenPoints) + 'd between updates)';
+        } else {
+            confidence = 'LOW';
+            confidenceNote = `only ${totalDaysSpan} days of data`;
+            if (isSparseData) confidenceNote += ', sparsely recorded';
+        }
+    } else {
+        if (dataPointCount >= 20) confidence = 'MEDIUM';
+        confidenceNote = `${dataPointCount} data point${dataPointCount !== 1 ? 's' : ''}, no parseable timestamps`;
     }
     
-    // CONFIDENCE SCORE
-    let confidence = 'LOW';
-    if (dataPointCount >= 20) confidence = 'HIGH';
-    else if (dataPointCount >= 10) confidence = 'MEDIUM';
-    
-    // BUILD TREND TEXT
+    // BUILD TREND TEXT (date-aware)
     let trendText = '';
-    
-    // Overall trend
-    let overallDirection = overallValueChangePercent > 10 ? 'Strong upward' : 
-                          overallValueChangePercent > 5 ? 'Moderate upward' :
-                          overallValueChangePercent > 2 ? 'Slight upward' :
-                          overallValueChangePercent < -10 ? 'Sharp downward' :
+
+    let overallDirection = overallValueChangePercent > 10 ? 'Strong upward' :
+                          overallValueChangePercent > 5  ? 'Moderate upward' :
+                          overallValueChangePercent > 2  ? 'Slight upward' :
+                          overallValueChangePercent < -10? 'Sharp downward' :
                           overallValueChangePercent < -5 ? 'Moderate downward' :
                           overallValueChangePercent < -2 ? 'Slight downward' : 'Stable';
-    
-trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): ${firstValue.toFixed(2)} → ${lastValue.toFixed(2)} (<span style="color: ${overallValueChangePercent >= 0 ? 'var(--win)' : 'var(--lose)'};">${overallValueChangePercent > 0 ? '+' : ''}${overallValueChangePercent.toFixed(1)}%</span>). `;    
-    // Recent trend comparison
+
+    trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): ${firstValue.toFixed(2)} → ${lastValue.toFixed(2)} (<span style="color: ${overallValueChangePercent >= 0 ? 'var(--win)' : 'var(--lose)'};">${overallValueChangePercent > 0 ? '+' : ''}${overallValueChangePercent.toFixed(1)}%</span>). `;
+
+    // Show per-day rate of change if we have real dates
+    if (perDayValueChange !== null && totalDaysSpan > 3) {
+        const pdSign = perDayValueChange >= 0 ? '+' : '';
+        trendText += `Rate of change: <strong style="color:${perDayValueChange >= 0 ? 'var(--win)' : 'var(--lose)'};">${pdSign}${perDayValueChange.toFixed(3)} value/day</strong>. `;
+    }
+
+    // Sparse data warning
+    if (hasRealDates && isSparseData) {
+        trendText += `<span style="color:var(--trap)">⚠️ Sparse data — recorded roughly every ${Math.round(avgDaysBetweenPoints)} days, so short-term moves may be invisible.</span> `;
+    }
+
+    // Recent trend comparison — only show if recent window is meaningful in days
+    const recentWindowLabel = (hasRealDates && recentDaysWindow !== null)
+        ? (recentDaysWindow < 7 ? `last ${recentDaysWindow}d` : `last ~${Math.round(recentDaysWindow/7)}wk`)
+        : 'recent';
     if (Math.abs(recentTrendChange - overallValueChangePercent) > 5) {
         if (recentTrendChange > 0 && overallValueChangePercent < 0) {
-            trendText += `<strong style="color: var(--win);">🔄 RECOVERING:</strong> Recent trend is <span style="color: var(--win);">+${recentTrendChange.toFixed(1)}%</span> despite overall decline. `;
+            trendText += `<strong style="color: var(--win);">🔄 RECOVERING (${recentWindowLabel}):</strong> Up <span style="color: var(--win);">+${recentTrendChange.toFixed(1)}%</span> despite overall decline. `;
         } else if (recentTrendChange < -5 && overallValueChangePercent > 0) {
-            trendText += `<strong style="color: var(--lose);">⚠️ WEAKENING:</strong> Recent trend is <span style="color: var(--lose);">${recentTrendChange.toFixed(1)}%</span> despite overall growth. `;
+            trendText += `<strong style="color: var(--lose);">⚠️ WEAKENING (${recentWindowLabel}):</strong> Down <span style="color: var(--lose);">${recentTrendChange.toFixed(1)}%</span> despite overall growth. `;
         } else if (recentTrendChange > overallValueChangePercent + 5) {
-            trendText += `<strong style="color: var(--win);">📈 MOMENTUM BUILDING:</strong> Recent performance (<span style="color: var(--win);">+${recentTrendChange.toFixed(1)}%</span>) stronger than overall trend. `;
+            trendText += `<strong style="color: var(--win);">📈 MOMENTUM BUILDING (${recentWindowLabel}):</strong> <span style="color: var(--win);">+${recentTrendChange.toFixed(1)}%</span> stronger than overall trend. `;
         }
     }
-    
-    // Demand analysis with ABSOLUTE level priority
+
+    // Demand analysis
     let demandStatus = lastDemand >= 8 ? 'excellent' : lastDemand >= 6 ? 'strong' : lastDemand >= 4 ? 'moderate' : lastDemand >= 2 ? 'weak' : 'very poor';
     trendText += `Demand is <strong style="color: ${getDemandColor(lastDemand)};">${demandStatus} (${lastDemand.toFixed(1)})</strong>`;
-    
     if (Math.abs(overallDemandChangePercent) > 10) {
         trendText += `, ${overallDemandChangePercent > 0 ? 'up' : 'down'} ${Math.abs(overallDemandChangePercent).toFixed(1)}% from ${firstDemand.toFixed(1)}`;
     }
     trendText += '. ';
-    
-    // Peak/bottom warnings
-    if (isNearPeak) {
-        trendText += `<strong style="color: var(--trap);">⚠️ AT/NEAR ALL-TIME HIGH</strong> (${lastValue.toFixed(2)} vs peak ${maxValue.toFixed(2)}). `;
+
+    // Peak/bottom — only assert if data covers enough days
+    const enoughDaysForPeak = !hasRealDates ? (dataPointCount >= 10) : (totalDaysSpan >= 30);
+    if (isNearPeak && enoughDaysForPeak) {
+        trendText += `<strong style="color: var(--trap);">⚠️ Near recorded high</strong> (${lastValue.toFixed(2)} vs peak ${maxValue.toFixed(2)} over ${timeSpan}). `;
+    } else if (isNearPeak) {
+        trendText += `Currently at the top of its <em>recent</em> range — not enough history to call this an all-time high. `;
     }
-    if (isNearBottom) {
-        trendText += `<strong>Currently near historical low</strong> (${lastValue.toFixed(2)} vs bottom ${minValue.toFixed(2)}). `;
+    if (isNearBottom && enoughDaysForPeak) {
+        trendText += `<strong>Near recorded low</strong> (${lastValue.toFixed(2)} vs bottom ${minValue.toFixed(2)} over ${timeSpan}). `;
+    } else if (isNearBottom) {
+        trendText += `At the bottom of its recent recorded range. `;
     }
-    
+
     // Volatility
     if (isVolatile) {
-        trendText += `<strong style="color: var(--trap);">High volatility</strong> (${volatilityPercent.toFixed(1)}% range) with ${volatilityBias} bias. `;
+        trendText += `<strong style="color: var(--trap);">High volatility</strong> (${volatilityPercent.toFixed(1)}% swing${hasRealDates ? ' over ' + timeSpan : ''}) with ${volatilityBias} bias. `;
     }
-    
+
     // Momentum
     if (momentum !== 'neutral') {
         trendText += `Trend is <strong>${momentum}</strong>. `;
@@ -1192,22 +1287,32 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
     
     // ===================================================
     // Feature 7: Overhauled Trend Analysis & Recommendations
+    // Uses real date/day calculations where available
     // ===================================================
     let recommendation = '';
     let recommendColor = 'white';
 
-    // Determine category tier for context-aware advice
-    const catStr = (petData.cat || '').toLowerCase();
+    const catStr     = (petData.cat || '').toLowerCase();
     const isHighTier = catStr.includes('high tier') || catStr.includes('preppy') || catStr.includes('exotic');
     const isRandom   = catStr.includes('random') || catStr.includes('common') || catStr.includes('uncommon');
 
-    // Noise threshold — ignore tiny fluctuations
-    const isSmallFluctuation = Math.abs(overallValueChangePercent) < 3 && Math.abs(overallDemandChange) < 0.5;
+    // Noise threshold — scale based on actual days if available
+    const noiseValPct  = hasRealDates && totalDaysSpan < 14 ? 5 : 3;
+    const isSmallFluctuation = Math.abs(overallValueChangePercent) < noiseValPct && Math.abs(overallDemandChange) < 0.5;
 
-    // Determine if we have enough data to call a genuine high/low
-    const genuineHistoricalHigh = dataPointCount >= 10 && isNearPeak;
-    const genuineHistoricalLow  = dataPointCount >= 10 && isNearBottom;
-    const limitedData           = dataPointCount < 5;
+    // Genuine peak/low requires meaningful time coverage
+    const enoughHistory      = hasRealDates ? totalDaysSpan >= 30 : dataPointCount >= 10;
+    const genuineHistoricalHigh = enoughHistory && isNearPeak;
+    const genuineHistoricalLow  = enoughHistory && isNearBottom;
+
+    // Limited data: less than 5 points OR less than 7 days if we have dates
+    const limitedData = hasRealDates ? (totalDaysSpan < 7 || dataPointCount < 3) : dataPointCount < 5;
+
+    // "Strong" trend requires meaningful time to confirm — a 10% move in 2 days is less reliable than over 2 weeks
+    const sustainedUptrend  = overallValueChangePercent > 10 && recentTrendChange > 5
+                              && (!hasRealDates || totalDaysSpan >= 14);
+    const sustainedDowntrend = overallValueChangePercent < -8 && recentTrendChange < -3
+                              && (!hasRealDates || totalDaysSpan >= 14);
 
     if (limitedData) {
         // Not enough data — don't make dramatic claims
@@ -1257,28 +1362,31 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
             recommendation = '❌ Near historical low with weak demand. Both value and interest are depressed — avoid until signs of recovery.';
             recommendColor = 'var(--lose)';
         }
-    } else if (overallValueChangePercent > 10 && recentTrendChange > 5) {
-        // Strong, sustained multi-day uptrend
+    } else if (sustainedUptrend) {
+        // Strong, confirmed multi-day uptrend
+        const dayCtx = hasRealDates ? ` over ${totalDaysSpan} days` : '';
         if (isHighTier && lastDemand >= 7) {
-            recommendation = '🔥 Strong multi-day uptrend in a High-Tier pet with high demand — consider holding rather than trading away. If acquiring, great long-term pick.';
+            recommendation = `🔥 Strong uptrend in a High-Tier pet${dayCtx} — consider holding rather than trading away. If acquiring, excellent long-term pick.`;
             recommendColor = 'var(--win)';
         } else if (lastDemand >= 6) {
-            recommendation = '🔥 Sustained uptrend with solid demand. Good acquisition target — momentum is real, not a blip.';
+            recommendation = `🔥 Sustained uptrend${dayCtx} with solid demand. Good acquisition — momentum is confirmed, not a blip.`;
             recommendColor = 'var(--win)';
         } else {
-            recommendation = '⚠️ Value rising but demand is below average. Could be value trap — verify demand before committing.';
+            recommendation = `⚠️ Value rising${dayCtx} but demand is below average. Possible value trap — verify interest before committing.`;
             recommendColor = 'var(--trap)';
         }
-    } else if (overallValueChangePercent < -8 && recentTrendChange < -3) {
+    } else if (sustainedDowntrend) {
         // Confirmed sustained decline
+        const dayCtx = hasRealDates ? ` over ${totalDaysSpan} days` : '';
         if (recentDemandTrendChange > 15 && lastDemand >= 6) {
-            recommendation = '⚠️ Value is dropping but demand recently spiked. Conflicting signals — monitor for 1–2 weeks before deciding.';
+            const watchTime = hasRealDates ? `${Math.max(7, Math.round(totalDaysSpan * 0.2))} more days` : '1–2 more weeks';
+            recommendation = `⚠️ Value dropping${dayCtx} but demand recently spiked. Conflicting signals — watch for ${watchTime} before deciding.`;
             recommendColor = 'var(--trap)';
         } else if (isHighTier) {
-            recommendation = '⚠️ High-Tier pet in a confirmed multi-week downtrend. Do not panic-trade — these often stabilise. Wait for value to flatten before deciding.';
+            recommendation = `⚠️ High-Tier pet in a confirmed downtrend${dayCtx}. Don't panic-trade — these often stabilise. Wait for value to flatten.`;
             recommendColor = 'var(--trap)';
         } else {
-            recommendation = '❌ Sustained value decline with no reversal in sight. Avoid acquiring. Trade away if you already own it.';
+            recommendation = `❌ Sustained value decline${dayCtx} with no reversal. Avoid acquiring. Trade away if you own it.`;
             recommendColor = 'var(--lose)';
         }
     } else if (overallValueChangePercent < -5 && recentTrendChange > 4) {
@@ -1316,8 +1424,8 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
         }
     }
     
-    // Add confidence score
-    trendText += `<br><br><em style="color: var(--subtext); font-size: 0.85em;">Analysis confidence: <strong>${confidence}</strong> (based on ${dataPointCount} datapoint${dataPointCount === 1 ? '' : 's'})</em>`;
+    // Add confidence score with date context
+    trendText += `<br><br><em style="color: var(--subtext); font-size: 0.85em;">Analysis confidence: <strong>${confidence}</strong> — ${confidenceNote}</em>`;
     
     document.getElementById('trendAnalysis').innerHTML = `<strong style="color: var(--accent);">📊 Trend Analysis:</strong><br>${trendText}<br><br><strong style="color: var(--frost);">Recommendation:</strong> <span style="color: ${recommendColor};">${recommendation}</span>`;
     
@@ -2139,15 +2247,12 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
             const cntA = listA.length, cntB = listB.length;
             let html = '';
 
-            // --- Feature 1: Upgrade / Downgrade Detection ---
             if (cntA > 0 && cntB > 0) {
-                const avgDemA = listA.reduce((s,p) => s + (p.d || 0), 0) / cntA;
                 const avgDemB = listB.reduce((s,p) => s + (p.d || 0), 0) / cntB;
-                if (cntA >= 2 && cntB === 1) {
-                    // Many-for-one → upgrade attempt
-                    html += `<span class="trade-type-tag tag-upgrade">🆙 UPGRADE ATTEMPT — Many-for-One</span>`;
-                } else if (cntA === 1 && cntB >= 2) {
-                    // One-for-many → downgrade
+                const pDiff = vA > 0 ? (vB - vA) / vA : 0; // positive = you gain value
+
+                // --- Downgrade Detection (one-for-many only) ---
+                if (cntA === 1 && cntB >= 2) {
                     if (avgDemB < 4) {
                         html += `<span class="trade-type-tag tag-downgrade">⬇️ DOWNGRADE — Splitting into low-demand stack</span>`;
                     } else {
@@ -2155,36 +2260,27 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
                     }
                 }
 
-                // --- Feature 2: Multi-Add Penalty ---
-                const bigSide   = cntA >= 3 ? { list: listA, label: 'You Give' } : (cntB >= 3 ? { list: listB, label: 'They Give' } : null);
-                const smallSide = cntA >= 3 ? cntB : (cntB >= 3 ? cntA : 0);
-                if (bigSide && bigSide.list.length >= 3 && smallSide < bigSide.list.length) {
-                    const avgDem = bigSide.list.reduce((s,p) => s + (p.d||0), 0) / bigSide.list.length;
-                    if (avgDem < 6) {
-                        html += `<span class="trade-type-tag tag-penalty">⚠️ STACK PENALTY — ${bigSide.label} has ${bigSide.list.length} pets (low-demand adds are hard to move)</span>`;
+                // --- Stack Penalty (RECEIVING side only, and only if NOT a big overpay) ---
+                // If they give you 3+ low-demand pets and you're not getting significantly more value, flag it.
+                // But if you're giving the stack (as overpay), don't penalise — that's expected.
+                if (cntB >= 3) {
+                    const avgDemReceiving = listB.reduce((s,p) => s + (p.d||0), 0) / cntB;
+                    // Only warn if the value you receive is NOT a huge overpay for you
+                    // i.e. you're getting a stack that's roughly even or worse in value
+                    const youAreGettingStack = true; // cntB is the receiving side
+                    if (avgDemReceiving < 5 && pDiff < 0.35) {
+                        html += `<span class="trade-type-tag tag-penalty">⚠️ STACK WARNING — Receiving ${cntB} low-demand pets that will be hard to move</span>`;
                     }
                 }
 
-                // --- Feature 5: Getting Played Alert ---
-                const lowDemThreshold = 4;
-                const receivingCount = cntB;
-                const lowDemReceiving = listB.filter(p => (p.d || 0) < lowDemThreshold).length;
-                // Check for ice-for-fire pattern using trend data
-                const givingFire   = listA.some(p => p.dt && p.dt.includes('🔥'));
-                const receivingIce = listB.some(p => p.dt && p.dt.includes('❄️'));
-                let playedReasons = [];
-                if (receivingCount >= 4 && lowDemReceiving >= 3 && cntB > cntA) {
-                    playedReasons.push(`receiving ${receivingCount} pets, ${lowDemReceiving} have low demand`);
-                }
-                if (givingFire && receivingIce) {
-                    playedReasons.push('giving rising-demand (🔥) for declining-demand (❄️) pets');
-                }
-                if (playedReasons.length > 0) {
-                    html += `<span class="trade-type-tag tag-played">🚩 GETTING PLAYED — ${playedReasons.join(' & ')}</span>`;
+                // --- Getting Played Alert (low-demand stack dump only) ---
+                const lowDemReceiving = listB.filter(p => (p.d || 0) < 4).length;
+                if (cntB >= 4 && lowDemReceiving >= 3 && cntB > cntA && pDiff < 0.4) {
+                    html += `<span class="trade-type-tag tag-played">🚩 GETTING PLAYED — Receiving ${cntB} pets, ${lowDemReceiving} have low demand</span>`;
                 }
             }
 
-            // --- Feature 4: Trade Speed Estimate ---
+            // --- Trade Speed Estimate ---
             const rawDemA = document.getElementById('demA').innerText.replace('Avg Demand: ', '') || '0';
             const rawDemB = document.getElementById('demB').innerText.replace('Avg Demand: ', '') || '0';
             const avgDA = parseFloat(rawDemA) || 0;
@@ -2197,7 +2293,7 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
                 </div>`;
             }
 
-            // --- Feature 3: Flip Potential Score (Side B = what you receive) ---
+            // --- Flip Potential Score (Side B = what you receive) ---
             if (cntB > 0) {
                 const fp = getFlipScore(listB);
                 if (fp) {
@@ -2249,5 +2345,6 @@ trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): $
 
         loadPetData();
     </script>
+    <div id="verdictExtras" class="verdict-extras"></div>
 </body>
 </html>
