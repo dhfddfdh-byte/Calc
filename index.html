@@ -284,6 +284,71 @@
             50% { opacity: 0.6; transform: scale(1.2); }
         }
 
+
+        /* ===== TRADE ADVISOR STYLES ===== */
+        .advisor-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2,6,23,0.96); backdrop-filter: blur(14px); display: none; align-items: center; justify-content: center; z-index: 5200; }
+        .advisor-container { width: 97%; max-width: 1050px; background: #1a2333; border-radius: 28px; border: 1.5px solid var(--border); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.8); }
+        .advisor-header { padding: 18px 25px; background: #111827; border-bottom: 1.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .advisor-body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+        .advisor-left { width: 340px; flex-shrink: 0; padding: 20px; border-right: 1.5px solid var(--border); overflow-y: auto; background: #131c2b; }
+        .advisor-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .advisor-filters { padding: 12px 18px; background: #0f172a; border-bottom: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+        .advisor-filter-select { background: #1e293b; border: 1px solid var(--border); color: #94a3b8; padding: 6px 10px; border-radius: 20px; font-size: 0.75em; font-weight: 700; outline: none; cursor: pointer; }
+        .advisor-filter-select:hover { border-color: var(--accent); color: white; }
+        .advisor-results { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .advisor-insight-bar { padding: 12px 18px; background: rgba(99,102,241,0.07); border-top: 1px solid var(--border); font-size: 0.78em; color: #94a3b8; line-height: 1.5; flex-shrink: 0; }
+        .advisor-offer-slot { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
+        .advisor-pet-chip { background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; position: relative; font-size: 0.7em; cursor: pointer; transition: 0.2s; }
+        .advisor-pet-chip:hover { border-color: #ef4444; }
+        .advisor-pet-chip img { width: 44px; height: 44px; object-fit: contain; margin-bottom: 3px; }
+        .advisor-pet-chip .chip-name { text-align: center; color: #cbd5e1; font-weight: 800; font-size: 0.9em; line-height: 1.2; }
+        .advisor-pet-chip .chip-val { color: var(--frost); font-weight: 900; margin-top: 2px; }
+        .advisor-pet-chip .chip-remove { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; background: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; }
+        .advisor-add-slot { background: transparent; border: 2px dashed var(--border); border-radius: 12px; height: 80px; display: flex; align-items: center; justify-content: center; color: var(--border); font-size: 1.5em; cursor: pointer; transition: 0.2s; }
+        .advisor-add-slot:hover { border-color: var(--accent); color: var(--accent); }
+        .advisor-offer-stats { background: #0f172a; border-radius: 12px; padding: 12px; margin-bottom: 15px; font-size: 0.8em; }
+        .advisor-stat-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+        .advisor-stat-label { color: var(--subtext); }
+        .advisor-stat-val { font-weight: 900; color: white; }
+        .target-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 16px; padding: 14px; display: flex; gap: 12px; align-items: flex-start; transition: 0.2s; cursor: default; }
+        .target-card:hover { border-color: var(--accent); background: #262c3d; }
+        .target-card img { width: 58px; height: 58px; object-fit: contain; flex-shrink: 0; border-radius: 10px; background: #0f172a; }
+        .target-card-body { flex: 1; min-width: 0; }
+        .target-name { font-weight: 900; font-size: 0.95em; color: white; margin-bottom: 4px; }
+        .target-badges { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+        .target-badge { font-size: 0.65em; font-weight: 900; padding: 2px 7px; border-radius: 8px; }
+        .badge-preppy { background: rgba(236,72,153,0.2); color: #f9a8d4; }
+        .badge-hightier { background: rgba(168,85,247,0.2); color: #d8b4fe; }
+        .badge-exotic { background: rgba(6,182,212,0.2); color: #67e8f9; }
+        .badge-randoms { background: rgba(100,116,139,0.2); color: #94a3b8; }
+        .badge-rising { background: rgba(16,185,129,0.2); color: #6ee7b7; }
+        .badge-falling { background: rgba(239,68,68,0.2); color: #fca5a5; }
+        .badge-ugly { background: rgba(239,68,68,0.15); color: #f87171; }
+        .badge-manip { background: rgba(245,158,11,0.2); color: #fcd34d; }
+        .target-reason { font-size: 0.75em; color: #94a3b8; line-height: 1.4; margin-bottom: 6px; }
+        .target-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .tqs-badge { font-size: 0.75em; font-weight: 900; padding: 3px 9px; border-radius: 10px; }
+        .tqs-high { background: rgba(16,185,129,0.2); color: #34d399; }
+        .tqs-mid  { background: rgba(251,191,36,0.2);  color: #fbbf24; }
+        .tqs-low  { background: rgba(239,68,68,0.2);   color: #f87171; }
+        .target-val-gap { font-size: 0.72em; font-weight: 800; color: var(--subtext); }
+        .target-demand-pill { font-size: 0.72em; font-weight: 800; padding: 2px 7px; border-radius: 8px; background: rgba(251,191,36,0.1); color: var(--demand-color); }
+        .advisor-section-title { font-size: 0.7em; font-weight: 900; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 10px; }
+        .advisor-inv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 8px; }
+        .advisor-inv-chip { background: #0f172a; border: 1.5px solid var(--border); border-radius: 10px; padding: 7px 5px; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.2s; font-size: 0.68em; position: relative; }
+        .advisor-inv-chip:hover { border-color: var(--win); background: rgba(16,185,129,0.06); }
+        .advisor-inv-chip img { width: 38px; height: 38px; object-fit: contain; margin-bottom: 3px; }
+        .advisor-inv-chip .inv-chip-name { text-align: center; color: #94a3b8; font-weight: 800; line-height: 1.2; }
+        .advisor-inv-chip .inv-chip-val { color: var(--frost); font-weight: 900; margin-top: 1px; }
+        .advisor-empty { text-align: center; color: var(--subtext); padding: 40px 20px; font-size: 0.9em; }
+        /* Analytics pie container */
+        .analytics-pie-row { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+        .analytics-pie-card { background: var(--panel); border-radius: 18px; border: 1px solid var(--border); padding: 20px; flex: 1; min-width: 200px; max-width: 280px; text-align: center; }
+        .analytics-pie-card h4 { color: var(--accent); font-size: 0.8em; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; font-weight: 900; }
+        .analytics-pie-legend { margin-top: 12px; text-align: left; }
+        .legend-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; font-size: 0.72em; color: #cbd5e1; font-weight: 700; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
         /* ===== NEW FEATURE STYLES ===== */
         .verdict-extras {
             position: fixed;
@@ -664,6 +729,7 @@
                     <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em;" onclick="exportInv()">Export Data</button>
                     <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em;" onclick="importInv()">Import Data</button>
                     <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em; background: var(--accent); border-color: var(--accent);" onclick="openAnalytics()">View Portfolio</button>
+                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em; background: #059669; border-color: #047857;" onclick="openTradeAdvisor()">🎯 Trade Advisor</button>
                 </div>
                 <button class="nav-btn" onclick="closeInventory()">Close</button>
             </div>
@@ -715,6 +781,65 @@
                         <div id="aiSuggestions">
                             <div class="ai-suggestion">Add pets to your inventory to generate AI-driven trade offers.</div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Trade Advisor Overlay -->
+    <div class="advisor-overlay" id="advisorOverlay" onclick="if(event.target===this)closeTradeAdvisor()">
+        <div class="advisor-container">
+            <div class="advisor-header">
+                <div>
+                    <span style="font-weight:900; font-size:1.1em; color:white;">🎯 TRADE ADVISOR</span>
+                    <span style="font-size:0.75em; color:var(--subtext); margin-left:10px;">Build your offer → see what you should be targeting</span>
+                </div>
+                <button class="nav-btn" onclick="closeTradeAdvisor()">Close</button>
+            </div>
+            <div class="advisor-body">
+                <div class="advisor-left">
+                    <div class="advisor-section-title">📦 Your Offer (from inventory)</div>
+                    <div id="advisorOfferSlots" class="advisor-offer-slot"></div>
+                    <div id="advisorOfferStats" class="advisor-offer-stats">
+                        <div style="text-align:center;color:var(--subtext);font-size:0.85em;">Add pets to see offer stats</div>
+                    </div>
+                    <div class="advisor-section-title" style="margin-top:15px;">➕ Click to add from inventory</div>
+                    <div id="advisorInvGrid" class="advisor-inv-grid"></div>
+                </div>
+                <div class="advisor-right">
+                    <div class="advisor-filters">
+                        <span style="font-size:0.72em;font-weight:900;color:var(--subtext);">FILTERS:</span>
+                        <select class="advisor-filter-select" id="advisorDemandFilter" onchange="refreshAdvisorTargets()">
+                            <option value="0">Any Demand</option>
+                            <option value="4">Demand 4+</option>
+                            <option value="6">Demand 6+</option>
+                            <option value="7">Demand 7+ only</option>
+                        </select>
+                        <select class="advisor-filter-select" id="advisorCatFilter" onchange="refreshAdvisorTargets()">
+                            <option value="all">All Categories</option>
+                            <option value="high tier">High Tier</option>
+                            <option value="preppy">Preppy</option>
+                            <option value="exotic">Exotic</option>
+                        </select>
+                        <select class="advisor-filter-select" id="advisorWindowFilter" onchange="refreshAdvisorTargets()">
+                            <option value="0.20">±20% Value</option>
+                            <option value="0.30">±30% Value</option>
+                            <option value="0.40">±40% Value</option>
+                            <option value="0.60">±60% Value</option>
+                        </select>
+                        <select class="advisor-filter-select" id="advisorSortFilter" onchange="refreshAdvisorTargets()">
+                            <option value="tqs">Sort: Quality Score</option>
+                            <option value="demand">Sort: Demand</option>
+                            <option value="value">Sort: Value Gain</option>
+                        </select>
+                    </div>
+                    <div class="advisor-results" id="advisorResults">
+                        <div class="advisor-empty">Add pets to your offer on the left to see smart recommendations.</div>
+                    </div>
+                    <div class="advisor-insight-bar" id="advisorInsightBar">
+                        Add pets from your inventory to your offer, then see what you should be trading for.
                     </div>
                 </div>
             </div>
@@ -1832,17 +1957,19 @@
             }
         }
 
+        let rarityChartInst = null, catChartInst = null;
         function openAnalytics() {
             const overlay = document.getElementById('analyticsOverlay');
             const body = document.getElementById('analyticsBody');
             overlay.style.display = 'flex';
-            const rarities = {};
-            const categories = {};
+            const rarities = {}, categories = {};
             let total = state.inv.length;
             if (total === 0) {
-                body.innerHTML = '<div style="text-align:center; color:#94a3b8;">Inventory is empty. Add pets to see analytics.</div>';
+                body.innerHTML = '<div style="text-align:center; color:#94a3b8;padding:40px">Inventory is empty.</div>';
                 return;
             }
+            // Total value by category
+            const catValues = {};
             state.inv.forEach(p => {
                 const r = (p.cat || 'unknown').toLowerCase();
                 let rKey = 'Common';
@@ -1857,19 +1984,36 @@
                 else if(r.includes('exotic')) cKey = 'Exotic';
                 else if(r.includes('classy')) cKey = 'Classy';
                 categories[cKey] = (categories[cKey] || 0) + 1;
+                const v = calculatePetVal(p, 'value');
+                catValues[cKey] = (catValues[cKey] || 0) + v;
             });
-            const generateBars = (data, colorMap) => {
-                return Object.entries(data)
-                    .sort((a,b) => b[1] - a[1])
-                    .map(([key, count]) => {
-                        const pct = ((count / total) * 100).toFixed(1);
-                        const color = colorMap[key] || '#6366f1'; 
-                        return `<div class="bar-row"><div class="bar-label">${key}</div><div class="bar-track"><div class="bar-fill" style="width: ${pct}%; background: ${color};"></div></div><div class="bar-stat">${count} (${pct}%)</div></div>`;
-                    }).join('');
+            const totalVal = Object.values(catValues).reduce((a,b)=>a+b,0);
+            const rColors = { 'Legendary':'#ff9800','Ultra-Rare':'#f06292','Rare':'#4fc3f7','Uncommon':'#81c784','Common':'#bdbdbd' };
+            const cColors = { 'High Tier':'#a855f7','Preppy':'#ec4899','Exotic':'#06b6d4','Classy':'#f59e0b','Randoms':'#64748b' };
+            const makeLegend = (data, colorMap) => Object.entries(data).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="legend-row"><div class="legend-dot" style="background:${colorMap[k]||'#6366f1'}"></div>${k}: <strong>${v}</strong></div>`).join('');
+            const makeValLegend = (data, colorMap) => Object.entries(data).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="legend-row"><div class="legend-dot" style="background:${colorMap[k]||'#6366f1'}"></div>${k}: <strong>${v.toFixed(1)}</strong> (${((v/totalVal)*100).toFixed(0)}%)</div>`).join('');
+            body.innerHTML = `
+            <div class="analytics-pie-row">
+                <div class="analytics-pie-card"><h4>By Rarity (count)</h4><canvas id="rarityPie" width="200" height="200"></canvas><div class="analytics-pie-legend">${makeLegend(rarities,rColors)}</div></div>
+                <div class="analytics-pie-card"><h4>By Category (count)</h4><canvas id="catPie" width="200" height="200"></canvas><div class="analytics-pie-legend">${makeLegend(categories,cColors)}</div></div>
+                <div class="analytics-pie-card"><h4>Value by Category</h4><canvas id="valPie" width="200" height="200"></canvas><div class="analytics-pie-legend">${makeValLegend(catValues,cColors)}</div></div>
+            </div>`;
+            if(rarityChartInst) rarityChartInst.destroy();
+            if(catChartInst) catChartInst.destroy();
+            const makeChart = (id, data, colors) => {
+                const sorted = Object.entries(data).sort((a,b)=>b[1]-a[1]);
+                return new Chart(document.getElementById(id).getContext('2d'), {
+                    type:'doughnut',
+                    data:{
+                        labels: sorted.map(([k])=>k),
+                        datasets:[{ data: sorted.map(([,v])=>v), backgroundColor: sorted.map(([k])=>colors[k]||'#6366f1'), borderColor:'#1a2333', borderWidth:3, hoverOffset:8 }]
+                    },
+                    options:{ responsive:false, plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} (${((ctx.parsed/Object.values(data).reduce((a,b)=>a+b,0))*100).toFixed(1)}%)`}} }, cutout:'62%', animation:{animateScale:true} }
+                });
             };
-            const rColors = { 'Legendary': 'var(--rarity-legendary)', 'Ultra-Rare': 'var(--rarity-ultra)', 'Rare': 'var(--rarity-rare)', 'Uncommon': 'var(--rarity-uncommon)', 'Common': 'var(--rarity-common)' };
-            const cColors = { 'High Tier': '#a855f7', 'Preppy': '#ec4899', 'Exotic': '#06b6d4', 'Classy': '#f59e0b', 'Randoms': '#64748b' };
-            body.innerHTML = `<div class="analytics-section"><h4>Rarity Breakdown</h4>${generateBars(rarities, rColors)}</div><div class="analytics-section"><h4>Category Breakdown</h4>${generateBars(categories, cColors)}</div>`;
+            rarityChartInst = makeChart('rarityPie', rarities, rColors);
+            catChartInst = makeChart('catPie', categories, cColors);
+            makeChart('valPie', catValues, cColors);
         }
 
         function closeAnalytics() { document.getElementById('analyticsOverlay').style.display = 'none'; }
@@ -2037,66 +2181,347 @@
 
         function clearDreamPet() { state.dreamPet = null; renderInventory(); }
 
+        // ================================================================
+        // PET INTELLIGENCE DATABASE
+        // ================================================================
+        const PET_INTEL = {
+            // Pets the community considers ugly/undesirable at their tier
+            ugly: ['Gold Griffin','Robo Dog','Metal Ox','Baku','Karate Gorilla','Chef Gorilla',
+                   'Toy Monkey','El Gato','Drill Gorilla','Sloth','Rock','Stegosaurus'],
+            // Preppy-adjacent pets that punch above their value due to aesthetics
+            highAppeal: ['Bat Dragon','Crow','Parrot','Owl','Giraffe','Shadow Dragon','Frost Dragon',
+                         'Dango Penguins','Cow','Unicorn','Flamingo','Hedgehog','Dodo','Bunny Swirl',
+                         'African Wild Dog','Balloon Unicorn','Diamond Butterfly','Orchid Butterfly',
+                         'Candyfloss Chick','Mini Pig','Peppermint Penguin','Strawberry Shortcake Bat Dragon',
+                         'Chocolate Chip Bat Dragon','Goose','Siamese Cat','Munchkin Cat','Alley Cat'],
+            // Pets likely to have manipulated/inflated values (high val, low demand)
+            manipWatchlist: ['Chef Gorilla','Karate Gorilla','Mega Field Mouse'],
+            // Known limited/retired pets that appreciate over time  
+            limited: ['Frost Dragon','Shadow Dragon','Bat Dragon','Giraffe','Crow','Parrot','Owl',
+                      'Evil Unicorn','Hedgehog','Arctic Reindeer','Turtle','Kangaroo'],
+            // Seasonal pets
+            seasonal: {
+                halloween: ['Bat Dragon','Evil Unicorn','Zombie Buffalo','Ghost Bunny','Cerberus','Vampire Dragon'],
+                christmas: ['Frost Dragon','Peppermint Penguin','Arctic Reindeer','Christmas Pudding Pup'],
+                valentines: ['Cupid Dragon','Pink Cat','Rose Dragon'],
+                easter: ['Bunny Swirl','Spring Bunny']
+            }
+        };
+
+        // Tier ladder for trade-up advice
+        const TIER_LADDER = [
+            { name: 'Starter', min: 0,    max: 2,    next: 'Commons/Uncommons' },
+            { name: 'Commons', min: 2,    max: 8,    next: 'Mid-Rares (Frost Fury, Crow level)' },
+            { name: 'Mid-Tier', min: 8,   max: 25,   next: 'High-Tier (Owl, Turtle, Kangaroo level)' },
+            { name: 'High-Tier', min: 25, max: 60,   next: 'Premium (Crow, Parrot, Hedgehog level)' },
+            { name: 'Premium',  min: 60,  max: 130,  next: 'Top-Tier (Frost Dragon, Owl, Parrot level)' },
+            { name: 'Top-Tier', min: 130, max: 300,  next: 'Exotic (Giraffe, Bat Dragon level)' },
+            { name: 'Exotic',   min: 300, max: 99999, next: 'you are at the top tier' }
+        ];
+
+        function getTierInfo(val) {
+            return TIER_LADDER.find(t => val >= t.min && val < t.max) || TIER_LADDER[0];
+        }
+
+        function getPetDemandTier(p) {
+            const d = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
+            if (d >= 7) return 'high';
+            if (d >= 4) return 'mid';
+            return 'low';
+        }
+
+        function getCatLabel(p) {
+            const c = (p.cat || '').toLowerCase();
+            if (c.includes('high tier')) return 'High Tier';
+            if (c.includes('preppy')) return 'Preppy';
+            if (c.includes('exotic')) return 'Exotic';
+            if (c.includes('classy')) return 'Classy';
+            if (c.includes('mid tier')) return 'Mid Tier';
+            return 'Randoms';
+        }
+
+        function isUgly(name) { return PET_INTEL.ugly.some(u => u.toLowerCase() === name.toLowerCase()); }
+        function isHighAppeal(name) { return PET_INTEL.highAppeal.some(u => u.toLowerCase() === name.toLowerCase()); }
+        function isManipulated(p) { return p.d <= 3 && p.v > 10; }
+
+        function getPetLabel(p) {
+            // Returns a human-readable label like "NFR Crow", "Neon Bat Dragon", "FR Turtle"
+            let prefix = '';
+            if (p.type === 'mega') {
+                prefix = (p.f_st && p.r_st) ? 'MFR ' : (p.f_st ? 'MF ' : (p.r_st ? 'MR ' : 'Mega '));
+            } else if (p.type === 'neon') {
+                prefix = (p.f_st && p.r_st) ? 'NFR ' : (p.f_st ? 'NF ' : (p.r_st ? 'NR ' : 'Neon '));
+            } else {
+                prefix = (p.f_st && p.r_st) ? 'FR ' : (p.f_st ? 'F ' : (p.r_st ? 'R ' : ''));
+            }
+            return prefix + p.n;
+        }
+
+        // Score a potential target pet (0-10 Trade Quality Score)
+        function scorePotentialTarget(target, offerVal, offerAvgDemand) {
+            let score = 5;
+            const targetVal = calculatePetVal(target, 'value');
+            const targetDemand = target.d;
+            const catLabel = getCatLabel(target);
+            const offerDemandTier = offerAvgDemand >= 7 ? 'high' : offerAvgDemand >= 4 ? 'mid' : 'low';
+            const targetDemandTier = getPetDemandTier(target);
+
+            // Value alignment (±5% = ideal, penalise further gaps)
+            const valGap = (targetVal - offerVal) / offerVal;
+            if (Math.abs(valGap) <= 0.05) score += 1.5;
+            else if (Math.abs(valGap) <= 0.15) score += 1;
+            else if (Math.abs(valGap) <= 0.30) score += 0.5;
+            else score -= 1;
+
+            // Demand score of target
+            if (targetDemand >= 8) score += 2.5;
+            else if (targetDemand >= 6) score += 1.5;
+            else if (targetDemand >= 4) score += 0.5;
+            else score -= 2;
+
+            // Demand tier upgrade bonus
+            if (offerDemandTier === 'low' && targetDemandTier === 'high') score += 1.5;
+            else if (offerDemandTier === 'low' && targetDemandTier === 'mid') score += 0.8;
+            else if (offerDemandTier === 'mid' && targetDemandTier === 'high') score += 1.0;
+            else if (targetDemandTier === 'low') score -= 1.5;
+
+            // Category bonus
+            if (catLabel === 'High Tier') score += 1.5;
+            else if (catLabel === 'Preppy' || catLabel === 'Exotic') score += 1.2;
+            else if (catLabel === 'Classy') score += 0.5;
+            else if (catLabel === 'Randoms') score -= 0.5;
+
+            // Aesthetic bonus/penalty
+            if (isHighAppeal(target.n)) score += 0.8;
+            if (isUgly(target.n)) score -= 2;
+
+            // Manipulation warning
+            if (isManipulated(target)) score -= 3;
+
+            // Trend bonus
+            if (target.vt && target.vt.includes('📈')) score += 0.5;
+            if (target.dt && target.dt.includes('🔥')) score += 0.5;
+            if (target.vt && target.vt.includes('📉')) score -= 0.5;
+            if (target.dt && target.dt.includes('❄️')) score -= 0.5;
+
+            return Math.max(0, Math.min(10, score));
+        }
+
+        function buildReasonText(target, offerVal, offerAvgDemand) {
+            const catLabel = getCatLabel(target);
+            const valGap = ((calculatePetVal(target, 'value') - offerVal) / offerVal * 100).toFixed(0);
+            const parts = [];
+            if (target.d >= 7) parts.push('high demand — gets offers fast');
+            else if (target.d >= 4) parts.push('moderate demand');
+            else parts.push('low demand — hard to move');
+            if (catLabel === 'Preppy' || catLabel === 'Exotic') parts.push(`${catLabel} category — attracts overpays`);
+            else if (catLabel === 'High Tier') parts.push('High Tier — liquid asset');
+            else if (catLabel === 'Randoms') parts.push('randoms category — lower appeal');
+            if (isHighAppeal(target.n)) parts.push('aesthetically loved by community');
+            if (isUgly(target.n)) parts.push('⚠️ low trade appeal');
+            if (isManipulated(target)) parts.push('⚠️ possible value inflation — verify');
+            if (parseFloat(valGap) > 5) parts.push(`${valGap}% value gain`);
+            else if (parseFloat(valGap) < -5) parts.push(`${Math.abs(valGap)}% value loss (demand upgrade)`);
+            return parts.join(' · ');
+        }
+
+        // Smart deterministic bundle builder
+        function buildSmartBundle(inventory, targetVal, mode) {
+            const maxPets = mode === 'velocity' ? 6 : 4;
+            // Sort: highest demand first, then highest value
+            const sorted = [...inventory].sort((a, b) => {
+                const dA = a.type === 'neon' ? (a.nd||a.d) : (a.type === 'mega' ? (a.md||a.d) : a.d);
+                const dB = b.type === 'neon' ? (b.nd||b.d) : (b.type === 'mega' ? (b.md||b.d) : b.d);
+                if (dB !== dA) return dB - dA;
+                return calculatePetVal(b, 'value') - calculatePetVal(a, 'value');
+            });
+            let bundle = [], sum = 0;
+            for (const p of sorted) {
+                if (bundle.length >= maxPets) break;
+                const v = calculatePetVal(p, 'value');
+                if (sum + v <= targetVal * 1.18) {
+                    bundle.push(p);
+                    sum += v;
+                }
+                if (sum >= targetVal * 0.88) break;
+            }
+            return { bundle, sum };
+        }
+
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
             const dreamContainer = document.getElementById('dreamPetContainer');
+            const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText) || 0;
+            const tier = getTierInfo(totalInvVal);
+
+            // Dream Pet mode
             if (state.dreamPet) {
-                dreamContainer.innerHTML = `<div class="dream-active-badge"><span>Target: ${state.dreamPet.n}</span><span style="cursor: pointer;" onclick="clearDreamPet()">✕</span></div>`;
-                const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
+                dreamContainer.innerHTML = `<div class="dream-active-badge"><span>Target: ${state.dreamPet.n}</span><span style="cursor:pointer" onclick="clearDreamPet()">✕</span></div>`;
                 const freshDream = ALL_PETS.find(x => x.n === state.dreamPet.n);
-                const dreamVal = freshDream ? freshDream.v : state.dreamPet.v; 
+                const dreamVal = freshDream ? calculatePetVal({...freshDream, type:'reg', f_st:false, r_st:false}, 'value') : state.dreamPet.v;
                 const pct = Math.min((totalInvVal / dreamVal) * 100, 100).toFixed(1);
-                let suggestions = `<div class="ai-summary"><b>Dream Progress:</b> ${pct}%<div class="dream-progress-bg"><div class="dream-progress-fill" style="width: ${pct}%"></div></div></div>`;
-                let bestCombos = [];
-                const shuffled = [...inventory].sort(() => Math.random() - 0.5);
-                for(let i=0; i<100; i++) {
-                    let combo = []; let sum = 0; const attempt = shuffled.sort(() => Math.random() - 0.5); 
-                    for(let p of attempt) {
-                        let val = calculatePetVal(p, 'value');
-                        if (sum + val <= dreamVal * 1.1) { combo.push(p); sum += val; }
+                let html = `<div class="ai-summary"><b>Dream Progress:</b> ${pct}%<div class="dream-progress-bg"><div class="dream-progress-fill" style="width:${pct}%"></div></div></div>`;
+                // Build deterministic combos by value proximity
+                const candidates = [...inventory].sort((a,b) => calculatePetVal(b,'value') - calculatePetVal(a,'value'));
+                const seen = new Set();
+                let combos = [];
+                for (let start = 0; start < Math.min(candidates.length, 8); start++) {
+                    let combo = [], sum = 0;
+                    for (const p of candidates) {
+                        if (combo.includes(p)) continue;
+                        const v = calculatePetVal(p, 'value');
+                        if (sum + v <= dreamVal * 1.12) { combo.push(p); sum += v; }
+                        if (sum >= dreamVal * 0.85) break;
                     }
-                    if(combo.length > 0) { bestCombos.push({ offer: combo, sum: sum, diff: Math.abs(dreamVal - sum) }); }
+                    const key = combo.map(p=>p.uid).sort().join(',');
+                    if (combo.length > 0 && !seen.has(key)) { seen.add(key); combos.push({ combo, sum, diff: Math.abs(dreamVal - sum) }); }
                 }
-                bestCombos.sort((a,b) => a.diff - b.diff);
-                bestCombos = bestCombos.filter((v,i,a)=>a.findIndex(t=>(t.sum===v.sum))===i).slice(0, 5);
-                box.innerHTML = suggestions + bestCombos.map(r => {
-                    const diffVal = (dreamVal - r.sum).toFixed(2);
-                    return `<div class="ai-suggestion" style="border-left-color: var(--rarity-legendary);">Offer: ${r.offer.map(p => (p.type === 'neon' ? 'Neon ' : (p.type === 'mega' ? 'Mega ' : '')) + p.n).join(' + ')}<br><div class="ai-stats-row"><span class="ai-stat-pill" style="background:#334155; color:white;">Total: ${r.sum.toFixed(2)}</span><span class="ai-stat-pill" style="color: ${diffVal > 0 ? 'var(--lose)' : 'var(--win)'}">Remaining: ${diffVal}</span></div></div>`;
-                }).join('');
+                combos.sort((a,b) => a.diff - b.diff);
+                box.innerHTML = html + (combos.length ? combos.slice(0,5).map(r => {
+                    const diff = (dreamVal - r.sum).toFixed(2);
+                    return `<div class="ai-suggestion" style="border-left-color:var(--rarity-legendary)"><b>Offer:</b> ${r.combo.map(getPetLabel).join(' + ')}<div class="ai-stats-row"><span class="ai-stat-pill" style="background:#334155;color:white">Total: ${r.sum.toFixed(2)}</span><span class="ai-stat-pill" style="color:${parseFloat(diff)>0?'var(--lose)':'var(--win)'}">Remaining: ${parseFloat(diff)>0?diff:'✅ Covered'}</span></div></div>`;
+                }).join('') : '<div class="ai-suggestion">Not enough inventory value to approach dream pet yet.</div>');
                 return;
-            } else { dreamContainer.innerHTML = `<button class="nav-btn" style="width: 100%; font-size: 0.8em; padding: 8px;" onclick="openSearch('dream')">★ Set Dream Pet</button>`; }
-            if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to inventory...</div>`; return; }
-            const shuffled = [...inventory].sort(() => Math.random() - 0.5);
-            const totalInvVal = parseFloat(document.getElementById('invTotalValue').innerText);
-            const remaining = (155.0 - totalInvVal).toFixed(1);
-            let suggestions = `<div class="ai-summary"><b>Progress:</b> You are <b>${remaining} Value</b> away from a Shadow Dragon.</div>`;
+            } else {
+                dreamContainer.innerHTML = `<button class="nav-btn" style="width:100%;font-size:0.8em;padding:8px" onclick="openSearch('dream')">★ Set Dream Pet</button>`;
+            }
+
+            if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate smart trade strategies.</div>`; return; }
+
+            // Progress summary — real tier milestone, not hardcoded Shadow Dragon
+            const tierMilestones = [
+                { val:2, label:'Starter', color:'#94a3b8' }, { val:8, label:'Commons', color:'#81c784' },
+                { val:25, label:'Mid-Tier', color:'#4fc3f7' }, { val:60, label:'High-Tier', color:'#fbbf24' },
+                { val:130, label:'Premium', color:'#f06292' }, { val:300, label:'Top-Tier', color:'#a855f7' }
+            ];
+            const nextMilestone = tierMilestones.find(m => totalInvVal < m.val) || tierMilestones[tierMilestones.length-1];
+            const prevMilestone = tierMilestones[Math.max(0, tierMilestones.indexOf(nextMilestone)-1)];
+            const milePct = nextMilestone === prevMilestone ? 100 : Math.min(100, ((totalInvVal - prevMilestone.val) / (nextMilestone.val - prevMilestone.val) * 100)).toFixed(0);
+
+            // Check for mega project opportunity
+            const nfrGroups = {};
+            inventory.forEach(p => { if (p.type === 'neon' && p.f_st && p.r_st) nfrGroups[p.n] = (nfrGroups[p.n]||0)+1; });
+            const megaProject = Object.entries(nfrGroups).find(([,c]) => c >= 3);
+
+            // Avg demand of inventory
+            const invAvgDem = inventory.reduce((s,p) => s + (p.d||0), 0) / inventory.length;
+            const invDemTier = invAvgDem >= 7 ? 'High' : invAvgDem >= 4 ? 'Mid' : 'Low';
+
+            let html = `<div class="ai-summary">
+                <b>Tier:</b> ${tier.name} • <b>Next:</b> ${nextMilestone.label} <span style="color:var(--subtext);font-size:0.85em">(${milePct}%)</span>
+                <div class="dream-progress-bg"><div class="dream-progress-fill" style="width:${milePct}%;background:${nextMilestone.color}"></div></div>
+                <span style="font-size:0.8em;color:var(--subtext)">Path: ${tier.next}</span>
+            </div>`;
+
+            if (megaProject) {
+                html += `<div class="ai-suggestion" style="border-left-color:#fbbf24">🔥 <b>Mega Project:</b> You have ${megaProject[1]} NFR ${megaProject[0]}s — you need just 1 more to make a MFR. This is the highest-value play available to you right now.</div>`;
+            }
+
+            // Build suggestions — different logic per mode
             let results = [];
-            let usedPetUids = new Set();
-            const findTarget = (val) => {
-                if (state.aiTargetPets.length > 0) return state.aiTargetPets[Math.floor(Math.random() * state.aiTargetPets.length)];
-                let marginMin = state.aiMode === 'velocity' ? 0.80 : 1.01;
-                let marginMax = state.aiMode === 'velocity' ? 1.10 : 1.25;
-                return ALL_PETS.filter(p => p.v > val * marginMin && p.v < val * marginMax).sort((a,b) => b.d - a.d)[0];
-            };
-            for(let i = 0; i < 50 && results.length < state.strategyLimit; i++) {
-                let bundle = []; let available = shuffled.filter(p => !usedPetUids.has(p.uid));
-                if (available.length < 1) break;
-                let limit = (state.aiMode === 'velocity') ? 10 : 4;
-                bundle = available.slice(0, Math.min(available.length, limit));
-                if (bundle.length > 0) {
-                    let bundleVal = bundle.reduce((s, p) => s + calculatePetVal(p, 'value'), 0);
-                    let bundleDem = (bundle.reduce((s, p) => s + p.d, 0) / bundle.length);
-                    let target = findTarget(bundleVal);
-                    if (target) {
-                        bundle.forEach(p => usedPetUids.add(p.uid));
-                        let vDiff = (target.v - bundleVal).toFixed(2);
-                        let dDiff = (target.d - bundleDem).toFixed(1);
-                        let winPct = ((target.v / bundleVal) - 1) * 100;
-                        results.push({ offer: bundle, target: target, vDiff: vDiff, dDiff: dDiff, winPct: winPct.toFixed(1) });
+            const usedUids = new Set();
+
+            if (state.aiMode === 'velocity') {
+                // Velocity: target high demand pets only, accept value loss
+                const pool = [...inventory].sort((a,b)=>calculatePetVal(b,'value')-calculatePetVal(a,'value'));
+                for (let i = 0; i < Math.min(pool.length, 12) && results.length < state.strategyLimit; i++) {
+                    const anchor = pool[i];
+                    if (usedUids.has(anchor.uid)) continue;
+                    const anchorVal = calculatePetVal(anchor, 'value');
+                    // Find high-demand targets slightly above/below value
+                    const targets = ALL_PETS
+                        .filter(t => t.d >= 7 && t.v >= anchorVal * 0.75 && t.v <= anchorVal * 1.20)
+                        .sort((a,b) => b.d - a.d)
+                        .slice(0, 3);
+                    for (const target of targets) {
+                        if (results.length >= state.strategyLimit) break;
+                        const tqs = scorePotentialTarget(target, anchorVal, anchor.d);
+                        const valGap = (target.v - anchorVal).toFixed(2);
+                        const valGapPct = ((target.v - anchorVal) / anchorVal * 100).toFixed(1);
+                        results.push({ offer:[anchor], target, tqs, valGap, valGapPct, reason: buildReasonText(target, anchorVal, anchor.d), single: true });
                     }
+                    usedUids.add(anchor.uid);
+                }
+            } else {
+                // Normal: build smart bundles, target demand-scored pets
+                const maxTargetVal = totalInvVal * 1.25;
+                const candidates = ALL_PETS
+                    .filter(t => {
+                        if (state.aiTargetPets.length > 0) return state.aiTargetPets.some(x=>x.n===t.n);
+                        return t.v >= 1 && t.v <= maxTargetVal * 1.1;
+                    })
+                    .sort((a,b) => scorePotentialTarget(b, totalInvVal * 0.5, invAvgDem) - scorePotentialTarget(a, totalInvVal * 0.5, invAvgDem))
+                    .slice(0, 50);
+
+                for (const target of candidates) {
+                    if (results.length >= state.strategyLimit) break;
+                    const targetVal = calculatePetVal(target, 'value');
+                    const available = inventory.filter(p => !usedUids.has(p.uid));
+                    if (available.length === 0) break;
+                    const { bundle, sum } = buildSmartBundle(available, targetVal, 'normal');
+                    if (bundle.length === 0) continue;
+                    const bundleAvgDem = bundle.reduce((s,p)=>s+(p.d||0),0)/bundle.length;
+                    const tqs = scorePotentialTarget(target, sum, bundleAvgDem);
+                    // Skip bad TQS unless no options
+                    if (tqs < 3 && results.length > 2) continue;
+                    const valGap = (target.v - sum).toFixed(2);
+                    const valGapPct = ((target.v - sum) / sum * 100).toFixed(1);
+                    bundle.forEach(p => usedUids.add(p.uid));
+                    results.push({ offer:bundle, target, tqs, valGap, valGapPct, bundleAvgDem, reason: buildReasonText(target, sum, bundleAvgDem) });
                 }
             }
-            box.innerHTML = suggestions + results.map(r => `<div class="ai-suggestion">Offer: ${r.offer.map(p => (p.type === 'neon' ? 'Neon ' : (p.type === 'mega' ? 'Mega ' : '')) + p.n).join(' + ')}<br>Target: <span class="ai-item-tag" style="background:var(--win)">Normal ${r.target.n}</span><div class="ai-stats-row"><span class="ai-stat-pill pill-win" style="${parseFloat(r.vDiff) < 0 ? 'color:var(--lose); background:rgba(239,68,68,0.1);' : ''}">Profit: ${r.vDiff} (${r.winPct}%)</span><span class="ai-stat-pill pill-dem" style="color:${getDemandColor(parseFloat(r.dDiff) + 5)}">Demand Shift: ${r.dDiff > 0 ? '+' : ''}${r.dDiff}</span></div></div>`).join('');
+
+            if (results.length === 0) {
+                box.innerHTML = html + '<div class="ai-suggestion">No suitable targets found. Try adjusting your inventory or using Velocity Mode.</div>';
+                return;
+            }
+
+            const demTierAdvice = invDemTier === 'Low'
+                ? 'Your inventory has low average demand — prioritise trading into higher-demand pets even at a slight value loss.'
+                : invDemTier === 'High' ? 'Strong demand across your inventory — focus on value gain, you have trading leverage.'
+                : 'Moderate demand. Aim for both value gain AND demand tier improvement where possible.';
+
+            html += `<div style="font-size:0.75em;color:var(--subtext);margin-bottom:12px;padding:8px;background:#0f172a;border-radius:8px;">${demTierAdvice}</div>`;
+
+            results.forEach(r => {
+                const catLabel = getCatLabel(r.target);
+                const catBadge = catLabel === 'High Tier' ? 'badge-hightier' : catLabel === 'Preppy' ? 'badge-preppy' : catLabel === 'Exotic' ? 'badge-exotic' : 'badge-randoms';
+                const tqsCls = r.tqs >= 7 ? 'tqs-high' : r.tqs >= 4 ? 'tqs-mid' : 'tqs-low';
+                const tqsLabel = r.tqs >= 7 ? '🔥 Strong Trade' : r.tqs >= 4 ? '〽️ Decent Trade' : '⚠️ Weak Trade';
+                const targetFull = r.target;
+                const isRising = targetFull.vt && targetFull.vt.includes('📈');
+                const isFalling = targetFull.dt && targetFull.dt.includes('❄️');
+                const ugly = isUgly(r.target.n);
+                const manip = isManipulated(r.target);
+                const valColor = parseFloat(r.valGapPct) >= 0 ? 'var(--win)' : 'var(--lose)';
+
+                html += `<div class="ai-suggestion">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+                        <div>
+                            <span style="font-size:0.85em;color:var(--subtext)">Offer:</span>
+                            <span style="font-weight:800;color:#cbd5e1"> ${r.offer.map(getPetLabel).join(' + ')}</span>
+                            ${r.offer.length >= 4 ? '<span style="font-size:0.7em;color:var(--trap);margin-left:5px">⚠️ large bundle</span>' : ''}
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                        <img src="https://amvgg.com/items/${encodeURIComponent(r.target.n)}.webp" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#0f172a" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                        <span class="ai-item-tag" style="background:${r.tqs>=7?'var(--win)':r.tqs>=4?'#b45309':'#7f1d1d'}">${getPetLabel({...r.target,type:'reg',f_st:false,r_st:false})}</span>
+                        <span class="target-badge ${catBadge}">${catLabel}</span>
+                        ${isRising ? '<span class="target-badge badge-rising">📈 Rising</span>' : ''}
+                        ${isFalling ? '<span class="target-badge badge-falling">❄️ Falling</span>' : ''}
+                        ${ugly ? '<span class="target-badge badge-ugly">👎 Low Appeal</span>' : ''}
+                        ${manip ? '<span class="target-badge badge-manip">⚠️ Check Value</span>' : ''}
+                    </div>
+                    <div style="font-size:0.75em;color:#94a3b8;margin-bottom:6px">${r.reason}</div>
+                    <div class="ai-stats-row">
+                        <span class="ai-stat-pill tqs-${r.tqs>=7?'high':r.tqs>=4?'mid':'low'}">${tqsLabel} (${r.tqs.toFixed(1)}/10)</span>
+                        <span class="ai-stat-pill" style="color:${valColor};background:rgba(255,255,255,0.05)">Value: ${parseFloat(r.valGapPct)>0?'+':''}${r.valGapPct}%</span>
+                        <span class="ai-stat-pill pill-dem">Dem: ${r.target.d}</span>
+                    </div>
+                </div>`;
+            });
+
+            box.innerHTML = html;
         }
 
         function renderSide(s) {
@@ -2341,6 +2766,198 @@
                 if (catA !== catB) return catB - catA;
                 return 0;
             });
+        }
+
+
+        // ================================================================
+        // TRADE ADVISOR — Full smart popup
+        // ================================================================
+        let advisorOfferPets = [];
+        let advisorCharts = {};
+
+        function openTradeAdvisor() {
+            document.getElementById('advisorOverlay').style.display = 'flex';
+            advisorOfferPets = [];
+            renderAdvisorOffer();
+            renderAdvisorInvGrid();
+            refreshAdvisorTargets();
+        }
+
+        function closeTradeAdvisor() {
+            document.getElementById('advisorOverlay').style.display = 'none';
+        }
+
+        function renderAdvisorInvGrid() {
+            const grid = document.getElementById('advisorInvGrid');
+            if (state.inv.length === 0) {
+                grid.innerHTML = '<div style="text-align:center;color:var(--subtext);font-size:0.8em;grid-column:1/-1;padding:20px">Add pets to your inventory first.</div>';
+                return;
+            }
+            // Group by name+type+f+r, show stack count
+            const groups = {};
+            state.inv.forEach(p => {
+                const key = `${p.n}|${p.type}|${p.f_st}|${p.r_st}`;
+                if (!groups[key]) groups[key] = { pet: p, count: 0 };
+                groups[key].count++;
+            });
+            grid.innerHTML = Object.values(groups).sort((a,b) => calculatePetVal(b.pet,'value') - calculatePetVal(a.pet,'value')).map(({pet:p, count}) => {
+                const val = calculatePetVal(p, 'value');
+                const label = getPetLabel(p);
+                return `<div class="advisor-inv-chip" onclick="advisorAddPet('${p.n.replace(/'/g,"\'")}','${p.type}',${p.f_st},${p.r_st})" title="Click to add to offer">
+                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    ${count > 1 ? `<div style="position:absolute;top:3px;right:3px;background:var(--accent);color:white;border-radius:5px;font-size:9px;padding:1px 4px;font-weight:900">x${count}</div>` : ''}
+                    <div class="inv-chip-name">${label.length > 14 ? label.substring(0,12)+'…' : label}</div>
+                    <div class="inv-chip-val">${val.toFixed(2)}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function advisorAddPet(name, type, f_st, r_st) {
+            if (advisorOfferPets.length >= 6) return;
+            const pet = ALL_PETS.find(x => x.n === name);
+            if (!pet) return;
+            advisorOfferPets.push({ ...pet, type: type || 'reg', f_st: !!f_st, r_st: !!r_st, uid: Math.random() });
+            renderAdvisorOffer();
+            refreshAdvisorTargets();
+        }
+
+        function advisorRemovePet(uid) {
+            advisorOfferPets = advisorOfferPets.filter(p => p.uid !== uid);
+            renderAdvisorOffer();
+            refreshAdvisorTargets();
+        }
+
+        function renderAdvisorOffer() {
+            const slotsEl = document.getElementById('advisorOfferSlots');
+            const statsEl = document.getElementById('advisorOfferStats');
+            let html = '';
+            advisorOfferPets.forEach(p => {
+                const val = calculatePetVal(p, 'value');
+                const label = getPetLabel(p);
+                html += `<div class="advisor-pet-chip" onclick="advisorRemovePet(${p.uid})" title="Click to remove">
+                    <div class="chip-remove">✕</div>
+                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    <div class="chip-name">${label.length > 12 ? label.substring(0,11)+'…' : label}</div>
+                    <div class="chip-val">${val.toFixed(2)}</div>
+                </div>`;
+            });
+            // Empty slots
+            for (let i = advisorOfferPets.length; i < 6; i++) {
+                html += `<div class="advisor-add-slot" onclick="advisorFocusInv()">+</div>`;
+            }
+            slotsEl.innerHTML = html;
+
+            if (advisorOfferPets.length === 0) {
+                statsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);font-size:0.82em">Add pets from below to build your offer</div>';
+                return;
+            }
+            const totalVal = advisorOfferPets.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
+            const avgDem = advisorOfferPets.reduce((s,p) => s + (p.d||0), 0) / advisorOfferPets.length;
+            const demTier = avgDem >= 7 ? '<span style="color:#34d399">High</span>' : avgDem >= 4 ? '<span style="color:#fbbf24">Mid</span>' : '<span style="color:#f87171">Low</span>';
+            const bundleWarn = advisorOfferPets.length > 4 ? '<div style="color:var(--trap);font-size:0.8em;margin-top:4px">⚠️ 5+ pet bundles are hard to accept</div>' : '';
+            statsEl.innerHTML = `
+                <div class="advisor-stat-row"><span class="advisor-stat-label">Total Value</span><span class="advisor-stat-val">${totalVal.toFixed(2)}</span></div>
+                <div class="advisor-stat-row"><span class="advisor-stat-label">Avg Demand</span><span class="advisor-stat-val">${avgDem.toFixed(1)} (${demTier} tier)</span></div>
+                <div class="advisor-stat-row"><span class="advisor-stat-label">Pets in Offer</span><span class="advisor-stat-val">${advisorOfferPets.length}/6</span></div>
+                ${bundleWarn}`;
+        }
+
+        function advisorFocusInv() {
+            document.getElementById('advisorInvGrid').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function refreshAdvisorTargets() {
+            const resultsEl = document.getElementById('advisorResults');
+            const insightEl = document.getElementById('advisorInsightBar');
+
+            if (advisorOfferPets.length === 0) {
+                resultsEl.innerHTML = '<div class="advisor-empty">Add pets from your inventory to your offer on the left, then smart targets will appear here.</div>';
+                insightEl.textContent = 'Build your offer to see tailored trade recommendations.';
+                return;
+            }
+
+            const offerVal  = advisorOfferPets.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
+            const offerAvgD = advisorOfferPets.reduce((s,p) => s + (p.d||0), 0) / advisorOfferPets.length;
+            const demandMin = parseFloat(document.getElementById('advisorDemandFilter').value) || 0;
+            const catFilter = document.getElementById('advisorCatFilter').value;
+            const window    = parseFloat(document.getElementById('advisorWindowFilter').value) || 0.20;
+            const sortBy    = document.getElementById('advisorSortFilter').value;
+
+            // Filter candidates
+            let candidates = ALL_PETS.filter(t => {
+                const tVal = calculatePetVal({...t, type:'reg', f_st:false, r_st:false}, 'value');
+                if (tVal < offerVal * (1 - window) || tVal > offerVal * (1 + window)) return false;
+                if (t.d < demandMin) return false;
+                if (catFilter !== 'all' && !(t.cat||'').toLowerCase().includes(catFilter)) return false;
+                // Exclude pets already in offer
+                if (advisorOfferPets.some(p => p.n === t.n)) return false;
+                return true;
+            });
+
+            // Score all candidates
+            candidates = candidates.map(t => ({
+                pet: t,
+                tqs: scorePotentialTarget(t, offerVal, offerAvgD),
+                valGap: (calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value') - offerVal),
+                valGapPct: ((calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value') - offerVal) / offerVal * 100)
+            }));
+
+            // Sort
+            if (sortBy === 'tqs')    candidates.sort((a,b) => b.tqs - a.tqs);
+            else if (sortBy === 'demand') candidates.sort((a,b) => b.pet.d - a.pet.d);
+            else if (sortBy === 'value')  candidates.sort((a,b) => b.valGapPct - a.valGapPct);
+
+            candidates = candidates.slice(0, 20);
+
+            if (candidates.length === 0) {
+                resultsEl.innerHTML = '<div class="advisor-empty">No pets match your current filters. Try widening the value window or lowering the demand filter.</div>';
+                return;
+            }
+
+            const demTierLabel = offerAvgD >= 7 ? 'High' : offerAvgD >= 4 ? 'Mid' : 'Low';
+            resultsEl.innerHTML = candidates.map(({pet: t, tqs, valGapPct}) => {
+                const catLabel = getCatLabel(t);
+                const catBadge = catLabel === 'High Tier' ? 'badge-hightier' : catLabel === 'Preppy' ? 'badge-preppy' : catLabel === 'Exotic' ? 'badge-exotic' : 'badge-randoms';
+                const tqsCls = tqs >= 7 ? 'high' : tqs >= 4 ? 'mid' : 'low';
+                const tqsLabel = tqs >= 7 ? '🔥 Strong Trade' : tqs >= 4 ? '〽️ Decent Trade' : '⚠️ Weak Trade';
+                const ugly = isUgly(t.n), manip = isManipulated(t);
+                const isRising = t.vt && t.vt.includes('📈'), isFalling = t.dt && t.dt.includes('❄️');
+                const valColor = valGapPct >= 0 ? 'var(--win)' : 'var(--lose)';
+                const reason = buildReasonText(t, offerVal, offerAvgD);
+                const tVal = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
+
+                return `<div class="target-card">
+                    <img src="https://amvgg.com/items/${encodeURIComponent(t.n)}.webp" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    <div class="target-card-body">
+                        <div class="target-name">${t.n}</div>
+                        <div class="target-badges">
+                            <span class="target-badge ${catBadge}">${catLabel}</span>
+                            ${isRising ? '<span class="target-badge badge-rising">📈 Rising</span>' : ''}
+                            ${isFalling ? '<span class="target-badge badge-falling">❄️ Falling</span>' : ''}
+                            ${ugly ? '<span class="target-badge badge-ugly">👎 Low Appeal</span>' : ''}
+                            ${manip ? '<span class="target-badge badge-manip">⚠️ Check Value</span>' : ''}
+                        </div>
+                        <div class="target-reason">${reason}</div>
+                        <div class="target-meta">
+                            <span class="tqs-badge tqs-${tqsCls}">${tqsLabel} ${tqs.toFixed(1)}/10</span>
+                            <span class="target-val-gap" style="color:${valColor}">${valGapPct>=0?'+':''}${valGapPct.toFixed(1)}%</span>
+                            <span class="target-demand-pill">Dem: ${t.d}</span>
+                            <span class="target-val-gap">Val: ${tVal.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Insight bar
+            const topCat = candidates.slice(0,5).reduce((acc, {pet}) => {
+                const c = getCatLabel(pet); acc[c] = (acc[c]||0)+1; return acc;
+            }, {});
+            const bestCat = Object.entries(topCat).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'mixed';
+            const demAdvice = offerAvgD < 4
+                ? 'Your offer has low average demand. Prioritise trading into higher-demand pets — even a slight value loss is worth it to gain liquidity.'
+                : offerAvgD >= 7 ? 'Strong demand offer. You have leverage — aim for value gain + category upgrade.'
+                : 'Moderate demand offer. Look for targets with demand 6+ to improve your trading velocity.';
+            insightEl.innerHTML = `<strong>Your offer: ${offerVal.toFixed(2)} value · ${demTierLabel} demand (${offerAvgD.toFixed(1)})</strong><br>${demAdvice} Best target category in range: <strong>${bestCat}</strong>.`;
         }
 
         loadPetData();
