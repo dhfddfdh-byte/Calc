@@ -921,8 +921,7 @@
         <div id="vDiff" class="v-diff">Difference: 0.000 (0.0%)</div>
         <div id="vSub" class="v-sub">Add pets to calculate trade results</div>
         <div class="switches">
-            <button class="sw-btn active" id="btnFrost" onclick="setMode('frost')">Frost</button>
-            <button class="sw-btn" id="btnValue" onclick="setMode('value')">Value</button>
+            <button class="sw-btn active" id="btnValue" onclick="setMode('value')">Value</button>
             <button class="save-trade-btn" onclick="logCurrentTrade()">Save to History</button>
         </div>
     </div>
@@ -934,7 +933,7 @@
         
         let ALL_PETS = [];
         let HISTORY_DATA = []; 
-        let state = { mode: 'frost', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
+        let state = { mode: 'value', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
         let history = []; 
         let tradeLog = []; 
         let selectedPetForQty = null; 
@@ -1794,8 +1793,8 @@
             const mode = searchState.sortMode;
             if (mode !== 'default') {
                 matches.sort((a, b) => {
-                    if (mode === 'valHigh') return (state.mode === 'frost' ? b.f : b.v) - (state.mode === 'frost' ? a.f : a.v);
-                    if (mode === 'valLow') return (state.mode === 'frost' ? a.f : a.v) - (state.mode === 'frost' ? b.f : b.v);
+                    if (mode === 'valHigh') return b.v - a.v;
+                    if (mode === 'valLow') return a.v - b.v;
                     if (mode === 'demHigh') return b.d - a.d;
                     if (mode === 'demLow') return a.d - b.d;
                     return 0;
@@ -1837,7 +1836,7 @@
 
             resultsEl.innerHTML = chunk.map(p => {
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
-                const val = state.mode === 'frost' ? p.f : p.v; 
+                const val = calculatePetVal(p, 'value'); 
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(p.d);
                 return `
@@ -2056,25 +2055,25 @@
         }
 
         function calculatePetVal(p, mode) {
+            // Always uses value mode - frost values removed
             let val = 0;
-            if (mode === 'frost') {
-                if (p.type === 'neon') val = p.nfr_f || (p.f * 3);
-                else if (p.type === 'mega') val = p.mfr_f || (p.f * 12);
-                else val = p.f;
-                if (p.f_st) val += 0.01; if (p.r_st) val += 0.01;
+            if (p.type === 'neon') {
+                if (p.f_st && p.r_st) val = p.nfr_v || p.n_v || p.v;
+                else if (p.f_st) val = p.n_f_v || p.n_v || p.v;
+                else if (p.r_st) val = p.n_r_v || p.n_v || p.v;
+                else val = p.n_v || p.v;
+            } else if (p.type === 'mega') {
+                if (p.f_st && p.r_st) val = p.mfr_v || p.m_v || p.v;
+                else if (p.f_st) val = p.m_f_v || p.m_v || p.v;
+                else if (p.r_st) val = p.m_r_v || p.m_v || p.v;
+                else val = p.m_v || p.v;
             } else {
-                if (p.type === 'neon') {
-                    if (p.f_st && p.r_st) val = p.nfr_v; 
-                    else if (p.f_st) val = p.n_f_v; else if (p.r_st) val = p.n_r_v; else val = p.n_v;                    
-                } else if (p.type === 'mega') {
-                    if (p.f_st && p.r_st) val = p.mfr_v; 
-                    else if (p.f_st) val = p.m_f_v; else if (p.r_st) val = p.m_r_v; else val = p.m_v;                    
-                } else {
-                    if (p.f_st && p.r_st) val = p.fr_v;  
-                    else if (p.f_st) val = p.f_v; else if (p.r_st) val = p.r_v; else val = p.v;                      
-                }
+                if (p.f_st && p.r_st) val = p.fr_v || p.v;
+                else if (p.f_st) val = p.f_v || p.v;
+                else if (p.r_st) val = p.r_v || p.v;
+                else val = p.v;
             }
-            return val;
+            return val || 0;
         }
 
         function renderInventory() {
@@ -2183,30 +2182,94 @@
 
         // ================================================================
         // PET INTELLIGENCE DATABASE
+        // Only HTT (Hard To Trade) list is hardcoded here.
+        // Everything else (preppy, high tier, exotic) is read
+        // dynamically from the pet's cat field.
         // ================================================================
-        const PET_INTEL = {
-            // Pets the community considers ugly/undesirable at their tier
-            ugly: ['Gold Griffin','Robo Dog','Metal Ox','Baku','Karate Gorilla','Chef Gorilla',
-                   'Toy Monkey','El Gato','Drill Gorilla','Sloth','Rock','Stegosaurus'],
-            // Preppy-adjacent pets that punch above their value due to aesthetics
-            highAppeal: ['Bat Dragon','Crow','Parrot','Owl','Giraffe','Shadow Dragon','Frost Dragon',
-                         'Dango Penguins','Cow','Unicorn','Flamingo','Hedgehog','Dodo','Bunny Swirl',
-                         'African Wild Dog','Balloon Unicorn','Diamond Butterfly','Orchid Butterfly',
-                         'Candyfloss Chick','Mini Pig','Peppermint Penguin','Strawberry Shortcake Bat Dragon',
-                         'Chocolate Chip Bat Dragon','Goose','Siamese Cat','Munchkin Cat','Alley Cat'],
-            // Pets likely to have manipulated/inflated values (high val, low demand)
-            manipWatchlist: ['Chef Gorilla','Karate Gorilla','Mega Field Mouse'],
-            // Known limited/retired pets that appreciate over time  
-            limited: ['Frost Dragon','Shadow Dragon','Bat Dragon','Giraffe','Crow','Parrot','Owl',
-                      'Evil Unicorn','Hedgehog','Arctic Reindeer','Turtle','Kangaroo'],
-            // Seasonal pets
-            seasonal: {
-                halloween: ['Bat Dragon','Evil Unicorn','Zombie Buffalo','Ghost Bunny','Cerberus','Vampire Dragon'],
-                christmas: ['Frost Dragon','Peppermint Penguin','Arctic Reindeer','Christmas Pudding Pup'],
-                valentines: ['Cupid Dragon','Pink Cat','Rose Dragon'],
-                easter: ['Bunny Swirl','Spring Bunny']
+        const HTT_PETS = new Set([
+            // Lunar / Ox category - consistently HTT across all sources
+            'Metal Ox','Lunar Ox','Musk Ox','Ox',
+            // Minion / Zodiac - bottom of desirability
+            'Zodiac Minion Chick','Minion Chick',
+            // Gorillas - fairground pets, chef/karate especially inflated
+            'Chef Gorilla','Karate Gorilla','Drill Gorilla',
+            'Gorilla','Capuchin Monkey','Gibbon',
+            // Lunar Tigers - very low demand
+            'Luna Tiger','Lunar Tiger','Lunar Snow Leopard','Luna Moonbear',
+            // Golden/Diamond grind pets - overpopulated, low real demand
+            'Golden Dragon','Diamond Dragon',
+            'Golden Griffin','Diamond Griffin',
+            'Golden Unicorn','Diamond Unicorn',
+            'Golden Ladybug','Diamond Ladybug',
+            'Golden Taurus Beetle',
+            // Shop/Robux pets that everyone has
+            'Kitsune','Robo Dog','Cerberus','Capricorn',
+            // Old pets with ugly/boring designs
+            'Wild Boar','Camel','Donkey','Stegosaurus',
+            'Musk Ox','Phou Deer',
+            // Other commonly cited HTT
+            'Chimera','Red Dragon','Mummy Cat',
+            'White Mummy Cat','Black Mummy Cat',
+            'Persian Cat','Dracula Parrot',
+            'Toy Monkey','Albino Monkey',
+            'Ancient Dragon','Guardian Lion',
+            'Baku','Axolotl','Weevil',
+            'Griffin','Snow Owl',
+            'T-Rex'
+        ]);
+
+        function isHTT(name) {
+            return HTT_PETS.has(name);
+        }
+
+        // Algorithmic manipulation detection using HISTORY_DATA
+        // A pet is suspicious if:
+        // 1. Its value rose significantly (>25%) across the dataset
+        // 2. Its demand was ALREADY low before the rise and stayed low throughout
+        // (demand following value rise = organic; demand flat/low before+after = suspicious)
+        function getManipulationFlag(petName) {
+            if (!HISTORY_DATA || HISTORY_DATA.length === 0) return null;
+            const history = HISTORY_DATA.filter(p =>
+                (p.name || p['pet name'] || '').toLowerCase().trim() === petName.toLowerCase().trim()
+            );
+            if (history.length < 5) return null; // need enough data
+
+            const values  = history.map(p => parseFloat(p.v) || 0).filter(v => v > 0);
+            const demands = history.map(p => parseFloat(p.d) || 0).filter(d => d > 0);
+            if (values.length < 5 || demands.length < 5) return null;
+
+            const firstVal  = values[0];
+            const lastVal   = values[values.length - 1];
+            const valueRise = ((lastVal - firstVal) / firstVal) * 100;
+
+            // Only flag if value rose significantly
+            if (valueRise < 25) return null;
+
+            // Check demand throughout — was it low BEFORE the rise started?
+            const earlyDemands = demands.slice(0, Math.floor(demands.length * 0.4));
+            const lateDemands  = demands.slice(Math.floor(demands.length * 0.6));
+            const earlyAvgDem  = earlyDemands.reduce((a,b)=>a+b,0) / earlyDemands.length;
+            const lateAvgDem   = lateDemands.reduce((a,b)=>a+b,0) / lateDemands.length;
+            const overallAvgDem = demands.reduce((a,b)=>a+b,0) / demands.length;
+
+            // Suspicious: demand was low before AND stayed low despite value rising
+            if (earlyAvgDem <= 4 && overallAvgDem <= 5) {
+                // Calculate rough day span if timestamps available
+                const timestamps = history.map(p => p.timestamp || p.time || '').filter(Boolean);
+                let dayInfo = '';
+                if (timestamps.length >= 2) {
+                    const parseTS = s => { const d = new Date(s); return isNaN(d) ? null : d; };
+                    const t0 = parseTS(timestamps[0]);
+                    const t1 = parseTS(timestamps[timestamps.length-1]);
+                    if (t0 && t1) {
+                        const days = Math.round(Math.abs(t1-t0) / 86400000);
+                        if (days > 0) dayInfo = ` in ~${days} days`;
+                    }
+                }
+                return `Value rose +${valueRise.toFixed(0)}%${dayInfo} while demand stayed low (avg ${overallAvgDem.toFixed(1)}) — may be manipulated, verify before trading`;
             }
-        };
+            return null;
+        }
 
         // Tier ladder for trade-up advice
         const TIER_LADDER = [
@@ -2240,9 +2303,6 @@
             return 'Randoms';
         }
 
-        function isUgly(name) { return PET_INTEL.ugly.some(u => u.toLowerCase() === name.toLowerCase()); }
-        function isHighAppeal(name) { return PET_INTEL.highAppeal.some(u => u.toLowerCase() === name.toLowerCase()); }
-        function isManipulated(p) { return p.d <= 3 && p.v > 10; }
 
         function getPetLabel(p) {
             // Returns a human-readable label like "NFR Crow", "Neon Bat Dragon", "FR Turtle"
@@ -2258,6 +2318,7 @@
         }
 
         // Score a potential target pet (0-10 Trade Quality Score)
+        // Uses cat field dynamically - no hardcoded appeal lists
         function scorePotentialTarget(target, offerVal, offerAvgDemand) {
             let score = 5;
             const targetVal = calculatePetVal(target, 'value');
@@ -2266,14 +2327,14 @@
             const offerDemandTier = offerAvgDemand >= 7 ? 'high' : offerAvgDemand >= 4 ? 'mid' : 'low';
             const targetDemandTier = getPetDemandTier(target);
 
-            // Value alignment (±5% = ideal, penalise further gaps)
+            // Value alignment
             const valGap = (targetVal - offerVal) / offerVal;
             if (Math.abs(valGap) <= 0.05) score += 1.5;
             else if (Math.abs(valGap) <= 0.15) score += 1;
             else if (Math.abs(valGap) <= 0.30) score += 0.5;
             else score -= 1;
 
-            // Demand score of target
+            // Demand score
             if (targetDemand >= 8) score += 2.5;
             else if (targetDemand >= 6) score += 1.5;
             else if (targetDemand >= 4) score += 0.5;
@@ -2285,20 +2346,22 @@
             else if (offerDemandTier === 'mid' && targetDemandTier === 'high') score += 1.0;
             else if (targetDemandTier === 'low') score -= 1.5;
 
-            // Category bonus
-            if (catLabel === 'High Tier') score += 1.5;
-            else if (catLabel === 'Preppy' || catLabel === 'Exotic') score += 1.2;
-            else if (catLabel === 'Classy') score += 0.5;
-            else if (catLabel === 'Randoms') score -= 0.5;
+            // Category score — fully dynamic from cat field
+            if (catLabel === 'High Tier') score += 1.8;
+            else if (catLabel === 'Preppy') score += 1.5;   // preppy attracts overpays
+            else if (catLabel === 'Exotic') score += 1.3;
+            else if (catLabel === 'Classy') score += 0.7;
+            else if (catLabel === 'Mid Tier') score += 0.3;
+            else if (catLabel === 'Randoms') score -= 0.5;  // randoms need overpay
 
-            // Aesthetic bonus/penalty
-            if (isHighAppeal(target.n)) score += 0.8;
-            if (isUgly(target.n)) score -= 2;
+            // HTT penalty (community-verified hard to trade list)
+            if (isHTT(target.n)) score -= 2.5;
 
-            // Manipulation warning
-            if (isManipulated(target)) score -= 3;
+            // Algorithmic manipulation flag (score penalty if suspicious)
+            const manipFlag = getManipulationFlag(target.n);
+            if (manipFlag) score -= 2;
 
-            // Trend bonus
+            // Trend signals from data
             if (target.vt && target.vt.includes('📈')) score += 0.5;
             if (target.dt && target.dt.includes('🔥')) score += 0.5;
             if (target.vt && target.vt.includes('📉')) score -= 0.5;
@@ -2311,17 +2374,25 @@
             const catLabel = getCatLabel(target);
             const valGap = ((calculatePetVal(target, 'value') - offerVal) / offerVal * 100).toFixed(0);
             const parts = [];
-            if (target.d >= 7) parts.push('high demand — gets offers fast');
+            // Demand assessment
+            if (target.d >= 8) parts.push('very high demand — attracts lots of offers');
+            else if (target.d >= 6) parts.push('high demand — gets offers fast');
             else if (target.d >= 4) parts.push('moderate demand');
-            else parts.push('low demand — hard to move');
-            if (catLabel === 'Preppy' || catLabel === 'Exotic') parts.push(`${catLabel} category — attracts overpays`);
-            else if (catLabel === 'High Tier') parts.push('High Tier — liquid asset');
-            else if (catLabel === 'Randoms') parts.push('randoms category — lower appeal');
-            if (isHighAppeal(target.n)) parts.push('aesthetically loved by community');
-            if (isUgly(target.n)) parts.push('⚠️ low trade appeal');
-            if (isManipulated(target)) parts.push('⚠️ possible value inflation — verify');
-            if (parseFloat(valGap) > 5) parts.push(`${valGap}% value gain`);
-            else if (parseFloat(valGap) < -5) parts.push(`${Math.abs(valGap)}% value loss (demand upgrade)`);
+            else parts.push('low demand — expect to wait');
+            // Category insight — read from cat field, not hardcoded lists
+            if (catLabel === 'Preppy') parts.push('Preppy — community often overpays for these');
+            else if (catLabel === 'High Tier') parts.push('High Tier — liquid, always tradeable');
+            else if (catLabel === 'Exotic') parts.push('Exotic — niche but strong demand');
+            else if (catLabel === 'Classy') parts.push('Classy category');
+            else if (catLabel === 'Randoms') parts.push('Randoms — typically needs overpay to move');
+            // HTT warning
+            if (isHTT(target.n)) parts.push('⚠️ community-flagged HTT — hard to re-trade');
+            // Algorithmic manipulation flag
+            const manipFlag = getManipulationFlag(target.n);
+            if (manipFlag) parts.push(`⚠️ ${manipFlag}`);
+            // Value gap
+            if (parseFloat(valGap) > 5) parts.push(`+${valGap}% value gain`);
+            else if (parseFloat(valGap) < -5) parts.push(`${Math.abs(valGap)}% value loss (buying demand/liquidity)`);
             return parts.join(' · ');
         }
 
@@ -2491,8 +2562,8 @@
                 const targetFull = r.target;
                 const isRising = targetFull.vt && targetFull.vt.includes('📈');
                 const isFalling = targetFull.dt && targetFull.dt.includes('❄️');
-                const ugly = isUgly(r.target.n);
-                const manip = isManipulated(r.target);
+                const ugly = isHTT(r.target.n);
+                const manip = !!getManipulationFlag(r.target.n);
                 const valColor = parseFloat(r.valGapPct) >= 0 ? 'var(--win)' : 'var(--lose)';
 
                 html += `<div class="ai-suggestion">
@@ -2509,8 +2580,8 @@
                         <span class="target-badge ${catBadge}">${catLabel}</span>
                         ${isRising ? '<span class="target-badge badge-rising">📈 Rising</span>' : ''}
                         ${isFalling ? '<span class="target-badge badge-falling">❄️ Falling</span>' : ''}
-                        ${ugly ? '<span class="target-badge badge-ugly">👎 Low Appeal</span>' : ''}
-                        ${manip ? '<span class="target-badge badge-manip">⚠️ Check Value</span>' : ''}
+                        ${ugly ? '<span class="target-badge badge-ugly">⚠️ HTT</span>' : ''}
+                        ${manip ? '<span class="target-badge badge-manip">📊 Value Spike</span>' : ''}
                     </div>
                     <div style="font-size:0.75em;color:#94a3b8;margin-bottom:6px">${r.reason}</div>
                     <div class="ai-stats-row">
@@ -2595,7 +2666,7 @@
         }
 
         function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
-        function setMode(m) { state.mode = m; document.getElementById('btnFrost').classList.toggle('active', m === 'frost'); document.getElementById('btnValue').classList.toggle('active', m === 'value'); render(); }
+        function setMode(m) { state.mode = 'value'; document.getElementById('btnValue').classList.add('active'); render(); }
         function tog(s, uid, type) {
             pushState(); const p = state[s].find(x => x.uid === uid);
             if (!p) return;
@@ -2920,7 +2991,7 @@
                 const catBadge = catLabel === 'High Tier' ? 'badge-hightier' : catLabel === 'Preppy' ? 'badge-preppy' : catLabel === 'Exotic' ? 'badge-exotic' : 'badge-randoms';
                 const tqsCls = tqs >= 7 ? 'high' : tqs >= 4 ? 'mid' : 'low';
                 const tqsLabel = tqs >= 7 ? '🔥 Strong Trade' : tqs >= 4 ? '〽️ Decent Trade' : '⚠️ Weak Trade';
-                const ugly = isUgly(t.n), manip = isManipulated(t);
+                const ugly = isHTT(t.n), manip = !!getManipulationFlag(t.n);
                 const isRising = t.vt && t.vt.includes('📈'), isFalling = t.dt && t.dt.includes('❄️');
                 const valColor = valGapPct >= 0 ? 'var(--win)' : 'var(--lose)';
                 const reason = buildReasonText(t, offerVal, offerAvgD);
@@ -2934,8 +3005,8 @@
                             <span class="target-badge ${catBadge}">${catLabel}</span>
                             ${isRising ? '<span class="target-badge badge-rising">📈 Rising</span>' : ''}
                             ${isFalling ? '<span class="target-badge badge-falling">❄️ Falling</span>' : ''}
-                            ${ugly ? '<span class="target-badge badge-ugly">👎 Low Appeal</span>' : ''}
-                            ${manip ? '<span class="target-badge badge-manip">⚠️ Check Value</span>' : ''}
+                            ${ugly ? '<span class="target-badge badge-ugly">⚠️ HTT</span>' : ''}
+                            ${manip ? '<span class="target-badge badge-manip">📊 Value Spike</span>' : ''}
                         </div>
                         <div class="target-reason">${reason}</div>
                         <div class="target-meta">
