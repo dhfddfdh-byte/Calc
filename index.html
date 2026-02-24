@@ -1120,12 +1120,54 @@
         }).filter(row => row.name || row['pet name']); // Support both column names
         
         console.log("✅ History loaded successfully:", HISTORY_DATA.length, "records");
+        buildManipCache(); // pre-compute once, not on every render
         
     } catch (e) { 
         console.error("❌ History fetch failed:", e);
         HISTORY_DATA = [];
     }
 }
+
+        // Pre-computed manipulation cache — built once, looked up instantly
+        const manipCache = new Map();
+        function buildManipCache() {
+            manipCache.clear();
+            // Group history by pet name
+            const byPet = {};
+            HISTORY_DATA.forEach(p => {
+                const name = (p.name || p['pet name'] || '').toLowerCase().trim();
+                if (!name) return;
+                if (!byPet[name]) byPet[name] = [];
+                byPet[name].push(p);
+            });
+            Object.entries(byPet).forEach(([name, records]) => {
+                if (records.length < 5) return;
+                const values  = records.map(p => parseFloat(p.v) || 0).filter(v => v > 0);
+                const demands = records.map(p => parseFloat(p.d) || 0).filter(d => d > 0);
+                if (values.length < 5 || demands.length < 5) return;
+                const firstVal  = values[0];
+                const lastVal   = values[values.length - 1];
+                const valueRise = ((lastVal - firstVal) / firstVal) * 100;
+                if (valueRise < 25) return;
+                const earlyDemands  = demands.slice(0, Math.floor(demands.length * 0.4));
+                const overallAvgDem = demands.reduce((a,b)=>a+b,0) / demands.length;
+                const earlyAvgDem   = earlyDemands.reduce((a,b)=>a+b,0) / earlyDemands.length;
+                if (earlyAvgDem <= 4 && overallAvgDem <= 5) {
+                    // Calculate day span
+                    let dayInfo = '';
+                    const timestamps = records.map(p => p.timestamp || p.time || '').filter(Boolean);
+                    if (timestamps.length >= 2) {
+                        const t0 = new Date(timestamps[0]), t1 = new Date(timestamps[timestamps.length-1]);
+                        if (!isNaN(t0) && !isNaN(t1)) {
+                            const days = Math.round(Math.abs(t1-t0)/86400000);
+                            if (days > 0) dayInfo = ` in ~${days} days`;
+                        }
+                    }
+                    manipCache.set(name, `Value rose +${valueRise.toFixed(0)}%${dayInfo} while demand stayed low (avg ${overallAvgDem.toFixed(1)}) — may be manipulated, verify before trading`);
+                }
+            });
+            console.log(`🔍 Manipulation cache built: ${manipCache.size} flagged pets`);
+        }
         function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
         async function openGraph(petData) {
     await fetchHistory();
@@ -2222,53 +2264,9 @@
             return HTT_PETS.has(name);
         }
 
-        // Algorithmic manipulation detection using HISTORY_DATA
-        // A pet is suspicious if:
-        // 1. Its value rose significantly (>25%) across the dataset
-        // 2. Its demand was ALREADY low before the rise and stayed low throughout
-        // (demand following value rise = organic; demand flat/low before+after = suspicious)
+        // O(1) lookup — cache is built once when history loads
         function getManipulationFlag(petName) {
-            if (!HISTORY_DATA || HISTORY_DATA.length === 0) return null;
-            const history = HISTORY_DATA.filter(p =>
-                (p.name || p['pet name'] || '').toLowerCase().trim() === petName.toLowerCase().trim()
-            );
-            if (history.length < 5) return null; // need enough data
-
-            const values  = history.map(p => parseFloat(p.v) || 0).filter(v => v > 0);
-            const demands = history.map(p => parseFloat(p.d) || 0).filter(d => d > 0);
-            if (values.length < 5 || demands.length < 5) return null;
-
-            const firstVal  = values[0];
-            const lastVal   = values[values.length - 1];
-            const valueRise = ((lastVal - firstVal) / firstVal) * 100;
-
-            // Only flag if value rose significantly
-            if (valueRise < 25) return null;
-
-            // Check demand throughout — was it low BEFORE the rise started?
-            const earlyDemands = demands.slice(0, Math.floor(demands.length * 0.4));
-            const lateDemands  = demands.slice(Math.floor(demands.length * 0.6));
-            const earlyAvgDem  = earlyDemands.reduce((a,b)=>a+b,0) / earlyDemands.length;
-            const lateAvgDem   = lateDemands.reduce((a,b)=>a+b,0) / lateDemands.length;
-            const overallAvgDem = demands.reduce((a,b)=>a+b,0) / demands.length;
-
-            // Suspicious: demand was low before AND stayed low despite value rising
-            if (earlyAvgDem <= 4 && overallAvgDem <= 5) {
-                // Calculate rough day span if timestamps available
-                const timestamps = history.map(p => p.timestamp || p.time || '').filter(Boolean);
-                let dayInfo = '';
-                if (timestamps.length >= 2) {
-                    const parseTS = s => { const d = new Date(s); return isNaN(d) ? null : d; };
-                    const t0 = parseTS(timestamps[0]);
-                    const t1 = parseTS(timestamps[timestamps.length-1]);
-                    if (t0 && t1) {
-                        const days = Math.round(Math.abs(t1-t0) / 86400000);
-                        if (days > 0) dayInfo = ` in ~${days} days`;
-                    }
-                }
-                return `Value rose +${valueRise.toFixed(0)}%${dayInfo} while demand stayed low (avg ${overallAvgDem.toFixed(1)}) — may be manipulated, verify before trading`;
-            }
-            return null;
+            return manipCache.get((petName || '').toLowerCase().trim()) || null;
         }
 
         // Tier ladder for trade-up advice
@@ -2492,59 +2490,169 @@
             let results = [];
             const usedUids = new Set();
 
+            // ── BUILD BUNDLES FIRST, THEN FIND MATCHING TARGETS ──────────
+            // This ensures the % gap is always based on actual offer value
+            
             if (state.aiMode === 'velocity') {
-                // Velocity: target high demand pets only, accept value loss
-                const pool = [...inventory].sort((a,b)=>calculatePetVal(b,'value')-calculatePetVal(a,'value'));
-                for (let i = 0; i < Math.min(pool.length, 12) && results.length < state.strategyLimit; i++) {
+                // Velocity: single-pet offers targeting demand 7+ only
+                // Accept slight value loss for liquidity gain
+                const pool = [...inventory].sort((a,b) => calculatePetVal(b,'value') - calculatePetVal(a,'value'));
+                for (let i = 0; i < pool.length && results.length < state.strategyLimit; i++) {
                     const anchor = pool[i];
                     if (usedUids.has(anchor.uid)) continue;
                     const anchorVal = calculatePetVal(anchor, 'value');
-                    // Find high-demand targets slightly above/below value
+                    if (anchorVal <= 0) continue;
                     const targets = ALL_PETS
-                        .filter(t => t.d >= 7 && t.v >= anchorVal * 0.75 && t.v <= anchorVal * 1.20)
+                        .filter(t => {
+                            if (state.aiTargetPets.length > 0 && !state.aiTargetPets.some(x=>x.n===t.n)) return false;
+                            const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
+                            return t.d >= 7 && tv >= anchorVal * 0.80 && tv <= anchorVal * 1.25;
+                        })
                         .sort((a,b) => b.d - a.d)
-                        .slice(0, 3);
+                        .slice(0, 2);
                     for (const target of targets) {
                         if (results.length >= state.strategyLimit) break;
+                        const tv = calculatePetVal({...target,type:'reg',f_st:false,r_st:false},'value');
+                        const valGapPct = ((tv - anchorVal) / anchorVal * 100);
                         const tqs = scorePotentialTarget(target, anchorVal, anchor.d);
-                        const valGap = (target.v - anchorVal).toFixed(2);
-                        const valGapPct = ((target.v - anchorVal) / anchorVal * 100).toFixed(1);
-                        results.push({ offer:[anchor], target, tqs, valGap, valGapPct, reason: buildReasonText(target, anchorVal, anchor.d), single: true });
+                        results.push({ offer:[anchor], target, tqs,
+                            valGap: (tv - anchorVal).toFixed(2),
+                            valGapPct: valGapPct.toFixed(1),
+                            bundleAvgDem: anchor.d,
+                            reason: buildReasonText(target, anchorVal, anchor.d) });
                     }
                     usedUids.add(anchor.uid);
                 }
             } else {
-                // Normal: build smart bundles, target demand-scored pets
-                const maxTargetVal = totalInvVal * 1.25;
-                const candidates = ALL_PETS
-                    .filter(t => {
-                        if (state.aiTargetPets.length > 0) return state.aiTargetPets.some(x=>x.n===t.n);
-                        return t.v >= 1 && t.v <= maxTargetVal * 1.1;
-                    })
-                    .sort((a,b) => scorePotentialTarget(b, totalInvVal * 0.5, invAvgDem) - scorePotentialTarget(a, totalInvVal * 0.5, invAvgDem))
-                    .slice(0, 50);
+                // Normal mode: build bundles of inventory pets, then find targets
+                // that match the actual bundle value (not total inventory)
+                // Try different bundle sizes: single pet, 2-pet, 3-pet, 4-pet
+                const bundleSizes = [1, 2, 3, 4];
+                const invSorted = [...inventory].sort((a,b) => {
+                    // Sort by demand desc, then value desc (best pets first)
+                    const dA = a.type==='neon'?(a.nd||a.d):a.type==='mega'?(a.md||a.d):a.d;
+                    const dB = b.type==='neon'?(b.nd||b.d):b.type==='mega'?(b.md||b.d):b.d;
+                    if (dB !== dA) return dB - dA;
+                    return calculatePetVal(b,'value') - calculatePetVal(a,'value');
+                });
 
-                for (const target of candidates) {
+                for (const bundleSize of bundleSizes) {
                     if (results.length >= state.strategyLimit) break;
-                    const targetVal = calculatePetVal(target, 'value');
-                    const available = inventory.filter(p => !usedUids.has(p.uid));
-                    if (available.length === 0) break;
-                    const { bundle, sum } = buildSmartBundle(available, targetVal, 'normal');
-                    if (bundle.length === 0) continue;
-                    const bundleAvgDem = bundle.reduce((s,p)=>s+(p.d||0),0)/bundle.length;
-                    const tqs = scorePotentialTarget(target, sum, bundleAvgDem);
-                    // Skip bad TQS unless no options
-                    if (tqs < 3 && results.length > 2) continue;
-                    const valGap = (target.v - sum).toFixed(2);
-                    const valGapPct = ((target.v - sum) / sum * 100).toFixed(1);
-                    bundle.forEach(p => usedUids.add(p.uid));
-                    results.push({ offer:bundle, target, tqs, valGap, valGapPct, bundleAvgDem, reason: buildReasonText(target, sum, bundleAvgDem) });
+                    // Build all possible bundles of this size
+                    const bundlesOfSize = [];
+                    const avail = invSorted.filter(p => !usedUids.has(p.uid));
+                    if (avail.length < bundleSize) continue;
+
+                    // Greedy: always take the best pets first for each bundle
+                    // Generate a few different starting combinations
+                    for (let start = 0; start < Math.min(avail.length, 6); start++) {
+                        if (results.length >= state.strategyLimit) break;
+                        let bundle = [], sum = 0;
+                        // Start with pet at index 'start', fill rest greedily
+                        const anchor = avail[start];
+                        bundle.push(anchor);
+                        sum += calculatePetVal(anchor, 'value');
+                        if (bundleSize > 1) {
+                            for (const p of avail) {
+                                if (bundle.length >= bundleSize) break;
+                                if (bundle.includes(p)) continue;
+                                sum += calculatePetVal(p, 'value');
+                                bundle.push(p);
+                            }
+                        }
+                        if (bundle.length < bundleSize) continue;
+                        if (sum <= 0) continue;
+
+                        const bundleAvgDem = bundle.reduce((s,p)=>s+(p.d||0),0) / bundle.length;
+
+                        // Now find targets within ±30% of THIS bundle's actual value
+                        const candidates = ALL_PETS.filter(t => {
+                            if (state.aiTargetPets.length > 0 && !state.aiTargetPets.some(x=>x.n===t.n)) return false;
+                            const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
+                            // Must be within ±30% of actual bundle sum — never accept massive gaps
+                            if (tv < sum * 0.75 || tv > sum * 1.35) return false;
+                            // Must not lose more than 15% value in normal mode
+                            if (tv < sum * 0.85) return false;
+                            return tv > 0;
+                        });
+
+                        if (candidates.length === 0) continue;
+
+                        // Score all candidates against this specific bundle
+                        const best = candidates
+                            .map(t => ({
+                                t,
+                                tv: calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value'),
+                                tqs: scorePotentialTarget(t, sum, bundleAvgDem)
+                            }))
+                            .filter(x => x.tqs >= 2)
+                            .sort((a,b) => b.tqs - a.tqs)
+                            .slice(0, 1)[0];
+
+                        if (!best) continue;
+
+                        const valGapPct = ((best.tv - sum) / sum * 100);
+                        // Skip if already have a very similar suggestion
+                        const isDupe = results.some(r => r.target.n === best.t.n && Math.abs(r.valGapPct - valGapPct) < 5);
+                        if (isDupe) continue;
+
+                        results.push({
+                            offer: bundle, target: best.t, tqs: best.tqs,
+                            valGap: (best.tv - sum).toFixed(2),
+                            valGapPct: valGapPct.toFixed(1),
+                            bundleAvgDem, sum,
+                            reason: buildReasonText(best.t, sum, bundleAvgDem)
+                        });
+                    }
                 }
             }
 
-            if (results.length === 0) {
-                box.innerHTML = html + '<div class="ai-suggestion">No suitable targets found. Try adjusting your inventory or using Velocity Mode.</div>';
-                return;
+            // ── SMART DOWNGRADE SECTION ───────────────────────────────────
+            // Find pets in inventory worth trading down from for better liquidity
+            // Rule: received value >= given value, received avg demand >= 5
+            let downgrades = [];
+            const highValPets = [...inventory]
+                .filter(p => calculatePetVal(p,'value') >= 5) // only pets worth downgrading
+                .sort((a,b) => calculatePetVal(b,'value') - calculatePetVal(a,'value'))
+                .slice(0, 5);
+
+            for (const anchor of highValPets) {
+                const anchorVal = calculatePetVal(anchor, 'value');
+                const anchorDem = anchor.type==='neon'?(anchor.nd||anchor.d):anchor.type==='mega'?(anchor.md||anchor.d):anchor.d;
+                // Find 2–4 pets whose combined value equals or beats anchorVal
+                // and whose average demand is >= 5 AND >= anchorDem - 1 (decent demand)
+                for (let count = 2; count <= 4; count++) {
+                    // Look for combinations of 'count' pets
+                    const perPetTarget = anchorVal / count;
+                    const receivables = ALL_PETS.filter(t => {
+                        if (t.n === anchor.n) return false;
+                        const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
+                        // Each pet should be roughly in range of perPetTarget ±50%
+                        if (tv < perPetTarget * 0.5 || tv > perPetTarget * 1.5) return false;
+                        if (t.d < 5) return false; // must have decent demand
+                        return true;
+                    }).sort((a,b) => b.d - a.d).slice(0, 8);
+
+                    if (receivables.length < count) continue;
+
+                    // Take top 'count' by demand
+                    const combo = receivables.slice(0, count);
+                    const comboVal = combo.reduce((s,t) => s + calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value'), 0);
+                    const comboAvgDem = combo.reduce((s,t)=>s+t.d,0) / count;
+
+                    // Value must be fair or overpay (never a loss)
+                    if (comboVal < anchorVal * 0.97) continue;
+                    // Average demand of received must be decent
+                    if (comboAvgDem < 5) continue;
+
+                    const valGainPct = ((comboVal - anchorVal) / anchorVal * 100).toFixed(1);
+                    const demGain = (comboAvgDem - anchorDem).toFixed(1);
+                    const isDupe = downgrades.some(d => d.anchor.n === anchor.n && d.combo.map(x=>x.n).join(',') === combo.map(x=>x.n).join(','));
+                    if (isDupe) continue;
+
+                    downgrades.push({ anchor, combo, comboVal, comboAvgDem, valGainPct, demGain, anchorVal });
+                    break; // one downgrade suggestion per anchor pet is enough
+                }
             }
 
             const demTierAdvice = invDemTier === 'Low'
@@ -2552,45 +2660,87 @@
                 : invDemTier === 'High' ? 'Strong demand across your inventory — focus on value gain, you have trading leverage.'
                 : 'Moderate demand. Aim for both value gain AND demand tier improvement where possible.';
 
-            html += `<div style="font-size:0.75em;color:var(--subtext);margin-bottom:12px;padding:8px;background:#0f172a;border-radius:8px;">${demTierAdvice}</div>`;
+            if (results.length === 0 && downgrades.length === 0) {
+                box.innerHTML = html + `<div class="ai-suggestion">No suitable trades found with your current inventory. Try adding more pets or switching to Velocity Mode.</div>`;
+                return;
+            }
+
+            if (results.length > 0) {
+                html += `<div style="font-size:0.75em;color:var(--subtext);margin-bottom:10px;padding:8px;background:#0f172a;border-radius:8px">${demTierAdvice}</div>`;
+                html += `<div style="font-size:0.7em;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📈 UPGRADE TRADES</div>`;
+            }
 
             results.forEach(r => {
                 const catLabel = getCatLabel(r.target);
                 const catBadge = catLabel === 'High Tier' ? 'badge-hightier' : catLabel === 'Preppy' ? 'badge-preppy' : catLabel === 'Exotic' ? 'badge-exotic' : 'badge-randoms';
-                const tqsCls = r.tqs >= 7 ? 'tqs-high' : r.tqs >= 4 ? 'tqs-mid' : 'tqs-low';
-                const tqsLabel = r.tqs >= 7 ? '🔥 Strong Trade' : r.tqs >= 4 ? '〽️ Decent Trade' : '⚠️ Weak Trade';
-                const targetFull = r.target;
-                const isRising = targetFull.vt && targetFull.vt.includes('📈');
-                const isFalling = targetFull.dt && targetFull.dt.includes('❄️');
+                const tqsCls = r.tqs >= 7 ? 'high' : r.tqs >= 4 ? 'mid' : 'low';
+                const tqsLabel = r.tqs >= 7 ? '🔥 Strong' : r.tqs >= 4 ? '〽️ Decent' : '⚠️ Weak';
+                const isRising = r.target.vt && r.target.vt.includes('📈');
+                const isFalling = r.target.dt && r.target.dt.includes('❄️');
                 const ugly = isHTT(r.target.n);
                 const manip = !!getManipulationFlag(r.target.n);
-                const valColor = parseFloat(r.valGapPct) >= 0 ? 'var(--win)' : 'var(--lose)';
+                const valGapNum = parseFloat(r.valGapPct);
+                const valColor = valGapNum >= 0 ? 'var(--win)' : 'var(--lose)';
+                const bundleVal = (r.sum || r.offer.reduce((s,p)=>s+calculatePetVal(p,'value'),0)).toFixed(2);
+                const targetVal = calculatePetVal({...r.target,type:'reg',f_st:false,r_st:false},'value').toFixed(2);
 
                 html += `<div class="ai-suggestion">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+                    <div style="margin-bottom:5px">
+                        <span style="font-size:0.8em;color:var(--subtext)">You offer:</span>
+                        <span style="font-weight:800;color:#cbd5e1;font-size:0.85em"> ${r.offer.map(getPetLabel).join(' + ')}</span>
+                        <span style="font-size:0.75em;color:var(--subtext);margin-left:5px">(${bundleVal})</span>
+                        ${r.offer.length >= 4 ? '<span style="font-size:0.7em;color:var(--trap);margin-left:4px">⚠️ large bundle</span>' : ''}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+                        <img src="https://amvgg.com/items/${encodeURIComponent(r.target.n)}.webp" style="width:30px;height:30px;object-fit:contain;border-radius:6px;background:#0f172a" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
                         <div>
-                            <span style="font-size:0.85em;color:var(--subtext)">Offer:</span>
-                            <span style="font-weight:800;color:#cbd5e1"> ${r.offer.map(getPetLabel).join(' + ')}</span>
-                            ${r.offer.length >= 4 ? '<span style="font-size:0.7em;color:var(--trap);margin-left:5px">⚠️ large bundle</span>' : ''}
+                            <span style="font-size:0.8em;color:var(--subtext)">For:</span>
+                            <span style="font-weight:900;color:white"> ${r.target.n}</span>
+                            <span style="font-size:0.75em;color:var(--subtext);margin-left:4px">(${targetVal})</span>
                         </div>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                        <img src="https://amvgg.com/items/${encodeURIComponent(r.target.n)}.webp" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#0f172a" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
-                        <span class="ai-item-tag" style="background:${r.tqs>=7?'var(--win)':r.tqs>=4?'#b45309':'#7f1d1d'}">${getPetLabel({...r.target,type:'reg',f_st:false,r_st:false})}</span>
                         <span class="target-badge ${catBadge}">${catLabel}</span>
-                        ${isRising ? '<span class="target-badge badge-rising">📈 Rising</span>' : ''}
-                        ${isFalling ? '<span class="target-badge badge-falling">❄️ Falling</span>' : ''}
-                        ${ugly ? '<span class="target-badge badge-ugly">⚠️ HTT</span>' : ''}
-                        ${manip ? '<span class="target-badge badge-manip">📊 Value Spike</span>' : ''}
+                        ${isRising ? '<span class="target-badge badge-rising">📈</span>' : ''}
+                        ${isFalling ? '<span class="target-badge badge-falling">❄️</span>' : ''}
+                        ${ugly ? '<span class="target-badge badge-ugly">HTT</span>' : ''}
+                        ${manip ? '<span class="target-badge badge-manip">⚠️Spike</span>' : ''}
                     </div>
-                    <div style="font-size:0.75em;color:#94a3b8;margin-bottom:6px">${r.reason}</div>
+                    <div style="font-size:0.73em;color:#94a3b8;margin-bottom:5px">${r.reason}</div>
                     <div class="ai-stats-row">
-                        <span class="ai-stat-pill tqs-${r.tqs>=7?'high':r.tqs>=4?'mid':'low'}">${tqsLabel} (${r.tqs.toFixed(1)}/10)</span>
-                        <span class="ai-stat-pill" style="color:${valColor};background:rgba(255,255,255,0.05)">Value: ${parseFloat(r.valGapPct)>0?'+':''}${r.valGapPct}%</span>
+                        <span class="ai-stat-pill tqs-${tqsCls}">${tqsLabel} ${r.tqs.toFixed(1)}/10</span>
+                        <span class="ai-stat-pill" style="color:${valColor};background:rgba(255,255,255,0.05)">${valGapNum>=0?'+':''}${r.valGapPct}%</span>
                         <span class="ai-stat-pill pill-dem">Dem: ${r.target.d}</span>
                     </div>
                 </div>`;
             });
+
+            // ── SMART DOWNGRADE SECTION ───────────────────────────────────
+            if (downgrades.length > 0) {
+                html += `<div style="font-size:0.7em;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px">⬇️ SMART DOWNGRADES (gain liquidity)</div>`;
+                downgrades.forEach(d => {
+                    const valGainNum = parseFloat(d.valGainPct);
+                    const demGainNum = parseFloat(d.demGain);
+                    const gainColor = valGainNum >= 0 ? 'var(--win)' : 'var(--lose)';
+                    const demColor = demGainNum > 0 ? 'var(--win)' : demGainNum < -1 ? 'var(--lose)' : 'var(--subtext)';
+                    html += `<div class="ai-suggestion" style="border-left-color:#f59e0b">
+                        <div style="margin-bottom:4px">
+                            <span style="font-size:0.8em;color:var(--subtext)">Give:</span>
+                            <span style="font-weight:800;color:#cbd5e1"> ${getPetLabel(d.anchor)}</span>
+                            <span style="font-size:0.75em;color:var(--subtext);margin-left:4px">(${d.anchorVal.toFixed(2)})</span>
+                        </div>
+                        <div style="margin-bottom:5px">
+                            <span style="font-size:0.8em;color:var(--subtext)">Receive:</span>
+                            <span style="font-weight:800;color:#fbbf24"> ${d.combo.map(t=>t.n).join(' + ')}</span>
+                            <span style="font-size:0.75em;color:var(--subtext);margin-left:4px">(${d.comboVal.toFixed(2)})</span>
+                        </div>
+                        <div style="font-size:0.73em;color:#94a3b8;margin-bottom:5px">1 pet → ${d.combo.length} faster-moving pets · avg demand ${d.comboAvgDem.toFixed(1)} · better liquidity</div>
+                        <div class="ai-stats-row">
+                            <span class="ai-stat-pill" style="color:${gainColor};background:rgba(255,255,255,0.05)">Value: ${valGainNum>=0?'+':''}${d.valGainPct}%</span>
+                            <span class="ai-stat-pill" style="color:${demColor};background:rgba(255,255,255,0.05)">Dem shift: ${demGainNum>=0?'+':''}${d.demGain}</span>
+                            <span class="ai-stat-pill" style="background:#1e3a1e;color:#6ee7b7">${d.combo.length} pets received</span>
+                        </div>
+                    </div>`;
+                });
+            }
 
             box.innerHTML = html;
         }
