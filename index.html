@@ -285,6 +285,24 @@
         }
 
 
+
+        /* ===== SETTINGS STYLES ===== */
+        .settings-overlay { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.96);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;z-index:5500; }
+        .settings-container { width:94%;max-width:560px;background:#1a2333;border-radius:24px;border:1.5px solid var(--border);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.8); }
+        .settings-header { padding:16px 22px;background:#111827;border-bottom:1.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0; }
+        .settings-body { padding:20px;overflow-y:auto;flex:1; }
+        .settings-section { background:#0f172a;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid var(--border); }
+        .settings-section-title { font-size:0.78em;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px; }
+        .keybind-row { background:#1e293b;border-radius:10px;padding:10px 12px;display:flex;gap:8px;align-items:center;border:1px solid var(--border); }
+        .keybind-key { background:var(--accent);color:white;font-weight:900;font-size:0.85em;padding:4px 10px;border-radius:8px;min-width:36px;text-align:center;cursor:pointer;flex-shrink:0; }
+        .keybind-key:hover { opacity:0.8; }
+        .keybind-select { background:#0f172a;border:1px solid var(--border);color:#cbd5e1;padding:5px 8px;border-radius:8px;font-size:0.75em;font-weight:700;flex:1;outline:none;cursor:pointer; }
+        .keybind-remove { background:#ef4444;color:white;border:none;border-radius:8px;padding:4px 9px;cursor:pointer;font-size:0.8em;font-weight:900;flex-shrink:0; }
+        .keybind-remove:hover { background:#dc2626; }
+        .keybind-source-toggle { display:flex;gap:4px;flex-shrink:0; }
+        .ks-tog { font-size:0.7em;font-weight:900;padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--subtext);cursor:pointer; }
+        .ks-tog.active { background:var(--accent);color:white;border-color:var(--accent); }
+
         /* ===== TRADE ADVISOR STYLES ===== */
         .advisor-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2,6,23,0.96); backdrop-filter: blur(14px); display: none; align-items: center; justify-content: center; z-index: 5200; }
         .advisor-container { width: 97%; max-width: 1050px; background: #1a2333; border-radius: 28px; border: 1.5px solid var(--border); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.8); }
@@ -660,6 +678,7 @@
                 <div class="info-section">
                     <h4>Keyboard Keybinds</h4>
                     <div class="info-row"><span class="info-label">Ctrl + Z:</span><span class="info-val">Undo Last Change</span></div>
+                        <div class="info-row"><span class="info-label">Ctrl + Y:</span><span class="info-val">Redo Last Change</span></div>
                 </div>
                 <div class="info-section">
                     <h4>Trend Emojis</h4>
@@ -676,6 +695,7 @@
         <button class="nav-btn" onclick="openInfo()">ℹ️ Information</button>
         <button class="nav-btn" onclick="openHistory()">📜 History</button>
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
+        <button class="nav-btn" onclick="openSettings()">⚙️ Settings</button>
     </div>
 
     <div class="analytics-overlay" id="analyticsOverlay">
@@ -787,6 +807,60 @@
         </div>
     </div>
 
+
+
+    <!-- Settings Overlay -->
+    <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+        <div class="settings-container">
+            <div class="settings-header">
+                <span style="font-weight:900;font-size:1.05em">⚙️ SETTINGS</span>
+                <button class="nav-btn" onclick="closeSettings()">Close</button>
+            </div>
+            <div class="settings-body">
+
+                <!-- UI Scale -->
+                <div class="settings-section">
+                    <div class="settings-section-title">🔍 UI Scale</div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+                        <input type="range" id="uiScaleSlider" min="80" max="130" value="100"
+                            oninput="applyUIScale(this.value)"
+                            style="flex:1;accent-color:var(--accent)">
+                        <span id="uiScaleLabel" style="font-weight:900;color:var(--accent);min-width:40px">100%</span>
+                        <button class="nav-btn" style="font-size:0.75em;padding:5px 10px" onclick="applyUIScale(100)">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Keybinds -->
+                <div class="settings-section">
+                    <div class="settings-section-title">⌨️ Pet Keybinds</div>
+                    <div style="font-size:0.75em;color:var(--subtext);margin:6px 0 12px">
+                        Press a key → assign a pet → it gets added to <b>your side</b> of the trade when you press that key.<br>
+                        <span style="color:#fbbf24">Ctrl+Z</span> = Undo &nbsp;|&nbsp; <span style="color:#fbbf24">Ctrl+Y</span> = Redo
+                    </div>
+                    <div id="keybindList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+                    <button class="nav-btn" style="width:100%;font-size:0.8em" onclick="addKeybind()">+ Add New Keybind</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Key capture modal -->
+    <div class="settings-overlay" id="keyCaptureOverlay" style="z-index:6000" onclick="cancelKeyCapture()">
+        <div class="settings-container" style="max-width:380px" onclick="event.stopPropagation()">
+            <div class="settings-header">
+                <span style="font-weight:900">Press Any Key</span>
+            </div>
+            <div style="padding:30px;text-align:center">
+                <div style="font-size:2em;font-weight:900;color:var(--accent);min-height:50px" id="keyCaptureDisplay">Waiting...</div>
+                <div style="font-size:0.8em;color:var(--subtext);margin-top:8px">Press any key (not Ctrl/Alt/Shift)</div>
+                <div style="display:flex;gap:10px;margin-top:20px;justify-content:center">
+                    <button class="nav-btn" id="keyCaptureConfirm" onclick="confirmKeyCapture()" disabled>Use This Key</button>
+                    <button class="nav-btn" style="background:#334155" onclick="cancelKeyCapture()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Trade Advisor Overlay -->
     <div class="advisor-overlay" id="advisorOverlay" onclick="if(event.target===this)closeTradeAdvisor()">
@@ -933,7 +1007,7 @@
         
         let ALL_PETS = [];
         let HISTORY_DATA = []; 
-        let state = { mode: 'value', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null };
+        let state = { mode: 'value', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null, keybinds: [], uiScale: 1.0 };
         let history = []; 
         let tradeLog = []; 
         let selectedPetForQty = null; 
@@ -1685,13 +1759,19 @@
             }
         }
 
+        let redoStack = [];
+
         function pushState() {
             if (history.length > 50) history.shift();
             history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
+            redoStack = []; // any new action clears redo
         }
 
         function undo() {
             if (history.length === 0) return;
+            // Save current state to redo stack before reverting
+            redoStack.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
+            if (redoStack.length > 50) redoStack.shift();
             const last = JSON.parse(history.pop());
             state.A = (last.A || []);
             state.B = (last.B || []);
@@ -1701,11 +1781,41 @@
             saveTrade();
         }
 
+        function redo() {
+            if (redoStack.length === 0) return;
+            history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
+            const next = JSON.parse(redoStack.pop());
+            state.A = (next.A || []);
+            state.B = (next.B || []);
+            state.inv = (next.inv || []);
+            render();
+            renderInventory();
+            saveTrade();
+        }
+
         window.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'z') {
-                e.preventDefault();
-                undo();
+            // Handle keybinds for pet shortcuts
+            if (!e.ctrlKey && !e.altKey && !e.metaKey) {
+                const bindKey = e.key.toUpperCase();
+                const bind = state.keybinds.find(b => b.key === bindKey);
+                if (bind && bind.petName) {
+                    // Don't fire if user is typing in an input
+                    if (['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)) return;
+                    e.preventDefault();
+                    const pet = bind.source === 'inv'
+                        ? state.inv.find(p => p.n === bind.petName)
+                        : ALL_PETS.find(p => p.n === bind.petName);
+                    if (pet) {
+                        pushState();
+                        state.A.push({ ...pet, uid: Date.now() + Math.random(), type: bind.type || 'reg', f_st: !!bind.f_st, r_st: !!bind.r_st });
+                        render();
+                        saveTrade();
+                    }
+                    return;
+                }
             }
+            if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+            if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
         });
 
         function parseCSV(text) {
@@ -2301,6 +2411,28 @@
             return 'Randoms';
         }
 
+        // Numerical prestige tier for category comparisons
+        // Higher = more desirable / harder to replace
+        function getCatTier(p) {
+            const c = getCatLabel(p);
+            if (c === 'Exotic')   return 5;
+            if (c === 'High Tier') return 4;
+            if (c === 'Preppy')   return 3;
+            if (c === 'Classy')   return 2;
+            if (c === 'Mid Tier') return 1.5;
+            return 1; // Randoms
+        }
+
+        // Best prestige tier across a bundle of pets
+        function getBundleTier(bundle) {
+            return bundle.reduce((best, p) => Math.max(best, getCatTier(p)), 1);
+        }
+
+        // Effective demand of a pet accounting for neon/mega demand fields
+        function getEffDemand(p) {
+            return p.type === 'neon' ? (p.nd || p.d) : p.type === 'mega' ? (p.md || p.d) : p.d;
+        }
+
 
         function getPetLabel(p) {
             // Returns a human-readable label like "NFR Crow", "Neon Bat Dragon", "FR Turtle"
@@ -2315,55 +2447,74 @@
             return prefix + p.n;
         }
 
-        // Score a potential target pet (0-10 Trade Quality Score)
-        // Uses cat field dynamically - no hardcoded appeal lists
-        function scorePotentialTarget(target, offerVal, offerAvgDemand) {
+        // Score a potential target (0-10). offerBundle = array of pets you're giving.
+        // This gives the scorer full context of what's being offered, not just value.
+        function scorePotentialTarget(target, offerVal, offerAvgDemand, offerBundle) {
             let score = 5;
-            const targetVal = calculatePetVal(target, 'value');
+            const targetVal = calculatePetVal({...target, type:'reg', f_st:false, r_st:false}, 'value');
             const targetDemand = target.d;
-            const catLabel = getCatLabel(target);
+            const targetCat = getCatLabel(target);
+            const targetTier = getCatTier(target);
+            const offerTier = offerBundle ? getBundleTier(offerBundle) : 1;
             const offerDemandTier = offerAvgDemand >= 7 ? 'high' : offerAvgDemand >= 4 ? 'mid' : 'low';
             const targetDemandTier = getPetDemandTier(target);
 
-            // Value alignment
+            // ── VALUE ALIGNMENT ───────────────────────────────────────────
             const valGap = (targetVal - offerVal) / offerVal;
-            if (Math.abs(valGap) <= 0.05) score += 1.5;
-            else if (Math.abs(valGap) <= 0.15) score += 1;
-            else if (Math.abs(valGap) <= 0.30) score += 0.5;
-            else score -= 1;
+            if (valGap >= 0.05 && valGap <= 0.20) score += 2;     // ideal: slight gain
+            else if (valGap >= 0 && valGap < 0.05) score += 1.2;  // fair trade
+            else if (valGap > 0.20) score += 1;                    // big gain (may be hard to get)
+            else if (valGap < 0 && valGap >= -0.05) score -= 1;   // tiny loss, only ok with demand upgrade
+            else score -= 4; // significant loss — heavily penalise
 
-            // Demand score
-            if (targetDemand >= 8) score += 2.5;
-            else if (targetDemand >= 6) score += 1.5;
-            else if (targetDemand >= 4) score += 0.5;
-            else score -= 2;
+            // ── TARGET DEMAND ─────────────────────────────────────────────
+            if (targetDemand >= 9) score += 3;
+            else if (targetDemand >= 7) score += 2;
+            else if (targetDemand >= 5) score += 1;
+            else if (targetDemand >= 3) score -= 1;
+            else score -= 3; // demand 0-2: terrible target
 
-            // Demand tier upgrade bonus
-            if (offerDemandTier === 'low' && targetDemandTier === 'high') score += 1.5;
-            else if (offerDemandTier === 'low' && targetDemandTier === 'mid') score += 0.8;
-            else if (offerDemandTier === 'mid' && targetDemandTier === 'high') score += 1.0;
-            else if (targetDemandTier === 'low') score -= 1.5;
+            // ── DEMAND TIER CHANGE ────────────────────────────────────────
+            if (offerDemandTier === 'low'  && targetDemandTier === 'high') score += 2;
+            else if (offerDemandTier === 'low'  && targetDemandTier === 'mid')  score += 1;
+            else if (offerDemandTier === 'mid'  && targetDemandTier === 'high') score += 1;
+            else if (offerDemandTier === 'high' && targetDemandTier === 'low')  score -= 3; // giving high demand for low demand = bad
+            else if (offerDemandTier === 'high' && targetDemandTier === 'mid')  score -= 1;
+            else if (targetDemandTier === 'low') score -= 2;
 
-            // Category score — fully dynamic from cat field
-            if (catLabel === 'High Tier') score += 1.8;
-            else if (catLabel === 'Preppy') score += 1.5;   // preppy attracts overpays
-            else if (catLabel === 'Exotic') score += 1.3;
-            else if (catLabel === 'Classy') score += 0.7;
-            else if (catLabel === 'Mid Tier') score += 0.3;
-            else if (catLabel === 'Randoms') score -= 0.5;  // randoms need overpay
+            // ── DEMAND PARITY PROTECTION ──────────────────────────────────
+            // If giving high demand, must receive reasonable demand back
+            if (offerAvgDemand >= 7 && targetDemand < 5) score -= 3;
+            else if (offerAvgDemand >= 5 && targetDemand < 3) score -= 2;
 
-            // HTT penalty (community-verified hard to trade list)
-            if (isHTT(target.n)) score -= 2.5;
+            // ── CATEGORY SCORE OF TARGET ──────────────────────────────────
+            if (targetCat === 'Exotic')    score += 2;
+            else if (targetCat === 'High Tier') score += 1.8;
+            else if (targetCat === 'Preppy')    score += 1.5;
+            else if (targetCat === 'Classy')    score += 0.7;
+            else if (targetCat === 'Mid Tier')  score += 0.3;
+            else if (targetCat === 'Randoms')   score -= 0.8;
 
-            // Algorithmic manipulation flag (score penalty if suspicious)
-            const manipFlag = getManipulationFlag(target.n);
-            if (manipFlag) score -= 2;
+            // ── CATEGORY DOWNGRADE PROTECTION ────────────────────────────
+            // If you're giving a premium pet, you shouldn't get a worse category back
+            // unless you're getting massive value overpay
+            const catDrop = offerTier - targetTier;
+            if (catDrop >= 3) score -= 5;       // e.g. High Tier → Randoms = very bad
+            else if (catDrop >= 2) score -= 3;  // e.g. Preppy → Randoms
+            else if (catDrop >= 1) score -= 1;  // e.g. Classy → Mid Tier (slight penalty)
+            else if (catDrop <= -1) score += 1; // upgrading category = bonus
 
-            // Trend signals from data
+            // ── HTT PENALTY ───────────────────────────────────────────────
+            if (isHTT(target.n)) score -= 3;
+
+            // ── MANIPULATION FLAG ─────────────────────────────────────────
+            if (getManipulationFlag(target.n)) score -= 2;
+
+            // ── TREND SIGNALS ─────────────────────────────────────────────
             if (target.vt && target.vt.includes('📈')) score += 0.5;
             if (target.dt && target.dt.includes('🔥')) score += 0.5;
-            if (target.vt && target.vt.includes('📉')) score -= 0.5;
-            if (target.dt && target.dt.includes('❄️')) score -= 0.5;
+            if (target.vt && target.vt.includes('📉')) score -= 0.8;
+            if (target.dt && target.dt.includes('❄️')) score -= 0.8;
 
             return Math.max(0, Math.min(10, score));
         }
@@ -2514,7 +2665,7 @@
                         if (results.length >= state.strategyLimit) break;
                         const tv = calculatePetVal({...target,type:'reg',f_st:false,r_st:false},'value');
                         const valGapPct = ((tv - anchorVal) / anchorVal * 100);
-                        const tqs = scorePotentialTarget(target, anchorVal, anchor.d);
+                        const tqs = scorePotentialTarget(target, anchorVal, anchor.d, [anchor]);
                         results.push({ offer:[anchor], target, tqs,
                             valGap: (tv - anchorVal).toFixed(2),
                             valGapPct: valGapPct.toFixed(1),
@@ -2565,14 +2716,21 @@
 
                         const bundleAvgDem = bundle.reduce((s,p)=>s+(p.d||0),0) / bundle.length;
 
-                        // Now find targets within ±30% of THIS bundle's actual value
+                        const bundleTier = getBundleTier(bundle);
+                        // Find targets matching actual bundle value — strict rules
                         const candidates = ALL_PETS.filter(t => {
                             if (state.aiTargetPets.length > 0 && !state.aiTargetPets.some(x=>x.n===t.n)) return false;
                             const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
-                            // Must be within ±30% of actual bundle sum — never accept massive gaps
-                            if (tv < sum * 0.75 || tv > sum * 1.35) return false;
-                            // Must not lose more than 15% value in normal mode
-                            if (tv < sum * 0.85) return false;
+                            // Must be within realistic value range of actual bundle
+                            if (tv > sum * 1.40) return false; // too expensive even with overpay
+                            // Normal mode: NEVER accept more than 5% value loss
+                            if (tv < sum * 0.95) return false;
+                            // Demand parity: if offering high demand, target can't be junk demand
+                            if (bundleAvgDem >= 7 && t.d < 4) return false;
+                            if (bundleAvgDem >= 5 && t.d < 2) return false;
+                            // Category floor: if giving Preppy/High Tier/Exotic, target must be Classy+ or demand 6+
+                            const targetTier = getCatTier(t);
+                            if (bundleTier >= 3 && targetTier < 2 && t.d < 6) return false;
                             return tv > 0;
                         });
 
@@ -2583,9 +2741,9 @@
                             .map(t => ({
                                 t,
                                 tv: calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value'),
-                                tqs: scorePotentialTarget(t, sum, bundleAvgDem)
+                                tqs: scorePotentialTarget(t, sum, bundleAvgDem, bundle)
                             }))
-                            .filter(x => x.tqs >= 2)
+                            .filter(x => x.tqs >= 3.5)
                             .sort((a,b) => b.tqs - a.tqs)
                             .slice(0, 1)[0];
 
@@ -3118,7 +3276,7 @@
             // Score all candidates
             candidates = candidates.map(t => ({
                 pet: t,
-                tqs: scorePotentialTarget(t, offerVal, offerAvgD),
+                tqs: scorePotentialTarget(t, offerVal, offerAvgD, advisorOfferPets),
                 valGap: (calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value') - offerVal),
                 valGapPct: ((calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value') - offerVal) / offerVal * 100)
             }));
@@ -3179,6 +3337,119 @@
                 : offerAvgD >= 7 ? 'Strong demand offer. You have leverage — aim for value gain + category upgrade.'
                 : 'Moderate demand offer. Look for targets with demand 6+ to improve your trading velocity.';
             insightEl.innerHTML = `<strong>Your offer: ${offerVal.toFixed(2)} value · ${demTierLabel} demand (${offerAvgD.toFixed(1)})</strong><br>${demAdvice} Best target category in range: <strong>${bestCat}</strong>.`;
+        }
+
+
+        // ================================================================
+        // SETTINGS — UI Scale + Pet Keybinds
+        // ================================================================
+        let capturingKeyForIndex = -1;
+        let capturedKey = '';
+
+        function openSettings() {
+            document.getElementById('settingsOverlay').style.display = 'flex';
+            renderKeybindList();
+            document.getElementById('uiScaleSlider').value = Math.round(state.uiScale * 100);
+            document.getElementById('uiScaleLabel').textContent = Math.round(state.uiScale * 100) + '%';
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsOverlay').style.display = 'none';
+        }
+
+        function applyUIScale(val) {
+            const pct = parseInt(val);
+            state.uiScale = pct / 100;
+            document.documentElement.style.fontSize = state.uiScale + 'em';
+            document.getElementById('uiScaleSlider').value = pct;
+            document.getElementById('uiScaleLabel').textContent = pct + '%';
+        }
+
+        function addKeybind() {
+            state.keybinds.push({ key: '?', petName: '', source: 'inv', type: 'reg', f_st: false, r_st: false });
+            renderKeybindList();
+        }
+
+        function removeKeybind(idx) {
+            state.keybinds.splice(idx, 1);
+            renderKeybindList();
+        }
+
+        function setKeybindPet(idx, petName) {
+            state.keybinds[idx].petName = petName;
+        }
+
+        function setKeybindSource(idx, source) {
+            state.keybinds[idx].source = source;
+            state.keybinds[idx].petName = '';
+            renderKeybindList();
+        }
+
+        function startKeyCapture(idx) {
+            capturingKeyForIndex = idx;
+            capturedKey = '';
+            document.getElementById('keyCaptureDisplay').textContent = 'Waiting...';
+            document.getElementById('keyCaptureConfirm').disabled = true;
+            document.getElementById('keyCaptureOverlay').style.display = 'flex';
+        }
+
+        function cancelKeyCapture() {
+            capturingKeyForIndex = -1;
+            capturedKey = '';
+            document.getElementById('keyCaptureOverlay').style.display = 'none';
+        }
+
+        function confirmKeyCapture() {
+            if (capturingKeyForIndex >= 0 && capturedKey) {
+                // Check for conflicts
+                const conflict = state.keybinds.findIndex((b, i) => i !== capturingKeyForIndex && b.key === capturedKey);
+                if (conflict >= 0) {
+                    alert(`Key "${capturedKey}" is already used by another keybind. Remove it first.`);
+                    return;
+                }
+                state.keybinds[capturingKeyForIndex].key = capturedKey;
+                renderKeybindList();
+            }
+            cancelKeyCapture();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('keyCaptureOverlay').style.display === 'flex') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (['Control','Alt','Shift','Meta'].includes(e.key)) return;
+                capturedKey = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+                document.getElementById('keyCaptureDisplay').textContent = capturedKey;
+                document.getElementById('keyCaptureConfirm').disabled = false;
+            }
+        }, true); // capture phase so it fires before the global listener
+
+        function renderKeybindList() {
+            const el = document.getElementById('keybindList');
+            if (!el) return;
+            if (state.keybinds.length === 0) {
+                el.innerHTML = '<div style="text-align:center;color:var(--subtext);font-size:0.8em;padding:10px">No keybinds set. Click Add New Keybind to create one.</div>';
+                return;
+            }
+            el.innerHTML = state.keybinds.map((b, i) => {
+                // Build pet list based on source
+                const pets = b.source === 'inv'
+                    ? state.inv.map(p => p.n).filter((v,idx,a)=>a.indexOf(v)===idx)
+                    : ALL_PETS.map(p => p.n);
+                const petOptions = pets.length === 0
+                    ? '<option value="">-- empty inventory --</option>'
+                    : '<option value="">-- pick pet --</option>' + pets.map(n => `<option value="${n.replace(/"/g,'&quot;')}" ${b.petName===n?'selected':''}>${n}</option>`).join('');
+
+                return `<div class="keybind-row">
+                    <div class="keybind-key" title="Click to change key" onclick="startKeyCapture(${i})">${b.key || '?'}</div>
+                    <div class="keybind-source-toggle">
+                        <button class="ks-tog ${b.source==='inv'?'active':''}" onclick="setKeybindSource(${i},'inv')">Inv</button>
+                        <button class="ks-tog ${b.source==='all'?'active':''}" onclick="setKeybindSource(${i},'all')">All</button>
+                    </div>
+                    <select class="keybind-select" onchange="setKeybindPet(${i},this.value)">${petOptions}</select>
+                    <button class="keybind-remove" onclick="removeKeybind(${i})">✕</button>
+                </div>`;
+            }).join('');
         }
 
         loadPetData();
