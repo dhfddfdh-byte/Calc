@@ -2111,6 +2111,7 @@
 
             resultsEl.innerHTML = chunk.map(p => {
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
+                const imgTag = petImgTag(p.n, 'width:100%;height:100%;object-fit:contain');
                 const val = calculatePetVal(p, 'value'); 
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(p.d);
@@ -2120,7 +2121,7 @@
                      oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
                      style="border-color: ${rarityColor}">
                     <div class="search-item-name">${p.n}${getTrendIcons(p)}</div>
-                    <img src="${imgUrl}" class="search-item-img" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    <img src="${imgUrl}" class="search-item-img" onerror="petImgFallback(this)" data-fallbacks='[]' data-fb-idx="0">
                     <div class="search-item-val">${val ? val.toFixed(2) : 0}</div>
                     <div class="search-item-demand" style="color: ${demandColor}">Dem: ${p.d}</div>
                 </div>`;
@@ -2973,7 +2974,7 @@
                         ${r.offer.length >= 4 ? '<span style="font-size:0.7em;color:var(--trap);margin-left:4px">⚠️ large bundle</span>' : ''}
                     </div>
                     <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
-                        <img src="https://amvgg.com/items/${encodeURIComponent(r.target.n)}.webp" style="width:30px;height:30px;object-fit:contain;border-radius:6px;background:#0f172a" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                        ${petImgTag(r.target.n, "width:30px;height:30px;object-fit:contain;border-radius:6px;background:#0f172a")}
                         <div>
                             <span style="font-size:0.8em;color:var(--subtext)">For:</span>
                             <span style="font-weight:900;color:white"> ${r.target.n}</span>
@@ -3036,6 +3037,7 @@
                 let val = calculatePetVal(p, state.mode);
                 totalV += val; totalD += currentDemand;
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
+                const imgTag = petImgTag(p.n, 'width:100%;height:100%;object-fit:contain');
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(currentDemand);
                 grid.innerHTML += `
@@ -3044,7 +3046,7 @@
                         <div class="card-img-container" 
                              oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
                              ondblclick="duplicate('${s}', ${p.uid})" title="Right click for Qty | Shift + Right click for Graph">
-                            <img src="${imgUrl}" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                            ${imgTag}
                         </div>
                         <div class="card-name">${p.n}${getTrendIcons(p)}</div>
                         <div class="card-val">${val.toFixed(2)}</div>
@@ -3306,7 +3308,7 @@
                 const val = calculatePetVal(p, 'value');
                 const label = getPetLabel(p);
                 return `<div class="advisor-inv-chip" onclick="advisorAddPet('${p.n.replace(/'/g,"\'")}','${p.type}',${p.f_st},${p.r_st})" title="Click to add to offer">
-                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    ${petImgTag(p.n, "width:38px;height:38px;object-fit:contain")}
                     ${count > 1 ? `<div style="position:absolute;top:3px;right:3px;background:var(--accent);color:white;border-radius:5px;font-size:9px;padding:1px 4px;font-weight:900">x${count}</div>` : ''}
                     <div class="inv-chip-name">${label.length > 14 ? label.substring(0,12)+'…' : label}</div>
                     <div class="inv-chip-val">${val.toFixed(2)}</div>
@@ -3338,7 +3340,7 @@
                 const label = getPetLabel(p);
                 html += `<div class="advisor-pet-chip" onclick="advisorRemovePet(${p.uid})" title="Click to remove">
                     <div class="chip-remove">✕</div>
-                    <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    ${petImgTag(p.n, "width:38px;height:38px;object-fit:contain")}
                     <div class="chip-name">${label.length > 12 ? label.substring(0,11)+'…' : label}</div>
                     <div class="chip-val">${val.toFixed(2)}</div>
                 </div>`;
@@ -3429,7 +3431,7 @@
                 const tVal = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
 
                 return `<div class="target-card">
-                    <img src="https://amvgg.com/items/${encodeURIComponent(t.n)}.webp" onerror="this.src='https://amvgg.com/items/theme-color.webp'">
+                    ${petImgTag(t.n, "width:58px;height:58px;object-fit:contain;border-radius:10px;background:#0f172a")}
                     <div class="target-card-body">
                         <div class="target-name">${t.n}</div>
                         <div class="target-badges">
@@ -3627,9 +3629,7 @@
                     <div class="vlist-pets">
                         ${g.pets.sort((a,b) => b.v - a.v).map(p => `
                             <div class="vlist-pet" onclick="quickAddFromList('${p.n.replace(/'/g,"\'")}')">
-                                <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp"
-                                     onerror="this.src='https://amvgg.com/items/theme-color.webp'"
-                                     loading="lazy">
+                                ${petImgTag(p.n)}
                                 <div class="vlist-pet-tooltip">${p.n} · ${p.v}</div>
                             </div>
                         `).join('')}
@@ -3669,9 +3669,7 @@
                     <div class="vlist-pets">
                         ${g.pets.sort((a,b) => b.v - a.v).map(p => `
                             <div class="vlist-pet" style="border-color:${color}22" onclick="quickAddFromList('${p.n.replace(/'/g,"\'")}')">
-                                <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp"
-                                     onerror="this.src='https://amvgg.com/items/theme-color.webp'"
-                                     loading="lazy">
+                                ${petImgTag(p.n)}
                                 <div class="vlist-pet-tooltip" style="border-color:${color}">${p.n} · Dem ${p.d}</div>
                             </div>
                         `).join('')}
@@ -3689,6 +3687,94 @@
             switchTab('calc');
             render();
             saveTrade();
+        }
+
+
+        // ================================================================
+        // SMART IMAGE LOADER — tries multiple name variants
+        // AMVGG filenames often differ in capitalisation from CSV names
+        // e.g. "ride-a-pet potion" → "Ride-A-Pet Potion"
+        // ================================================================
+        function toTitleCase(str) {
+            return str.replace(/([^\s\-])[^\s\-]*/g, (w, first) => first.toUpperCase() + w.slice(1).toLowerCase());
+        }
+
+        // Strip accents/diacritics: Tió → Tio, é → e, ñ → n etc.
+        function stripAccents(str) {
+            return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        // Normalise special characters that AMVGG may strip or replace
+        // e.g. apostrophes, periods, colons, ampersands etc.
+        function stripSpecialChars(str) {
+            return str
+                .replace(/[''`´]/g, '')          // apostrophes / smart quotes → remove
+                .replace(/\.+/g, '')              // periods → remove
+                .replace(/&/g, 'and')              // & → and
+                .replace(/[^a-zA-Z0-9\s\-éèêëàâîïùûüôœæçñãõÉÈÊËÀÂÎÏÙÛÜÔŒÆÇÑÃÕ]/g, '') // remove anything else unusual
+                .replace(/\s{2,}/g, ' ')           // collapse double spaces
+                .trim();
+        }
+
+        function getPetImageVariants(name) {
+            const variants = new Set();
+            const accStripped  = stripAccents(name);
+            const specStripped = stripSpecialChars(name);
+            const bothStripped = stripSpecialChars(stripAccents(name));
+
+            // Build a set of base strings — original + each normalisation combo
+            const bases = new Set([name, accStripped, specStripped, bothStripped]);
+
+            bases.forEach(base => {
+                if (!base) return;
+                variants.add(base);                                           // as-is
+                variants.add(toTitleCase(base));                              // Title Case
+                variants.add(base.charAt(0).toUpperCase() + base.slice(1));  // Sentence case
+                variants.add(base.toLowerCase());                             // lowercase
+                // Capitalise after hyphens and spaces
+                variants.add(base.replace(/(^|[\s\-])([a-z])/g, (_, sep, c) => sep + c.toUpperCase()));
+                // Spaces ↔ hyphens
+                variants.add(base.replace(/\s+/g, '-'));
+                variants.add(toTitleCase(base).replace(/\s+/g, '-'));
+                variants.add(base.replace(/-/g, ' '));
+                variants.add(toTitleCase(base.replace(/-/g, ' ')));
+            });
+
+            return [...variants].filter(Boolean);
+        }
+
+        // Build an img element with smart fallback chain
+        // Returns an <img> tag string for use in innerHTML
+        function petImgTag(name, style) {
+            const variants = getPetImageVariants(name);
+            const styleAttr = style || 'width:36px;height:36px;object-fit:contain';
+            // Encode all variants as a JSON array and store in data attribute
+            // The onerror handler works through the list
+            const firstSrc = 'https://amvgg.com/items/' + encodeURIComponent(variants[0]) + '.webp';
+            const fallbacks = JSON.stringify(variants.slice(1).map(v => 'https://amvgg.com/items/' + encodeURIComponent(v) + '.webp'));
+            return `<img src="${firstSrc}" style="${styleAttr}" loading="lazy"
+                data-fallbacks='${fallbacks}' data-fb-idx="0"
+                onerror="petImgFallback(this)"
+                alt="${name.replace(/"/g,'&quot;')}">`;
+        }
+
+        function petImgFallback(img) {
+            try {
+                const fallbacks = JSON.parse(img.dataset.fallbacks || '[]');
+                let idx = parseInt(img.dataset.fbIdx || '0');
+                idx++;
+                if (idx < fallbacks.length) {
+                    img.dataset.fbIdx = idx;
+                    img.src = fallbacks[idx];
+                } else {
+                    // All variants exhausted — use placeholder
+                    img.onerror = null;
+                    img.src = 'https://amvgg.com/items/theme-color.webp';
+                }
+            } catch(e) {
+                img.onerror = null;
+                img.src = 'https://amvgg.com/items/theme-color.webp';
+            }
         }
 
         loadPetData();
