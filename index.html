@@ -3662,9 +3662,9 @@
 
         // Get demand for a pet based on type
         function getPetListDemand(p, type) {
-            if (type === 'neon')  return parseInt(p.nd || p.d) || 0;
-            if (type === 'mega')  return parseInt(p.md || p.d) || 0;
-            return parseInt(p.d) || 0;
+            if (type === 'neon')  return parseFloat(p.nd || p.d) || 0;
+            if (type === 'mega')  return parseFloat(p.md || p.d) || 0;
+            return parseFloat(p.d) || 0;
         }
 
         function getTypeLabel(type) {
@@ -3685,9 +3685,9 @@
 
             let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
 
-            // For neon/mega, filter out pets with no value for that type
-            if (type === 'neon')  pets = pets.filter(p => parseFloat(p.nfr_v || p.n_v) > 0);
-            if (type === 'mega')  pets = pets.filter(p => parseFloat(p.mfr_v || p.m_v) > 0);
+            // For neon/mega, filter out pets with no value for that type AND eggs (eggs don't have neon/mega)
+            if (type === 'neon')  pets = pets.filter(p => !isEgg(p.n) && parseFloat(p.nfr_v || p.n_v) > 0);
+            if (type === 'mega')  pets = pets.filter(p => !isEgg(p.n) && parseFloat(p.mfr_v || p.m_v) > 0);
 
             const groups = {};
             pets.forEach(p => {
@@ -3737,27 +3737,53 @@
             const tileSize = zoom + 10;
             const typeLabel = getTypeLabel(type);
 
-            let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
-            if (type === 'neon')  pets = pets.filter(p => parseFloat(p.nfr_v || p.n_v) > 0);
-            if (type === 'mega')  pets = pets.filter(p => parseFloat(p.mfr_v || p.m_v) > 0);
+            let allFiltered = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
+
+            // Eggs only show in Normal tab
+            if (type === 'neon')  allFiltered = allFiltered.filter(p => !isEgg(p.n) && parseFloat(p.nfr_v || p.n_v) > 0);
+            if (type === 'mega')  allFiltered = allFiltered.filter(p => !isEgg(p.n) && parseFloat(p.mfr_v || p.m_v) > 0);
+
+            // Separate artifact demand pets from normal grouped pets
+            const artifactPets = allFiltered.filter(p => ARTIFACT_DEMAND_PETS.has(p.n.toLowerCase().trim()));
+            const normalPets   = allFiltered.filter(p => !ARTIFACT_DEMAND_PETS.has(p.n.toLowerCase().trim()));
 
             const groups = {};
-            pets.forEach(p => {
+            normalPets.forEach(p => {
                 const d = getPetListDemand(p, type);
-                const key = d.toString();
-                if (!groups[key]) groups[key] = { d, pets: [] };
+                // For values between 0 and 1, bucket by 0.1 increments
+                const bucket = d < 1 ? Math.round(d * 10) / 10 : Math.floor(d);
+                const key = bucket.toString();
+                if (!groups[key]) groups[key] = { d: bucket, pets: [] };
                 groups[key].pets.push(p);
             });
 
             const sorted = Object.values(groups).sort((a,b) => b.d - a.d);
-            if (sorted.length === 0) {
+
+            // Build artifact row HTML
+            let artifactRowHtml = '';
+            if (artifactPets.length > 0 && type === 'normal') {
+                artifactRowHtml = `<div class="vlist-tier-row" style="border-bottom:1.5px solid #7c3aed44;margin-bottom:14px;padding-bottom:14px">
+                    <div class="vlist-tier-label" style="color:#a855f7;font-size:0.65em;line-height:1.3">✨<br>Artifact<br>Demand</div>
+                    <div class="vlist-pets">
+                        ${artifactPets.map(p => {
+                            const safeN = p.n.replace(/'/g,"\'");
+                            return `<div class="vlist-pet" style="width:${tileSize}px;height:${tileSize}px;border-color:#7c3aed88" onclick="quickAddFromList('${safeN}','${type}')">
+                                ${petImgTag(p.n, 'width:'+imgSize+'px;height:'+imgSize+'px;object-fit:contain')}
+                                <div class="vlist-pet-tooltip" style="border-color:#a855f7">${p.n} · ✨ Artifact Demand</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }
+
+            if (sorted.length === 0 && !artifactRowHtml) {
                 body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">No pets found for this type.</div>';
                 return;
             }
 
-            body.innerHTML = sorted.map(g => {
+            const groupsHtml = sorted.map(g => {
                 const color = getDemandColor(g.d);
-                const label = g.d >= 9 ? '🔥 ' + g.d : g.d >= 7 ? '⚡ ' + g.d : g.d <= 2 ? '❄️ ' + g.d : String(g.d);
+                const label = g.d >= 9 ? '🔥 ' + g.d : g.d >= 7 ? '⚡ ' + g.d : g.d <= 2 ? '❄️ ' + (g.d < 1 ? g.d.toFixed(1) : g.d) : String(g.d);
                 return `<div class="vlist-tier-row">
                     <div class="vlist-tier-label" style="color:${color}">${label}</div>
                     <div class="vlist-pets">
@@ -3772,6 +3798,8 @@
                     </div>
                 </div>`;
             }).join('');
+
+            body.innerHTML = artifactRowHtml + groupsHtml;
         }
 
         // Click a pet on the value/demand list → add to Side A, switch to calc tab
@@ -3788,6 +3816,31 @@
             saveTrade();
         }
 
+
+
+        // ================================================================
+        // IMAGE OVERRIDES — for items AMVGG doesn't host (potions, etc.)
+        // Add any pet name (lowercase) → image URL here
+        // Uses inline SVG data URIs so they ALWAYS work, no CDN needed
+        // ================================================================
+        const IMAGE_OVERRIDES = {
+            'ride-a-pet potion': `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><radialGradient id="bg" cx="40%" cy="35%"><stop offset="0%" stop-color="%23ff9f43"/><stop offset="100%" stop-color="%23ee5a24"/></radialGradient></defs><rect width="64" height="64" rx="12" fill="%231e293b"/><ellipse cx="32" cy="18" rx="8" ry="5" fill="%23f9ca24" opacity=".9"/><rect x="26" y="16" width="12" height="6" fill="%23f9ca24"/><path d="M24 22 Q20 30 20 38 Q20 52 32 52 Q44 52 44 38 Q44 30 40 22 Z" fill="url(%23bg)" opacity=".95"/><ellipse cx="32" cy="37" rx="7" ry="9" fill="%23ff6b35" opacity=".5"/><path d="M28 28 Q31 25 34 28" stroke="white" stroke-width="1.5" fill="none" opacity=".6"/><text x="32" y="57" text-anchor="middle" font-size="7" fill="%23f9ca24" font-family="sans-serif" font-weight="bold">RIDE</text></svg>`)}`,
+
+            'fly-a-pet potion': `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><radialGradient id="bg2" cx="40%" cy="35%"><stop offset="0%" stop-color="%2374b9ff"/><stop offset="100%" stop-color="%230984e3"/></radialGradient></defs><rect width="64" height="64" rx="12" fill="%231e293b"/><ellipse cx="32" cy="18" rx="8" ry="5" fill="%23a29bfe" opacity=".9"/><rect x="26" y="16" width="12" height="6" fill="%23a29bfe"/><path d="M24 22 Q20 30 20 38 Q20 52 32 52 Q44 52 44 38 Q44 30 40 22 Z" fill="url(%23bg2)" opacity=".95"/><ellipse cx="32" cy="37" rx="7" ry="9" fill="%2300cec9" opacity=".5"/><path d="M28 28 Q31 25 34 28" stroke="white" stroke-width="1.5" fill="none" opacity=".6"/><text x="32" y="57" text-anchor="middle" font-size="8" fill="%23a29bfe" font-family="sans-serif" font-weight="bold">FLY</text></svg>`)}`,
+        };
+
+        // Pets with "Artifact Demand" — custom demand tier you created
+        // Shown separately in demand list, excluded from normal demand groups
+        const ARTIFACT_DEMAND_PETS = new Set([
+            'ride-a-pet potion',
+            'fly-a-pet potion',
+        ]);
+
+        // Returns true if this pet is an egg (should only show in Normal type)
+        function isEgg(name) {
+            const n = (name || '').toLowerCase();
+            return n.includes(' egg') || n.endsWith('egg') || n === 'egg';
+        }
 
         // ================================================================
         // SMART IMAGE LOADER — tries multiple name variants
@@ -3845,10 +3898,15 @@
         // Build an img element with smart fallback chain
         // Returns an <img> tag string for use in innerHTML
         function petImgTag(name, style) {
-            const variants = getPetImageVariants(name);
             const styleAttr = style || 'width:36px;height:36px;object-fit:contain';
-            // Encode all variants as a JSON array and store in data attribute
-            // The onerror handler works through the list
+            const key = (name || '').toLowerCase().trim();
+
+            // Check hardcoded overrides first — for items AMVGG doesn't host
+            if (IMAGE_OVERRIDES[key]) {
+                return `<img src="${IMAGE_OVERRIDES[key]}" style="${styleAttr}" alt="${name.replace(/"/g,'&quot;')}">`;
+            }
+
+            const variants = getPetImageVariants(name);
             const firstSrc = 'https://amvgg.com/items/' + encodeURIComponent(variants[0]) + '.webp';
             const fallbacks = JSON.stringify(variants.slice(1).map(v => 'https://amvgg.com/items/' + encodeURIComponent(v) + '.webp'));
             return `<img src="${firstSrc}" style="${styleAttr}" loading="lazy"
