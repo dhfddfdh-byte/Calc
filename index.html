@@ -315,6 +315,11 @@
             padding: 16px 22px; background: #111827; border-bottom: 1.5px solid var(--border);
             display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
         }
+
+        .vlist-type-group { display:flex; gap:3px; background:#0f172a; border-radius:20px; padding:3px; border:1px solid var(--border); }
+        .vlist-type-btn { padding:4px 12px; border-radius:16px; border:none; background:transparent; color:var(--subtext); font-weight:800; font-size:0.72em; cursor:pointer; transition:0.15s; font-family:inherit; white-space:nowrap; }
+        .vlist-type-btn.active { background:var(--accent); color:white; }
+        .vlist-type-btn:not(.active):hover { color:white; background:rgba(255,255,255,0.07); }
         .vlist-search {
             background: #1e293b; border: 1.5px solid var(--border); color: white;
             padding: 8px 14px; border-radius: 20px; font-size: 0.82em; font-weight: 700;
@@ -784,8 +789,23 @@
     <div class="tab-content" id="tabValue">
         <div class="vlist-container">
             <div class="vlist-header">
-                <span style="font-weight:900;color:white">📊 Value List</span>
-                <input class="vlist-search" id="valueListSearch" placeholder="🔍 Search pets..." oninput="renderValueList()">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span style="font-weight:900;color:white">📊 Value List</span>
+                    <div class="vlist-type-group">
+                        <button class="vlist-type-btn active" id="vTypeNormal" onclick="setVListType('value','normal')">Normal</button>
+                        <button class="vlist-type-btn" id="vTypeNeon" onclick="setVListType('value','neon')">Neon</button>
+                        <button class="vlist-type-btn" id="vTypeMega" onclick="setVListType('value','mega')">Mega Neon</button>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:7px">
+                        <span style="font-size:0.72em;color:var(--subtext);font-weight:800">🔍</span>
+                        <input type="range" id="valueZoom" min="32" max="90" value="46"
+                            oninput="setListZoom('value',this.value)"
+                            style="width:80px;accent-color:var(--accent)">
+                    </div>
+                    <input class="vlist-search" id="valueListSearch" placeholder="🔍 Search pets..." oninput="renderValueList()">
+                </div>
             </div>
             <div class="vlist-body" id="valueListBody">
                 <div style="text-align:center;color:var(--subtext);padding:40px">Loading...</div>
@@ -797,8 +817,23 @@
     <div class="tab-content" id="tabDemand">
         <div class="vlist-container">
             <div class="vlist-header">
-                <span style="font-weight:900;color:white">🔥 Demand List</span>
-                <input class="vlist-search" id="demandListSearch" placeholder="🔍 Search pets..." oninput="renderDemandList()">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span style="font-weight:900;color:white">🔥 Demand List</span>
+                    <div class="vlist-type-group">
+                        <button class="vlist-type-btn active" id="dTypeNormal" onclick="setVListType('demand','normal')">Normal</button>
+                        <button class="vlist-type-btn" id="dTypeNeon" onclick="setVListType('demand','neon')">Neon</button>
+                        <button class="vlist-type-btn" id="dTypeMega" onclick="setVListType('demand','mega')">Mega Neon</button>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:7px">
+                        <span style="font-size:0.72em;color:var(--subtext);font-weight:800">🔍</span>
+                        <input type="range" id="demandZoom" min="32" max="90" value="46"
+                            oninput="setListZoom('demand',this.value)"
+                            style="width:80px;accent-color:var(--accent)">
+                    </div>
+                    <input class="vlist-search" id="demandListSearch" placeholder="🔍 Search pets..." oninput="renderDemandList()">
+                </div>
             </div>
             <div class="vlist-body" id="demandListBody">
                 <div style="text-align:center;color:var(--subtext);padding:40px">Loading...</div>
@@ -3593,25 +3628,77 @@
             if (tab === 'demand' && ALL_PETS.length > 0) renderDemandList();
         }
 
+        // List state — type and zoom are independent per list
+        const listState = {
+            value:  { type: 'normal', zoom: 46 },
+            demand: { type: 'normal', zoom: 46 }
+        };
+
+        function setVListType(list, type) {
+            listState[list].type = type;
+            // Update toggle buttons
+            const prefix = list === 'value' ? 'v' : 'd';
+            ['Normal','Neon','Mega'].forEach(t => {
+                const id = prefix + 'Type' + t;
+                const el = document.getElementById(id);
+                if (el) el.classList.toggle('active', t.toLowerCase() === type || (t === 'Mega' && type === 'mega'));
+            });
+            if (list === 'value') renderValueList();
+            else renderDemandList();
+        }
+
+        function setListZoom(list, val) {
+            listState[list].zoom = parseInt(val);
+            if (list === 'value') renderValueList();
+            else renderDemandList();
+        }
+
+        // Get the correct value for a pet based on list type
+        function getPetListValue(p, type) {
+            if (type === 'neon')  return parseFloat(p.nfr_v || p.n_v || p.v) || 0;
+            if (type === 'mega')  return parseFloat(p.mfr_v || p.m_v || p.v) || 0;
+            return parseFloat(p.v) || 0;
+        }
+
+        // Get demand for a pet based on type
+        function getPetListDemand(p, type) {
+            if (type === 'neon')  return parseInt(p.nd || p.d) || 0;
+            if (type === 'mega')  return parseInt(p.md || p.d) || 0;
+            return parseInt(p.d) || 0;
+        }
+
+        function getTypeLabel(type) {
+            if (type === 'neon') return 'NFR';
+            if (type === 'mega') return 'MFR';
+            return '';
+        }
+
         function renderValueList() {
             const body = document.getElementById('valueListBody');
             const search = (document.getElementById('valueListSearch').value || '').toLowerCase();
             if (ALL_PETS.length === 0) { body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">Loading data...</div>'; return; }
 
-            // Filter by search
+            const { type, zoom } = listState.value;
+            const imgSize = zoom;
+            const tileSize = zoom + 10;
+            const typeLabel = getTypeLabel(type);
+
             let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
 
-            // Group by value — round to 2 decimal places then group
+            // For neon/mega, filter out pets with no value for that type
+            if (type === 'neon')  pets = pets.filter(p => parseFloat(p.nfr_v || p.n_v) > 0);
+            if (type === 'mega')  pets = pets.filter(p => parseFloat(p.mfr_v || p.m_v) > 0);
+
             const groups = {};
             pets.forEach(p => {
-                const v = parseFloat(p.v) || 0;
+                const v = getPetListValue(p, type);
                 if (v <= 0) return;
-                // Bucket into tiers: round to nearest sensible step
                 let tier;
-                if (v >= 100) tier = Math.round(v / 10) * 10;
-                else if (v >= 10) tier = Math.round(v);
-                else if (v >= 1) tier = Math.round(v * 2) / 2;
-                else tier = Math.round(v * 100) / 100;
+                if (v >= 1000) tier = Math.round(v / 100) * 100;
+                else if (v >= 100) tier = Math.round(v / 10) * 10;
+                else if (v >= 10)  tier = Math.round(v);
+                else if (v >= 1)   tier = Math.round(v * 2) / 2;
+                else               tier = Math.round(v * 100) / 100;
                 const key = tier.toString();
                 if (!groups[key]) groups[key] = { tier, pets: [] };
                 groups[key].pets.push(p);
@@ -3619,7 +3706,7 @@
 
             const sorted = Object.values(groups).sort((a,b) => b.tier - a.tier);
             if (sorted.length === 0) {
-                body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">No pets found.</div>';
+                body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">No pets found for this type.</div>';
                 return;
             }
 
@@ -3627,12 +3714,14 @@
                 <div class="vlist-tier-row">
                     <div class="vlist-tier-label">${g.tier >= 1 ? g.tier : g.tier.toFixed(2)}</div>
                     <div class="vlist-pets">
-                        ${g.pets.sort((a,b) => b.v - a.v).map(p => `
-                            <div class="vlist-pet" onclick="quickAddFromList('${p.n.replace(/'/g,"\'")}')">
-                                ${petImgTag(p.n)}
-                                <div class="vlist-pet-tooltip">${p.n} · ${p.v}</div>
-                            </div>
-                        `).join('')}
+                        ${g.pets.sort((a,b) => getPetListValue(b,type) - getPetListValue(a,type)).map(p => {
+                            const val = getPetListValue(p, type);
+                            const safeN = p.n.replace(/'/g,"\'");
+                            return `<div class="vlist-pet" style="width:${tileSize}px;height:${tileSize}px" onclick="quickAddFromList('${safeN}','${type}')">
+                                ${petImgTag(p.n, 'width:'+imgSize+'px;height:'+imgSize+'px;object-fit:contain')}
+                                <div class="vlist-pet-tooltip">${typeLabel ? typeLabel+' ' : ''}${p.n} · ${val}</div>
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>
             `).join('');
@@ -3643,12 +3732,18 @@
             const search = (document.getElementById('demandListSearch').value || '').toLowerCase();
             if (ALL_PETS.length === 0) { body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">Loading data...</div>'; return; }
 
-            let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
+            const { type, zoom } = listState.demand;
+            const imgSize = zoom;
+            const tileSize = zoom + 10;
+            const typeLabel = getTypeLabel(type);
 
-            // Group by demand (integer 0-10)
+            let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
+            if (type === 'neon')  pets = pets.filter(p => parseFloat(p.nfr_v || p.n_v) > 0);
+            if (type === 'mega')  pets = pets.filter(p => parseFloat(p.mfr_v || p.m_v) > 0);
+
             const groups = {};
             pets.forEach(p => {
-                const d = parseInt(p.d) || 0;
+                const d = getPetListDemand(p, type);
                 const key = d.toString();
                 if (!groups[key]) groups[key] = { d, pets: [] };
                 groups[key].pets.push(p);
@@ -3656,34 +3751,38 @@
 
             const sorted = Object.values(groups).sort((a,b) => b.d - a.d);
             if (sorted.length === 0) {
-                body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">No pets found.</div>';
+                body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">No pets found for this type.</div>';
                 return;
             }
 
             body.innerHTML = sorted.map(g => {
                 const color = getDemandColor(g.d);
-                const label = g.d >= 9 ? '🔥 ' + g.d : g.d >= 7 ? '⚡ ' + g.d : g.d >= 5 ? g.d : g.d <= 2 ? '❄️ ' + g.d : String(g.d);
-                return `
-                <div class="vlist-tier-row">
+                const label = g.d >= 9 ? '🔥 ' + g.d : g.d >= 7 ? '⚡ ' + g.d : g.d <= 2 ? '❄️ ' + g.d : String(g.d);
+                return `<div class="vlist-tier-row">
                     <div class="vlist-tier-label" style="color:${color}">${label}</div>
                     <div class="vlist-pets">
-                        ${g.pets.sort((a,b) => b.v - a.v).map(p => `
-                            <div class="vlist-pet" style="border-color:${color}22" onclick="quickAddFromList('${p.n.replace(/'/g,"\'")}')">
-                                ${petImgTag(p.n)}
-                                <div class="vlist-pet-tooltip" style="border-color:${color}">${p.n} · Dem ${p.d}</div>
-                            </div>
-                        `).join('')}
+                        ${g.pets.sort((a,b) => getPetListValue(b,'normal') - getPetListValue(a,'normal')).map(p => {
+                            const dem = getPetListDemand(p, type);
+                            const safeN = p.n.replace(/'/g,"\'");
+                            return `<div class="vlist-pet" style="width:${tileSize}px;height:${tileSize}px;border-color:${color}33" onclick="quickAddFromList('${safeN}','${type}')">
+                                ${petImgTag(p.n, 'width:'+imgSize+'px;height:'+imgSize+'px;object-fit:contain')}
+                                <div class="vlist-pet-tooltip" style="border-color:${color}">${typeLabel ? typeLabel+' ' : ''}${p.n} · Dem ${dem}</div>
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>`;
             }).join('');
         }
 
-        // Click a pet on the value/demand list → add to Side A of trade, switch to calc tab
-        function quickAddFromList(petName) {
+        // Click a pet on the value/demand list → add to Side A, switch to calc tab
+        // Respects the type selected (adds as neon/mega if that type is active)
+        function quickAddFromList(petName, type) {
             const pet = ALL_PETS.find(p => p.n === petName);
             if (!pet) return;
             pushState();
-            state.A.push({ ...pet, uid: Date.now() + Math.random(), type: 'reg', f_st: false, r_st: false });
+            const petType = (type === 'neon') ? 'neon' : (type === 'mega') ? 'mega' : 'reg';
+            const isFR = (type === 'neon' || type === 'mega'); // NFR/MFR = fly+ride
+            state.A.push({ ...pet, uid: Date.now() + Math.random(), type: petType, f_st: isFR, r_st: isFR });
             switchTab('calc');
             render();
             saveTrade();
