@@ -798,11 +798,11 @@
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                    <div style="display:flex;align-items:center;gap:7px">
-                        <span style="font-size:0.72em;color:var(--subtext);font-weight:800">🔍</span>
+                    <div style="display:flex;align-items:center;gap:7px;background:var(--panel);border:1.5px solid var(--accent);border-radius:8px;padding:4px 10px">
+                        <span style="font-size:0.75em;color:var(--accent);font-weight:900;letter-spacing:0.03em">🔍 Zoom</span>
                         <input type="range" id="valueZoom" min="32" max="90" value="46"
                             oninput="setListZoom('value',this.value)"
-                            style="width:80px;accent-color:var(--accent)">
+                            style="width:90px;accent-color:var(--accent);cursor:pointer">
                     </div>
                     <input class="vlist-search" id="valueListSearch" placeholder="🔍 Search pets..." oninput="renderValueList()">
                 </div>
@@ -826,11 +826,11 @@
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                    <div style="display:flex;align-items:center;gap:7px">
-                        <span style="font-size:0.72em;color:var(--subtext);font-weight:800">🔍</span>
+                    <div style="display:flex;align-items:center;gap:7px;background:var(--panel);border:1.5px solid var(--accent);border-radius:8px;padding:4px 10px">
+                        <span style="font-size:0.75em;color:var(--accent);font-weight:900;letter-spacing:0.03em">🔍 Zoom</span>
                         <input type="range" id="demandZoom" min="32" max="90" value="46"
                             oninput="setListZoom('demand',this.value)"
-                            style="width:80px;accent-color:var(--accent)">
+                            style="width:90px;accent-color:var(--accent);cursor:pointer">
                     </div>
                     <input class="vlist-search" id="demandListSearch" placeholder="🔍 Search pets..." oninput="renderDemandList()">
                 </div>
@@ -3824,9 +3824,8 @@
         // Uses inline SVG data URIs so they ALWAYS work, no CDN needed
         // ================================================================
         const IMAGE_OVERRIDES = {
-            'ride-a-pet potion': `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><radialGradient id="bg" cx="40%" cy="35%"><stop offset="0%" stop-color="%23ff9f43"/><stop offset="100%" stop-color="%23ee5a24"/></radialGradient></defs><rect width="64" height="64" rx="12" fill="%231e293b"/><ellipse cx="32" cy="18" rx="8" ry="5" fill="%23f9ca24" opacity=".9"/><rect x="26" y="16" width="12" height="6" fill="%23f9ca24"/><path d="M24 22 Q20 30 20 38 Q20 52 32 52 Q44 52 44 38 Q44 30 40 22 Z" fill="url(%23bg)" opacity=".95"/><ellipse cx="32" cy="37" rx="7" ry="9" fill="%23ff6b35" opacity=".5"/><path d="M28 28 Q31 25 34 28" stroke="white" stroke-width="1.5" fill="none" opacity=".6"/><text x="32" y="57" text-anchor="middle" font-size="7" fill="%23f9ca24" font-family="sans-serif" font-weight="bold">RIDE</text></svg>`)}`,
-
-            'fly-a-pet potion': `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><radialGradient id="bg2" cx="40%" cy="35%"><stop offset="0%" stop-color="%2374b9ff"/><stop offset="100%" stop-color="%230984e3"/></radialGradient></defs><rect width="64" height="64" rx="12" fill="%231e293b"/><ellipse cx="32" cy="18" rx="8" ry="5" fill="%23a29bfe" opacity=".9"/><rect x="26" y="16" width="12" height="6" fill="%23a29bfe"/><path d="M24 22 Q20 30 20 38 Q20 52 32 52 Q44 52 44 38 Q44 30 40 22 Z" fill="url(%23bg2)" opacity=".95"/><ellipse cx="32" cy="37" rx="7" ry="9" fill="%2300cec9" opacity=".5"/><path d="M28 28 Q31 25 34 28" stroke="white" stroke-width="1.5" fill="none" opacity=".6"/><text x="32" y="57" text-anchor="middle" font-size="8" fill="%23a29bfe" font-family="sans-serif" font-weight="bold">FLY</text></svg>`)}`,
+            'ride-a-pet potion': 'https://static.wikia.nocookie.net/adoptme/images/3/30/AM_Ride-A-Pet_Potion.png/revision/latest?cb=20220427134837',
+            'fly-a-pet potion':  'https://static.wikia.nocookie.net/adoptme/images/2/2a/Fly-A-Pet_Potion.png/revision/latest?cb=20231206204208',
         };
 
         // Pets with "Artifact Demand" — custom demand tier you created
