@@ -286,6 +286,76 @@
 
 
 
+
+        /* ===== HOME SCREEN / TAB SYSTEM ===== */
+        .home-screen { width: 100%; max-width: 1150px; display: flex; flex-direction: column; align-items: center; }
+        .tab-bar {
+            display: flex; gap: 10px; margin-bottom: 28px;
+            background: #111827; border-radius: 50px; padding: 6px;
+            border: 1.5px solid var(--border);
+        }
+        .tab-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 28px; border-radius: 44px; border: none;
+            font-weight: 900; font-size: 0.9em; cursor: pointer;
+            transition: all 0.2s; color: var(--subtext); background: transparent;
+            font-family: inherit;
+        }
+        .tab-btn.active { background: white; color: #111; box-shadow: 0 2px 12px rgba(0,0,0,0.3); }
+        .tab-btn:not(.active):hover { color: white; background: rgba(255,255,255,0.07); }
+        .tab-content { display: none; width: 100%; }
+        .tab-content.active { display: block; }
+
+        /* ===== VALUE LIST / DEMAND LIST ===== */
+        .vlist-container {
+            width: 100%; background: var(--panel); border-radius: 20px;
+            border: 1.5px solid var(--border); overflow: hidden;
+        }
+        .vlist-header {
+            padding: 16px 22px; background: #111827; border-bottom: 1.5px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+        }
+        .vlist-search {
+            background: #1e293b; border: 1.5px solid var(--border); color: white;
+            padding: 8px 14px; border-radius: 20px; font-size: 0.82em; font-weight: 700;
+            outline: none; width: 220px; font-family: inherit;
+        }
+        .vlist-search::placeholder { color: var(--subtext); }
+        .vlist-body { padding: 16px; }
+        .vlist-tier-row {
+            display: flex; align-items: flex-start; gap: 12px;
+            margin-bottom: 10px; padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .vlist-tier-label {
+            min-width: 68px; font-size: 0.72em; font-weight: 900;
+            color: var(--accent); padding-top: 6px; text-align: right; flex-shrink: 0;
+        }
+        .vlist-pets {
+            display: flex; flex-wrap: wrap; gap: 5px; flex: 1;
+        }
+        .vlist-pet {
+            width: 46px; height: 46px; border-radius: 10px;
+            background: #1e293b; border: 1.5px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.15s; position: relative; flex-shrink: 0;
+        }
+        .vlist-pet:hover { border-color: var(--accent); background: #273549; transform: scale(1.12); z-index: 10; }
+        .vlist-pet img { width: 36px; height: 36px; object-fit: contain; }
+        .vlist-pet-tooltip {
+            position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+            background: #0f172a; border: 1.5px solid var(--accent); color: white;
+            font-size: 0.65em; font-weight: 900; padding: 4px 8px; border-radius: 8px;
+            white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.1s;
+            z-index: 100;
+        }
+        .vlist-pet:hover .vlist-pet-tooltip { opacity: 1; }
+        .vlist-tier-row:last-child { border-bottom: none; margin-bottom: 0; }
+        .demand-dot {
+            width: 10px; height: 10px; border-radius: 50%; display: inline-block;
+            margin-right: 4px; flex-shrink: 0;
+        }
+
         /* ===== SETTINGS STYLES ===== */
         .settings-overlay { position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.96);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;z-index:5500; }
         .settings-container { width:94%;max-width:560px;background:#1a2333;border-radius:24px;border:1.5px solid var(--border);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,0.8); }
@@ -691,6 +761,55 @@
         </div>
     </div>
 
+    <!-- HOME SCREEN WRAPPER -->
+    <div class="home-screen" id="homeScreen">
+
+    <!-- TAB BAR -->
+    <div class="tab-bar">
+        <button class="tab-btn" id="tabBtnValue" onclick="switchTab('value')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Value List
+        </button>
+        <button class="tab-btn" id="tabBtnDemand" onclick="switchTab('demand')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            Demand List
+        </button>
+        <button class="tab-btn active" id="tabBtnCalc" onclick="switchTab('calc')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="2" width="20" height="20" rx="3"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
+            Value Calculator
+        </button>
+    </div>
+
+    <!-- VALUE LIST TAB -->
+    <div class="tab-content" id="tabValue">
+        <div class="vlist-container">
+            <div class="vlist-header">
+                <span style="font-weight:900;color:white">📊 Value List</span>
+                <input class="vlist-search" id="valueListSearch" placeholder="🔍 Search pets..." oninput="renderValueList()">
+            </div>
+            <div class="vlist-body" id="valueListBody">
+                <div style="text-align:center;color:var(--subtext);padding:40px">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DEMAND LIST TAB -->
+    <div class="tab-content" id="tabDemand">
+        <div class="vlist-container">
+            <div class="vlist-header">
+                <span style="font-weight:900;color:white">🔥 Demand List</span>
+                <input class="vlist-search" id="demandListSearch" placeholder="🔍 Search pets..." oninput="renderDemandList()">
+            </div>
+            <div class="vlist-body" id="demandListBody">
+                <div style="text-align:center;color:var(--subtext);padding:40px">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CALCULATOR TAB -->
+    <div class="tab-content active" id="tabCalc">
+
+    <!-- original nav buttons inside calc tab -->
     <div class="nav-bar">
         <button class="nav-btn" onclick="openInfo()">ℹ️ Information</button>
         <button class="nav-btn" onclick="openHistory()">📜 History</button>
@@ -998,7 +1117,8 @@
             <button class="sw-btn active" id="btnValue" onclick="setMode('value')">Value</button>
             <button class="save-trade-btn" onclick="logCurrentTrade()">Save to History</button>
         </div>
-    </div>
+    </div>  <!-- end tabCalc -->
+    </div>  <!-- end homeScreen -->
 
    <script>
         // CRITICAL DATA VARIABLES DEFINED AT TOP
@@ -1899,6 +2019,9 @@
                 fetchHistory(); 
                 restoreTrade();
                 render();
+                // Render lists if already on those tabs
+                if (currentTab === 'value') renderValueList();
+                if (currentTab === 'demand') renderDemandList();
             } catch (error) {
                 console.error('Error loading data:', error);
                 document.querySelector('.loading-text').textContent = 'Error loading data.';
@@ -3450,6 +3573,122 @@
                     <button class="keybind-remove" onclick="removeKeybind(${i})">✕</button>
                 </div>`;
             }).join('');
+        }
+
+
+        // ================================================================
+        // TAB SYSTEM + VALUE LIST + DEMAND LIST
+        // ================================================================
+        let currentTab = 'calc';
+
+        function switchTab(tab) {
+            currentTab = tab;
+            ['value','demand','calc'].forEach(t => {
+                document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+                document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+            });
+            if (tab === 'value' && ALL_PETS.length > 0) renderValueList();
+            if (tab === 'demand' && ALL_PETS.length > 0) renderDemandList();
+        }
+
+        function renderValueList() {
+            const body = document.getElementById('valueListBody');
+            const search = (document.getElementById('valueListSearch').value || '').toLowerCase();
+            if (ALL_PETS.length === 0) { body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">Loading data...</div>'; return; }
+
+            // Filter by search
+            let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
+
+            // Group by value — round to 2 decimal places then group
+            const groups = {};
+            pets.forEach(p => {
+                const v = parseFloat(p.v) || 0;
+                if (v <= 0) return;
+                // Bucket into tiers: round to nearest sensible step
+                let tier;
+                if (v >= 100) tier = Math.round(v / 10) * 10;
+                else if (v >= 10) tier = Math.round(v);
+                else if (v >= 1) tier = Math.round(v * 2) / 2;
+                else tier = Math.round(v * 100) / 100;
+                const key = tier.toString();
+                if (!groups[key]) groups[key] = { tier, pets: [] };
+                groups[key].pets.push(p);
+            });
+
+            const sorted = Object.values(groups).sort((a,b) => b.tier - a.tier);
+            if (sorted.length === 0) {
+                body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">No pets found.</div>';
+                return;
+            }
+
+            body.innerHTML = sorted.map(g => `
+                <div class="vlist-tier-row">
+                    <div class="vlist-tier-label">${g.tier >= 1 ? g.tier : g.tier.toFixed(2)}</div>
+                    <div class="vlist-pets">
+                        ${g.pets.sort((a,b) => b.v - a.v).map(p => `
+                            <div class="vlist-pet" onclick="quickAddFromList('${p.n.replace(/'/g,"\'")}')">
+                                <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp"
+                                     onerror="this.src='https://amvgg.com/items/theme-color.webp'"
+                                     loading="lazy">
+                                <div class="vlist-pet-tooltip">${p.n} · ${p.v}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDemandList() {
+            const body = document.getElementById('demandListBody');
+            const search = (document.getElementById('demandListSearch').value || '').toLowerCase();
+            if (ALL_PETS.length === 0) { body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">Loading data...</div>'; return; }
+
+            let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
+
+            // Group by demand (integer 0-10)
+            const groups = {};
+            pets.forEach(p => {
+                const d = parseInt(p.d) || 0;
+                const key = d.toString();
+                if (!groups[key]) groups[key] = { d, pets: [] };
+                groups[key].pets.push(p);
+            });
+
+            const sorted = Object.values(groups).sort((a,b) => b.d - a.d);
+            if (sorted.length === 0) {
+                body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">No pets found.</div>';
+                return;
+            }
+
+            body.innerHTML = sorted.map(g => {
+                const color = getDemandColor(g.d);
+                const label = g.d >= 9 ? '🔥 ' + g.d : g.d >= 7 ? '⚡ ' + g.d : g.d >= 5 ? g.d : g.d <= 2 ? '❄️ ' + g.d : String(g.d);
+                return `
+                <div class="vlist-tier-row">
+                    <div class="vlist-tier-label" style="color:${color}">${label}</div>
+                    <div class="vlist-pets">
+                        ${g.pets.sort((a,b) => b.v - a.v).map(p => `
+                            <div class="vlist-pet" style="border-color:${color}22" onclick="quickAddFromList('${p.n.replace(/'/g,"\'")}')">
+                                <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp"
+                                     onerror="this.src='https://amvgg.com/items/theme-color.webp'"
+                                     loading="lazy">
+                                <div class="vlist-pet-tooltip" style="border-color:${color}">${p.n} · Dem ${p.d}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Click a pet on the value/demand list → add to Side A of trade, switch to calc tab
+        function quickAddFromList(petName) {
+            const pet = ALL_PETS.find(p => p.n === petName);
+            if (!pet) return;
+            pushState();
+            state.A.push({ ...pet, uid: Date.now() + Math.random(), type: 'reg', f_st: false, r_st: false });
+            switchTab('calc');
+            render();
+            saveTrade();
         }
 
         loadPetData();
