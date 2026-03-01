@@ -249,6 +249,12 @@
         .similar-item.selected { border-color: var(--win); background: rgba(16, 185, 129, 0.05); }
         
         .ai-count-control { margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
+        .ai-fullscreen-btn { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); padding: 4px 9px; border-radius: 7px; font-size: 0.7em; font-weight: 900; cursor: pointer; transition: 0.2s; margin-left: 6px; }
+        .ai-fullscreen-btn:hover { background: var(--accent); color: white; }
+        #aiFullscreenOverlay { display:none; position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); padding:20px; box-sizing:border-box; flex-direction:column; }
+        #aiFullscreenOverlay.open { display:flex; }
+        #aiFullscreenInner { background:var(--card); border:1.5px solid var(--accent); border-radius:20px; padding:22px; flex:1; display:flex; flex-direction:column; overflow:hidden; max-width:860px; width:100%; margin:0 auto; }
+        #aiFullscreenBody { flex:1; overflow-y:auto; margin-top:12px; }
         .ai-count-control label { font-size: 0.75em; color: var(--subtext); font-weight: 700; }
         .ai-count-control input { cursor: pointer; accent-color: var(--accent); }
         .history-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 4500; }
@@ -941,7 +947,10 @@
                     <div class="ai-box">
                         <div class="ai-title">
                             🤖 AI Strategist
-                            <button class="ai-refresh-btn" onclick="renderInventory()">Refresh ↻</button>
+                            <div style="display:flex;gap:6px;align-items:center">
+                                <button class="ai-fullscreen-btn" onclick="openAIFullscreen()" title="Fullscreen">⛶ Expand</button>
+                                <button class="ai-refresh-btn" onclick="renderInventory()">Refresh ↻</button>
+                            </div>
                         </div>
                         
                         <div class="ai-toggle-group">
@@ -3982,6 +3991,74 @@
         let capturingKeyForIndex = -1;
         let capturedKey = '';
 
+        // ── AI STRATEGIST FULLSCREEN ─────────────────────────────────────────
+        function openAIFullscreen() {
+            const overlay = document.getElementById('aiFullscreenOverlay');
+            overlay.classList.add('open');
+            // Sync controls from main panel to fullscreen
+            const mode = state.aiMode || 'normal';
+            document.getElementById('fsAiTogNormal').classList.toggle('active', mode === 'normal');
+            document.getElementById('fsAiTogVelocity').classList.toggle('active', mode === 'velocity');
+            document.getElementById('fsStrategyCountSlider').value = state.strategyLimit || 10;
+            document.getElementById('fsStrategyCountVal').textContent = state.strategyLimit || 10;
+            // Sync dream pet display
+            const dc = document.getElementById('fsDreamPetContainer');
+            if (state.dreamPet) {
+                dc.innerHTML = `<div class="dream-active-badge"><span>Target: ${state.dreamPet.n}</span><span style="cursor:pointer" onclick="clearDreamPetFS()">✕</span></div>`;
+            } else {
+                dc.innerHTML = `<button class="nav-btn" style="width:100%;font-size:0.8em;padding:8px" onclick="openSearch('dream')">★ Set Dream Pet</button>`;
+            }
+            refreshAIFullscreen();
+        }
+
+        function closeAIFullscreen() {
+            document.getElementById('aiFullscreenOverlay').classList.remove('open');
+        }
+
+        function refreshAIFullscreen() {
+            // Render AI suggestions into the fullscreen body
+            const origBox = document.getElementById('aiSuggestions');
+            const fsBox   = document.getElementById('aiFullscreenBody');
+            // Temporarily swap the target element, run the update, swap back
+            const origParent = origBox.parentNode;
+            fsBox.innerHTML = '<div class="ai-suggestion" style="text-align:center;color:var(--subtext)">Generating...</div>';
+            // Use a fake box trick: clone the content after updateAISuggestions runs
+            updateAISuggestions(state.inv);
+            fsBox.innerHTML = origBox.innerHTML;
+        }
+
+        function setAiStrategyFS(mode) {
+            setAiStrategy(mode);
+            document.getElementById('fsAiTogNormal').classList.toggle('active', mode === 'normal');
+            document.getElementById('fsAiTogVelocity').classList.toggle('active', mode === 'velocity');
+            refreshAIFullscreen();
+        }
+
+        function updateStrategyCountFS(val) {
+            updateStrategyCount(val);
+            document.getElementById('fsStrategyCountVal').textContent = val;
+            refreshAIFullscreen();
+        }
+
+        function clearDreamPetFS() {
+            clearDreamPet();
+            document.getElementById('fsDreamPetContainer').innerHTML =
+                `<button class="nav-btn" style="width:100%;font-size:0.8em;padding:8px" onclick="openSearch('dream')">★ Set Dream Pet</button>`;
+            refreshAIFullscreen();
+        }
+
+        // Close on backdrop click
+        document.getElementById('aiFullscreenOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeAIFullscreen();
+        });
+
+        // Close on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('aiFullscreenOverlay').classList.contains('open')) {
+                closeAIFullscreen();
+            }
+        });
+
         function openSettings() {
             document.getElementById('settingsOverlay').style.display = 'flex';
             renderKeybindList();
@@ -4426,5 +4503,32 @@
         loadPetData();
     </script>
     <div id="verdictExtras" class="verdict-extras"></div>
+
+    <!-- AI STRATEGIST FULLSCREEN OVERLAY -->
+    <div id="aiFullscreenOverlay">
+        <div id="aiFullscreenInner">
+            <div class="ai-title" style="margin-bottom:0">
+                <span>🤖 AI Strategist</span>
+                <div style="display:flex;gap:6px;align-items:center">
+                    <button class="ai-refresh-btn" onclick="refreshAIFullscreen()">Refresh ↻</button>
+                    <button class="ai-fullscreen-btn" onclick="closeAIFullscreen()">✕ Close</button>
+                </div>
+            </div>
+            <!-- Mirror all controls -->
+            <div class="ai-toggle-group" style="margin-top:12px">
+                <div class="ai-tog" id="fsAiTogNormal" onclick="setAiStrategyFS('normal')">Normal Mode</div>
+                <div class="ai-tog" id="fsAiTogVelocity" onclick="setAiStrategyFS('velocity')">Velocity Mode</div>
+            </div>
+            <div id="fsDreamPetContainer" style="margin-bottom:12px"></div>
+            <div class="ai-count-control" style="margin-bottom:12px">
+                <label>Strategy Count: <span id="fsStrategyCountVal">10</span></label>
+                <input type="range" id="fsStrategyCountSlider" min="1" max="10" value="10" oninput="updateStrategyCountFS(this.value)">
+            </div>
+            <div id="aiFullscreenBody">
+                <div class="ai-suggestion">Loading...</div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
