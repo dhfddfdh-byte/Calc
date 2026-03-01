@@ -132,6 +132,10 @@
             display: flex; align-items: center; justify-content: center; transition: all 0.2s;
         }
         .t-btn.active { background: #3b82f6; color: white; }
+        .lock-btn { position:absolute; bottom:30px; right:4px; background:transparent; border:1px solid #334155; color:#64748b; border-radius:5px; font-size:9px; padding:2px 4px; cursor:pointer; z-index:12; transition:0.15s; line-height:1; }
+        .lock-btn.locked { background:#f59e0b22; border-color:#f59e0b; color:#f59e0b; }
+        .card.pet-locked { opacity:0.55; }
+        .card.pet-locked::after { content:'🔒'; position:absolute; top:50%; left:50%; transform:translate(-50%,-60%); font-size:1.4em; pointer-events:none; opacity:0.7; }
         .card-stack-badge {
             position: absolute; top: 5px; left: 5px; background: var(--accent);
             color: white; font-size: 0.75em; font-weight: 900; padding: 2px 8px;
@@ -1178,6 +1182,10 @@
         let ALL_PETS = [];
         let HISTORY_DATA = []; 
         let state = { mode: 'value', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null, keybinds: [], uiScale: 1.0 };
+        // Pet names locked from AI suggestions (persisted separately)
+        const lockedPets = new Set(JSON.parse(localStorage.getItem('lockedPets') || '[]'));
+        function saveLockedPets() { try { localStorage.setItem('lockedPets', JSON.stringify([...lockedPets])); } catch(e) {} }
+        function toggleLockPet(name) { if (lockedPets.has(name)) lockedPets.delete(name); else lockedPets.add(name); saveLockedPets(); renderInventory(); }
         let history = []; 
         let tradeLog = []; 
         let selectedPetForQty = null; 
@@ -2427,10 +2435,11 @@
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(currentDemand);
                 grid.innerHTML += `
-                    <div class="card" style="border-color: ${rarityColor}">
+                    <div class="card ${lockedPets.has(p.n) ? 'pet-locked' : ''}" style="border-color: ${lockedPets.has(p.n) ? '#f59e0b' : rarityColor}">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
                         <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
                         <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
+                        <button class="lock-btn ${lockedPets.has(p.n) ? 'locked' : ''}" onclick="toggleLockPet('${p.n.replace(/'/g,"\'")}')" title="${lockedPets.has(p.n) ? 'Unlock from AI' : 'Lock from AI'}">${lockedPets.has(p.n) ? '🔒' : '🔓'}</button>
                         <div class="card-img-container" 
                              oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
                              ondblclick="duplicate('inv', ${p.uid})" title="Right click for Qty | Shift + Right click for Graph">
@@ -3172,8 +3181,11 @@
                 dreamContainer.innerHTML = `<button class="nav-btn" style="width:100%;font-size:0.8em;padding:8px" onclick="openSearch('dream')">★ Set Dream Pet</button>`;
             }
 
+            // Filter out locked pets — they won't appear in any AI suggestions
+            inventory = inventory.filter(p => !lockedPets.has(p.n));
+
             if (inventory.length === 0) {
-                box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate smart trade strategies.</div>`;
+                box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate smart trade strategies. ${lockedPets.size > 0 ? '(' + lockedPets.size + ' pet' + (lockedPets.size > 1 ? 's' : '') + ' locked from AI)' : ''}</div>`;
                 return;
             }
 
