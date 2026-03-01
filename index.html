@@ -3993,6 +3993,7 @@
 
         // ── AI STRATEGIST FULLSCREEN ─────────────────────────────────────────
         function openAIFullscreen() {
+            attachAIOverlayListeners();
             const overlay = document.getElementById('aiFullscreenOverlay');
             overlay.classList.add('open');
             // Sync controls from main panel to fullscreen
@@ -4047,17 +4048,22 @@
             refreshAIFullscreen();
         }
 
-        // Close on backdrop click
-        document.getElementById('aiFullscreenOverlay').addEventListener('click', function(e) {
-            if (e.target === this) closeAIFullscreen();
-        });
-
-        // Close on Escape
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && document.getElementById('aiFullscreenOverlay').classList.contains('open')) {
-                closeAIFullscreen();
-            }
-        });
+        // Close on backdrop click + Escape — wired up lazily on first open
+        let aiOverlayListenersAttached = false;
+        function attachAIOverlayListeners() {
+            if (aiOverlayListenersAttached) return;
+            aiOverlayListenersAttached = true;
+            const overlay = document.getElementById('aiFullscreenOverlay');
+            if (!overlay) return;
+            overlay.addEventListener('click', function(e) {
+                if (e.target === this) closeAIFullscreen();
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.getElementById('aiFullscreenOverlay').classList.contains('open')) {
+                    closeAIFullscreen();
+                }
+            });
+        }
 
         function openSettings() {
             document.getElementById('settingsOverlay').style.display = 'flex';
