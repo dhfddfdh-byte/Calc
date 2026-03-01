@@ -4041,6 +4041,13 @@
             refreshAIFullscreen();
         }
 
+        function setAIFullscreenZoom(val) {
+            const body = document.getElementById('aiFullscreenBody');
+            if (body) body.style.fontSize = (val / 100) + 'em';
+            const lbl = document.getElementById('fsAiZoomLabel');
+            if (lbl) lbl.textContent = val + '%';
+        }
+
         function clearDreamPetFS() {
             clearDreamPet();
             document.getElementById('fsDreamPetContainer').innerHTML =
@@ -4526,9 +4533,18 @@
                 <div class="ai-tog" id="fsAiTogVelocity" onclick="setAiStrategyFS('velocity')">Velocity Mode</div>
             </div>
             <div id="fsDreamPetContainer" style="margin-bottom:12px"></div>
-            <div class="ai-count-control" style="margin-bottom:12px">
-                <label>Strategy Count: <span id="fsStrategyCountVal">10</span></label>
-                <input type="range" id="fsStrategyCountSlider" min="1" max="10" value="10" oninput="updateStrategyCountFS(this.value)">
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+                <div class="ai-count-control" style="margin-bottom:0;flex:1;min-width:140px">
+                    <label>Strategy Count: <span id="fsStrategyCountVal">10</span></label>
+                    <input type="range" id="fsStrategyCountSlider" min="1" max="10" value="10" oninput="updateStrategyCountFS(this.value)">
+                </div>
+                <div style="display:flex;align-items:center;gap:7px;background:var(--panel);border:1.5px solid var(--accent);border-radius:8px;padding:5px 11px;flex-shrink:0">
+                    <span style="font-size:0.75em;color:var(--accent);font-weight:900;white-space:nowrap">🔍 Zoom</span>
+                    <input type="range" id="fsAiZoom" min="70" max="150" value="100"
+                        oninput="setAIFullscreenZoom(this.value)"
+                        style="width:90px;accent-color:var(--accent);cursor:pointer">
+                    <span id="fsAiZoomLabel" style="font-size:0.72em;color:var(--accent);font-weight:800;min-width:34px">100%</span>
+                </div>
             </div>
             <div id="aiFullscreenBody">
                 <div class="ai-suggestion">Loading...</div>
