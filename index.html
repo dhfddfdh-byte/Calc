@@ -3750,9 +3750,9 @@
             const groups = {};
             normalPets.forEach(p => {
                 const d = getPetListDemand(p, type);
-                // For values between 0 and 1, bucket by 0.1 increments
-                const bucket = d < 1 ? Math.round(d * 10) / 10 : Math.floor(d);
-                const key = bucket.toString();
+                // Bucket by 0.1 increments for all demand values
+                const bucket = Math.round(d * 10) / 10;
+                const key = bucket.toFixed(1);
                 if (!groups[key]) groups[key] = { d: bucket, pets: [] };
                 groups[key].pets.push(p);
             });
@@ -3783,7 +3783,8 @@
 
             const groupsHtml = sorted.map(g => {
                 const color = getDemandColor(g.d);
-                const label = g.d >= 9 ? '🔥 ' + g.d : g.d >= 7 ? '⚡ ' + g.d : g.d <= 2 ? '❄️ ' + (g.d < 1 ? g.d.toFixed(1) : g.d) : String(g.d);
+                const dStr = Number.isInteger(g.d) ? g.d.toFixed(1) : g.d.toFixed(1);
+                const label = g.d >= 9 ? '🔥 ' + dStr : g.d >= 7 ? '⚡ ' + dStr : g.d <= 2 ? '❄️ ' + dStr : dStr;
                 return `<div class="vlist-tier-row">
                     <div class="vlist-tier-label" style="color:${color}">${label}</div>
                     <div class="vlist-pets">
