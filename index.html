@@ -3250,6 +3250,8 @@
 
             let results = [];
             const usedUids = new Set();
+            // Never suggest a pet the user already owns as a target
+            const invNames = new Set(inventory.map(p => p.n));
 
             if (state.aiMode === 'velocity') {
                 // Velocity v2: uses liquidity score, trade frequency, stability
@@ -3262,6 +3264,7 @@
                     const targets = ALL_PETS
                         .filter(t => {
                             if (state.aiTargetPets.length > 0 && !state.aiTargetPets.some(x=>x.n===t.n)) return false;
+                            if (invNames.has(t.n)) return false;            // never suggest a pet you already own
                             const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
                             const liq = getLiquidityScore(t.n);
                             return t.d >= 6.5                               // high demand required
@@ -3327,6 +3330,9 @@
 
                         const candidates = ALL_PETS.filter(t => {
                             if (state.aiTargetPets.length > 0 && !state.aiTargetPets.some(x=>x.n===t.n)) return false;
+                            if (invNames.has(t.n)) return false;            // never suggest a pet you already own
+                            // Also exclude pets in the current bundle offer
+                            if (bundle.some(p => p.n === t.n)) return false;
                             const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
                             if (tv > sum * 1.40 || tv < sum * (1 - maxLoss)) return false;
                             if (bundleAvgDem >= 7 && t.d < 4) return false;
@@ -3899,6 +3905,7 @@
                 if (catFilter !== 'all' && !(t.cat||'').toLowerCase().includes(catFilter)) return false;
                 // Exclude pets already in offer
                 if (advisorOfferPets.some(p => p.n === t.n)) return false;
+                if (state.inv.some(p => p.n === t.n)) return false; // don't suggest what you already own
                 return true;
             });
 
