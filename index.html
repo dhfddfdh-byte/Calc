@@ -826,6 +826,12 @@
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:5px;background:var(--panel);border:1.5px solid #334155;border-radius:8px;padding:4px 8px">
+                        <span style="font-size:0.72em;color:var(--subtext);font-weight:800;margin-right:2px">Step</span>
+                        <button class="vlist-type-btn active" id="dInc01" onclick="setDemandIncrement(0.1)">0.1</button>
+                        <button class="vlist-type-btn" id="dInc05" onclick="setDemandIncrement(0.5)">0.5</button>
+                        <button class="vlist-type-btn" id="dInc1" onclick="setDemandIncrement(1)">1</button>
+                    </div>
                     <div style="display:flex;align-items:center;gap:7px;background:var(--panel);border:1.5px solid var(--accent);border-radius:8px;padding:4px 10px">
                         <span style="font-size:0.75em;color:var(--accent);font-weight:900;letter-spacing:0.03em">🔍 Zoom</span>
                         <input type="range" id="demandZoom" min="32" max="90" value="46"
@@ -1349,7 +1355,10 @@
         }).filter(row => row.name || row['pet name']); // Support both column names
         
         console.log("✅ History loaded successfully:", HISTORY_DATA.length, "records");
-        buildManipCache(); // pre-compute once, not on every render
+        buildManipCache();    // pre-compute manipulation flags
+        buildDynamicHTT();    // build dynamic HTT from live demand/trend data
+        buildTradeFreqMap();  // build trade frequency index from history
+        trendVelocityCache.clear(); // clear any stale trend velocity cache
         
     } catch (e) { 
         console.error("❌ History fetch failed:", e);
@@ -2051,7 +2060,8 @@
                 })).filter(p => p.n && p.n.length > 0);
                 
                 document.getElementById('loadingScreen').style.display = 'none';
-                fetchHistory(); 
+                buildDynamicHTT();  // initial HTT from pet data (before history)
+                fetchHistory();
                 restoreTrade();
                 render();
                 // Render lists if already on those tabs
@@ -2608,109 +2618,501 @@
 
         // Score a potential target (0-10). offerBundle = array of pets you're giving.
         // This gives the scorer full context of what's being offered, not just value.
-        function scorePotentialTarget(target, offerVal, offerAvgDemand, offerBundle) {
-            let score = 5;
+        // ================================================================
+        // 🧠 AI INTELLIGENCE ENGINE v2 — Complete Rewrite
+        // ================================================================
+
+        // ── DYNAMIC HTT DETECTION ────────────────────────────────────────
+        // Hardcoded seed list (always HTT regardless of data)
+        const HTT_SEED = new Set([
+            'Metal Ox','Lunar Ox','Musk Ox','Ox',
+            'Zodiac Minion Chick','Minion Chick',
+            'Chef Gorilla','Karate Gorilla','Drill Gorilla','Gorilla','Capuchin Monkey','Gibbon',
+            'Luna Tiger','Lunar Tiger','Lunar Snow Leopard','Luna Moonbear',
+            'Golden Dragon','Diamond Dragon','Golden Griffin','Diamond Griffin',
+            'Golden Unicorn','Diamond Unicorn','Golden Ladybug','Diamond Ladybug','Golden Taurus Beetle',
+            'Kitsune','Robo Dog','Cerberus','Capricorn',
+            'Wild Boar','Camel','Donkey','Stegosaurus','Phou Deer',
+            'Chimera','Red Dragon','Mummy Cat','White Mummy Cat','Black Mummy Cat',
+            'Persian Cat','Dracula Parrot','Toy Monkey','Albino Monkey',
+            'Ancient Dragon','Guardian Lion','Baku','Axolotl','Weevil','Griffin','Snow Owl','T-Rex'
+        ]);
+
+        // Dynamic HTT cache — built from live data after pets load
+        const dynamicHTT = new Set();
+        function buildDynamicHTT() {
+            dynamicHTT.clear();
+            ALL_PETS.forEach(p => {
+                // Any pet with demand ≤ 2 AND no uptrend AND value ≥ 1 = likely HTT
+                const isSeed = HTT_SEED.has(p.n);
+                const lowDem  = parseFloat(p.d) <= 2;
+                const falling = (p.dt || '').includes('❄️') || (p.vt || '').includes('📉');
+                const notRising = !(p.vt || '').includes('📈') && !(p.dt || '').includes('🔥');
+                const hasValue  = parseFloat(p.v) >= 1;
+                if (isSeed || (lowDem && falling && hasValue)) dynamicHTT.add(p.n);
+            });
+        }
+        function isHTT(name) { return dynamicHTT.has(name) || HTT_SEED.has(name); }
+
+        // ── TRADE FREQUENCY INDEX ─────────────────────────────────────────
+        // Built from HISTORY_DATA once it loads — how often each pet appears in trades
+        const tradeFreqMap = new Map(); // petName.lower → count per day
+        function buildTradeFreqMap() {
+            tradeFreqMap.clear();
+            if (!HISTORY_DATA || HISTORY_DATA.length === 0) return;
+            const countMap = new Map();
+            let minTime = Infinity, maxTime = -Infinity;
+            HISTORY_DATA.forEach(row => {
+                const name = (row.name || row['pet name'] || '').toLowerCase().trim();
+                if (!name) return;
+                countMap.set(name, (countMap.get(name) || 0) + 1);
+                const t = new Date(row.timestamp || row.time || '');
+                if (!isNaN(t)) { minTime = Math.min(minTime, t); maxTime = Math.max(maxTime, t); }
+            });
+            const daySpan = Math.max(1, (maxTime - minTime) / 86400000);
+            countMap.forEach((count, name) => {
+                tradeFreqMap.set(name, count / daySpan);
+            });
+        }
+        function getTradeFreq(name) {
+            return tradeFreqMap.get((name || '').toLowerCase().trim()) || 0;
+        }
+        // Normalised 0–1 liquidity score (higher = trades more often)
+        function getLiquidityScore(name) {
+            const freq = getTradeFreq(name);
+            const maxFreq = 5; // cap at 5 trades/day = max liquidity
+            return Math.min(1, freq / maxFreq);
+        }
+
+        // ── TREND VELOCITY ENGINE ─────────────────────────────────────────
+        // Instead of just emoji flags, calculate actual rate of value change
+        function getTrendVelocity(petName) {
+            const records = HISTORY_DATA.filter(r =>
+                (r.name || r['pet name'] || '').toLowerCase().trim() === (petName || '').toLowerCase().trim()
+            );
+            if (records.length < 3) return { pctChange: 0, direction: 'stable', acceleration: 0 };
+            const vals = records.map(r => parseFloat(r.v) || 0).filter(v => v > 0);
+            if (vals.length < 3) return { pctChange: 0, direction: 'stable', acceleration: 0 };
+            // Recent 40% vs earlier 40%
+            const recentSlice  = vals.slice(Math.floor(vals.length * 0.6));
+            const earlierSlice = vals.slice(0, Math.floor(vals.length * 0.4));
+            const recentAvg  = recentSlice.reduce((a,b)=>a+b,0)  / recentSlice.length;
+            const earlierAvg = earlierSlice.reduce((a,b)=>a+b,0) / earlierSlice.length;
+            const pctChange  = earlierAvg > 0 ? ((recentAvg - earlierAvg) / earlierAvg) * 100 : 0;
+            // Acceleration: compare first half vs second half of recent slice
+            const mid = Math.floor(recentSlice.length / 2);
+            const firstHalf  = recentSlice.slice(0, mid);
+            const secondHalf = recentSlice.slice(mid);
+            const fAvg = firstHalf.length  > 0 ? firstHalf.reduce((a,b)=>a+b,0)  / firstHalf.length  : recentAvg;
+            const sAvg = secondHalf.length > 0 ? secondHalf.reduce((a,b)=>a+b,0) / secondHalf.length : recentAvg;
+            const acceleration = fAvg > 0 ? ((sAvg - fAvg) / fAvg) * 100 : 0;
+            return {
+                pctChange,
+                acceleration,
+                direction: pctChange > 5 ? 'rising' : pctChange < -5 ? 'falling' : 'stable'
+            };
+        }
+
+        // Quick cached version — computed once per session
+        const trendVelocityCache = new Map();
+        function getCachedTrend(name) {
+            const key = (name || '').toLowerCase().trim();
+            if (!trendVelocityCache.has(key)) {
+                trendVelocityCache.set(key, getTrendVelocity(name));
+            }
+            return trendVelocityCache.get(key);
+        }
+
+        // ── ACCEPTANCE PROBABILITY MODEL ──────────────────────────────────
+        // Estimates % chance a target owner actually accepts your offer
+        function getAcceptanceProbability(offerVal, offerAvgDemand, target, offerBundle) {
             const targetVal = calculatePetVal({...target, type:'reg', f_st:false, r_st:false}, 'value');
-            const targetDemand = target.d;
-            const targetCat = getCatLabel(target);
-            const targetTier = getCatTier(target);
+            const valGapPct = targetVal > 0 ? ((offerVal - targetVal) / targetVal) * 100 : 0;
+            // Base: how much you're overpaying
+            let prob = 50;
+            if      (valGapPct >= 20) prob = 85;
+            else if (valGapPct >= 10) prob = 73;
+            else if (valGapPct >= 5)  prob = 63;
+            else if (valGapPct >= 0)  prob = 52;
+            else if (valGapPct >= -5) prob = 38;
+            else if (valGapPct >= -10)prob = 25;
+            else                      prob = 12;
+            // Demand of offer vs target demand
+            if (offerAvgDemand >= 7 && target.d < 5) prob -= 15; // they don't want your pets either
+            if (offerAvgDemand >= target.d)           prob += 5;  // your pets are as liquid as theirs
+            // HTT in offer = they might not want it
+            const offerHTT = offerBundle && offerBundle.some(p => isHTT(p.n));
+            if (offerHTT) prob -= 12;
+            // Many pets in offer = friction
+            const bundleSize = offerBundle ? offerBundle.length : 1;
+            if (bundleSize >= 5) prob -= 15;
+            else if (bundleSize >= 4) prob -= 8;
+            else if (bundleSize >= 3) prob -= 3;
+            // Category desirability of offer
             const offerTier = offerBundle ? getBundleTier(offerBundle) : 1;
-            const offerDemandTier = offerAvgDemand >= 7 ? 'high' : offerAvgDemand >= 4 ? 'mid' : 'low';
-            const targetDemandTier = getPetDemandTier(target);
+            if (offerTier >= 4) prob += 8;  // Exotic/High Tier offer = people want it
+            else if (offerTier >= 3) prob += 4;
+            // Manipulation spike on target = they might be holding hoping for more
+            if (getManipulationFlag(target.n)) prob -= 8;
+            // Trend double-win: offering falling for rising = great deal but they know it too
+            const offerTrend = offerBundle ? offerBundle.reduce((s,p) => {
+                const t = getCachedTrend(p.n);
+                return s + (t.direction === 'rising' ? 1 : t.direction === 'falling' ? -1 : 0);
+            }, 0) / Math.max(1, offerBundle.length) : 0;
+            const targetTrend = getCachedTrend(target.n);
+            if (offerTrend > 0 && targetTrend.direction === 'falling') prob += 10; // you're giving rising, they're giving falling
+            if (offerTrend < 0 && targetTrend.direction === 'rising')  prob -= 10;
+            return Math.max(5, Math.min(95, Math.round(prob)));
+        }
 
-            // ── VALUE ALIGNMENT ───────────────────────────────────────────
-            const valGap = (targetVal - offerVal) / offerVal;
-            if (valGap >= 0.05 && valGap <= 0.20) score += 2;     // ideal: slight gain
-            else if (valGap >= 0 && valGap < 0.05) score += 1.2;  // fair trade
-            else if (valGap > 0.20) score += 1;                    // big gain (may be hard to get)
-            else if (valGap < 0 && valGap >= -0.05) score -= 1;   // tiny loss, only ok with demand upgrade
-            else score -= 4; // significant loss — heavily penalise
+        // ── INVENTORY HEALTH SCORE ────────────────────────────────────────
+        function getInventoryHealthReport(inventory) {
+            if (!inventory || inventory.length === 0) return null;
+            let score = 0;
+            const breakdown = [];
 
-            // ── TARGET DEMAND ─────────────────────────────────────────────
-            if (targetDemand >= 9) score += 3;
-            else if (targetDemand >= 7) score += 2;
-            else if (targetDemand >= 5) score += 1;
-            else if (targetDemand >= 3) score -= 1;
-            else score -= 3; // demand 0-2: terrible target
+            const avgDemand = inventory.reduce((s,p) => s + (parseFloat(getEffDemand(p)) || 0), 0) / inventory.length;
+            const avgVal    = inventory.reduce((s,p) => s + calculatePetVal(p,'value'), 0) / inventory.length;
+            const httCount  = inventory.filter(p => isHTT(p.n)).length;
+            const httPct    = httCount / inventory.length;
+            const manipCount = inventory.filter(p => getManipulationFlag(p.n)).length;
+            const fallingCount = inventory.filter(p => (p.dt||'').includes('❄️') || (p.vt||'').includes('📉')).length;
+            const risingCount  = inventory.filter(p => (p.vt||'').includes('📈') || (p.dt||'').includes('🔥')).length;
+            const catDist = {};
+            inventory.forEach(p => { const c = getCatLabel(p); catDist[c] = (catDist[c]||0)+1; });
+            const premiumPct = ((catDist['Exotic']||0) + (catDist['High Tier']||0) + (catDist['Preppy']||0)) / inventory.length;
+            const avgLiq = inventory.reduce((s,p) => s + getLiquidityScore(p.n), 0) / inventory.length;
 
-            // ── DEMAND TIER CHANGE ────────────────────────────────────────
-            if (offerDemandTier === 'low'  && targetDemandTier === 'high') score += 2;
-            else if (offerDemandTier === 'low'  && targetDemandTier === 'mid')  score += 1;
-            else if (offerDemandTier === 'mid'  && targetDemandTier === 'high') score += 1;
-            else if (offerDemandTier === 'high' && targetDemandTier === 'low')  score -= 3; // giving high demand for low demand = bad
-            else if (offerDemandTier === 'high' && targetDemandTier === 'mid')  score -= 1;
-            else if (targetDemandTier === 'low') score -= 2;
+            // Demand component (0-30)
+            const demScore = Math.min(30, Math.round((avgDemand / 10) * 30));
+            score += demScore;
+            breakdown.push({ label: 'Demand Quality', score: demScore, max: 30,
+                tip: avgDemand >= 7 ? 'Excellent demand across inventory' :
+                     avgDemand >= 5 ? 'Good demand, room to improve' :
+                     avgDemand >= 3 ? 'Moderate demand — target pets with 6+ demand' :
+                     'Low demand — your pets are hard to trade. Prioritize demand upgrades.' });
 
-            // ── DEMAND PARITY PROTECTION ──────────────────────────────────
-            // If giving high demand, must receive reasonable demand back
-            if (offerAvgDemand >= 7 && targetDemand < 5) score -= 3;
-            else if (offerAvgDemand >= 5 && targetDemand < 3) score -= 2;
+            // Liquidity component (0-20)
+            const liqScore = Math.min(20, Math.round(avgLiq * 20));
+            score += liqScore;
+            breakdown.push({ label: 'Market Liquidity', score: liqScore, max: 20,
+                tip: avgLiq >= 0.7 ? 'Your pets trade frequently — high liquidity' :
+                     avgLiq >= 0.4 ? 'Decent liquidity' :
+                     'Low liquidity — your pets don\'t trade often. Consider swapping to more popular pets.' });
 
-            // ── CATEGORY SCORE OF TARGET ──────────────────────────────────
-            if (targetCat === 'Exotic')    score += 2;
-            else if (targetCat === 'High Tier') score += 1.8;
-            else if (targetCat === 'Preppy')    score += 1.5;
-            else if (targetCat === 'Classy')    score += 0.7;
-            else if (targetCat === 'Mid Tier')  score += 0.3;
-            else if (targetCat === 'Randoms')   score -= 0.8;
+            // Category component (0-20)
+            const catScore = Math.min(20, Math.round(premiumPct * 20));
+            score += catScore;
+            breakdown.push({ label: 'Category Quality', score: catScore, max: 20,
+                tip: premiumPct >= 0.5 ? 'Strong Exotic/High Tier/Preppy presence' :
+                     premiumPct >= 0.25 ? 'Some premium category pets' :
+                     'Mostly Randoms/Mid Tier. Adding Preppy or High Tier pets will help significantly.' });
 
-            // ── CATEGORY DOWNGRADE PROTECTION ────────────────────────────
-            // If you're giving a premium pet, you shouldn't get a worse category back
-            // unless you're getting massive value overpay
-            const catDrop = offerTier - targetTier;
-            if (catDrop >= 3) score -= 5;       // e.g. High Tier → Randoms = very bad
-            else if (catDrop >= 2) score -= 3;  // e.g. Preppy → Randoms
-            else if (catDrop >= 1) score -= 1;  // e.g. Classy → Mid Tier (slight penalty)
-            else if (catDrop <= -1) score += 1; // upgrading category = bonus
+            // Trend health component (0-15)
+            const trendScore = Math.max(0, Math.min(15, Math.round(((risingCount - fallingCount * 1.5) / inventory.length) * 15 + 7)));
+            score += trendScore;
+            breakdown.push({ label: 'Trend Health', score: trendScore, max: 15,
+                tip: risingCount > fallingCount ? `${risingCount} pets trending up — good momentum` :
+                     fallingCount > risingCount  ? `${fallingCount} pets trending down — consider offloading` :
+                     'Mixed trends — monitor closely' });
 
-            // ── HTT PENALTY ───────────────────────────────────────────────
-            if (isHTT(target.n)) score -= 3;
+            // HTT penalty (0-15)
+            const httScore = Math.max(0, Math.round((1 - httPct * 2) * 15));
+            score += httScore;
+            breakdown.push({ label: 'Tradability', score: httScore, max: 15,
+                tip: httCount === 0 ? 'No HTT pets — clean inventory' :
+                     httCount <= 1  ? `${httCount} HTT pet detected` :
+                     `${httCount} HTT pets dragging down tradability. These are hard to move.` });
 
-            // ── MANIPULATION FLAG ─────────────────────────────────────────
-            if (getManipulationFlag(target.n)) score -= 2;
+            // Manipulation risk (bonus/penalty out of 10, included in total but not shown separately)
+            if (manipCount > 0) score = Math.max(0, score - manipCount * 5);
 
-            // ── TREND SIGNALS ─────────────────────────────────────────────
-            if (target.vt && target.vt.includes('📈')) score += 0.5;
-            if (target.dt && target.dt.includes('🔥')) score += 0.5;
-            if (target.vt && target.vt.includes('📉')) score -= 0.8;
-            if (target.dt && target.dt.includes('❄️')) score -= 0.8;
+            const grade = score >= 85 ? 'S' : score >= 70 ? 'A' : score >= 55 ? 'B' : score >= 40 ? 'C' : score >= 25 ? 'D' : 'F';
+            const gradeColor = score >= 85 ? '#a855f7' : score >= 70 ? '#34d399' : score >= 55 ? '#fbbf24' : score >= 40 ? '#fb923c' : '#f87171';
 
+            const advice = [];
+            if (avgDemand < 5) advice.push('🎯 Priority: Trade into pets with demand 6+');
+            if (httCount > 0)  advice.push(`⚠️ Offload ${httCount} HTT pet${httCount>1?'s':''} as soon as possible`);
+            if (manipCount > 0)advice.push(`📊 ${manipCount} pet${manipCount>1?'s are':' is'} flagged as potentially manipulated`);
+            if (fallingCount > risingCount) advice.push('📉 More falling than rising pets — consider rotating inventory');
+            if (premiumPct < 0.2 && avgVal >= 10) advice.push('💡 Consider trading into Preppy or High Tier pets for better resale');
+            if (advice.length === 0) advice.push('✅ Inventory looks healthy — focus on tier progression');
+
+            return { score: Math.min(100, score), grade, gradeColor, breakdown, advice, avgDemand, premiumPct, httCount, risingCount, fallingCount };
+        }
+
+        // ── CHAIN TRADE ENGINE ────────────────────────────────────────────
+        // Finds a 2-step path: inventory → bridge → target
+        // Returns best chain trade suggestion if direct path doesn't exist
+        function findChainTrade(inventory, targetVal, targetDem, targetCat) {
+            if (!inventory || inventory.length === 0) return null;
+            const invVal = inventory.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
+            // Only suggest chain trade if direct path seems hard
+            // Look for a "bridge" pet: demand 7+, value in range, that is commonly traded
+            const bridgeCandidates = ALL_PETS.filter(b => {
+                const bv = calculatePetVal({...b,type:'reg',f_st:false,r_st:false},'value');
+                return b.d >= 6
+                    && bv >= invVal * 0.85 && bv <= invVal * 1.20
+                    && getLiquidityScore(b.n) >= 0.3
+                    && !isHTT(b.n);
+            }).sort((a,b) => b.d - a.d).slice(0, 5);
+
+            for (const bridge of bridgeCandidates) {
+                const bv = calculatePetVal({...bridge,type:'reg',f_st:false,r_st:false},'value');
+                // Can we then get the target type from bridge?
+                const step2 = ALL_PETS.filter(t => {
+                    const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
+                    return tv >= targetVal * 0.90 && tv <= targetVal * 1.25
+                        && t.d >= targetDem - 1
+                        && getCatLabel(t) === targetCat;
+                }).slice(0,1)[0];
+                if (step2 && step2.n !== bridge.n) {
+                    return { bridge, step2, bridgeVal: bv };
+                }
+            }
+            return null;
+        }
+
+        // ── WHAT SHOULD I TARGET NEXT ENGINE ─────────────────────────────
+        // Proactively recommends the best pets to target in your value range
+        function getProactiveTargets(totalInvVal, limit = 6) {
+            if (!ALL_PETS || ALL_PETS.length === 0) return [];
+            const minVal = totalInvVal * 0.70;
+            const maxVal = totalInvVal * 1.35;
+            return ALL_PETS
+                .filter(p => {
+                    const v = calculatePetVal({...p,type:'reg',f_st:false,r_st:false},'value');
+                    return v >= minVal && v <= maxVal && !isHTT(p.n) && !getManipulationFlag(p.n);
+                })
+                .map(p => {
+                    const trend = getCachedTrend(p.n);
+                    const liq   = getLiquidityScore(p.n);
+                    const catT  = getCatTier(p);
+                    let score = 0;
+                    score += (parseFloat(p.d) || 0) * 3;          // demand matters most
+                    score += liq * 20;                              // liquidity
+                    score += catT * 4;                              // category
+                    score += trend.pctChange * 0.5;                // rising trend bonus
+                    score += (trend.acceleration > 0 ? trend.acceleration * 0.3 : 0); // accelerating bonus
+                    if ((p.vt||'').includes('📈')) score += 5;
+                    if ((p.dt||'').includes('🔥')) score += 5;
+                    if ((p.vt||'').includes('📉')) score -= 8;
+                    if ((p.dt||'').includes('❄️')) score -= 8;
+                    return { p, score, trend, liq };
+                })
+                .sort((a,b) => b.score - a.score)
+                .slice(0, limit);
+        }
+
+        // ── OVERPAY PSYCHOLOGY FACTOR ─────────────────────────────────────
+        // Returns a multiplier for how much people typically overpay for this category
+        function getOverpayFactor(pet) {
+            const cat = getCatLabel(pet);
+            // Preppy: community overpays 10-20% emotionally
+            if (cat === 'Preppy') return 1.15;
+            // Exotic: niche demand, people pay premium
+            if (cat === 'Exotic') return 1.10;
+            // High Tier: liquid, slight premium
+            if (cat === 'High Tier') return 1.06;
+            // Classy: slight premium
+            if (cat === 'Classy') return 1.03;
+            // Randoms: need to offer MORE than value
+            return 0.95;
+        }
+
+        // ── BUNDLE READABILITY SCORE ──────────────────────────────────────
+        // A "readable" bundle is one people can quickly understand and trust
+        function getBundleReadabilityScore(bundle) {
+            if (!bundle || bundle.length === 0) return 10;
+            let score = 10;
+            // Too many pets = hard to evaluate
+            if (bundle.length >= 5) score -= 4;
+            else if (bundle.length >= 4) score -= 2;
+            else if (bundle.length >= 3) score -= 1;
+            // All randoms = untrustworthy
+            const randCount = bundle.filter(p => getCatLabel(p) === 'Randoms').length;
+            score -= randCount * 0.8;
+            // Mixed categories = confusing
+            const uniqueCats = new Set(bundle.map(p => getCatLabel(p))).size;
+            if (uniqueCats >= 4) score -= 2;
+            // HTT in bundle = major red flag
+            const httCount = bundle.filter(p => isHTT(p.n)).length;
+            score -= httCount * 3;
+            // 1 clean high-tier anchor = great
+            const hasAnchor = bundle.some(p => getCatTier(p) >= 3);
+            if (hasAnchor && bundle.length <= 3) score += 2;
             return Math.max(0, Math.min(10, score));
         }
 
-        function buildReasonText(target, offerVal, offerAvgDemand) {
-            const catLabel = getCatLabel(target);
-            const valGap = ((calculatePetVal(target, 'value') - offerVal) / offerVal * 100).toFixed(0);
-            const parts = [];
-            // Demand assessment
-            if (target.d >= 8) parts.push('very high demand — attracts lots of offers');
-            else if (target.d >= 6) parts.push('high demand — gets offers fast');
-            else if (target.d >= 4) parts.push('moderate demand');
-            else parts.push('low demand — expect to wait');
-            // Category insight — read from cat field, not hardcoded lists
-            if (catLabel === 'Preppy') parts.push('Preppy — community often overpays for these');
-            else if (catLabel === 'High Tier') parts.push('High Tier — liquid, always tradeable');
-            else if (catLabel === 'Exotic') parts.push('Exotic — niche but strong demand');
-            else if (catLabel === 'Classy') parts.push('Classy category');
-            else if (catLabel === 'Randoms') parts.push('Randoms — typically needs overpay to move');
-            // HTT warning
-            if (isHTT(target.n)) parts.push('⚠️ community-flagged HTT — hard to re-trade');
-            // Algorithmic manipulation flag
-            const manipFlag = getManipulationFlag(target.n);
-            if (manipFlag) parts.push(`⚠️ ${manipFlag}`);
+        // ── MAIN SCORING FUNCTION (v2) ────────────────────────────────────
+        // Fully contextual, multiplicative, psychology-aware
+        function scorePotentialTarget(target, offerVal, offerAvgDemand, offerBundle) {
+            const targetVal    = calculatePetVal({...target, type:'reg', f_st:false, r_st:false}, 'value');
+            const targetDemand = parseFloat(target.d) || 0;
+            const targetCat    = getCatLabel(target);
+            const targetTier   = getCatTier(target);
+            const offerTier    = offerBundle ? getBundleTier(offerBundle) : 1;
+            const offerDemTier = offerAvgDemand >= 7 ? 'high' : offerAvgDemand >= 4 ? 'mid' : 'low';
+            const targetDemTier = getPetDemandTier(target);
+
+            // ── Value alignment (contextual — gap tolerance scales with value) ──
+            // At low values a 15% gap is nothing; at high values it's huge
+            const valGap = (targetVal - offerVal) / Math.max(offerVal, 0.01);
+            const valueTolerance = offerVal >= 200 ? 0.08 : offerVal >= 50 ? 0.12 : 0.18;
+            let valueScore;
+            if      (valGap > valueTolerance && valGap <= 0.30) valueScore = 2.5;   // ideal gain
+            else if (valGap >= 0 && valGap <= valueTolerance)   valueScore = 1.8;   // fair
+            else if (valGap > 0.30)                              valueScore = 1.2;   // big gain (hard to get)
+            else if (valGap >= -0.05)                            valueScore = 0.5;   // tiny loss
+            else if (valGap >= -0.12)                            valueScore = -1.0;  // notable loss
+            else                                                 valueScore = -4.0;  // big loss
+
+            // ── Demand score (non-linear — demand 9 >> demand 8) ─────────
+            const demandScore = targetDemand >= 9 ? 4 : targetDemand >= 7.5 ? 3 : targetDemand >= 6 ? 2 :
+                                targetDemand >= 4 ? 1 : targetDemand >= 3 ? -0.5 : -3;
+
+            // ── Demand tier improvement multiplier ────────────────────────
+            let demTierMult = 1.0;
+            if (offerDemTier === 'low'  && targetDemTier === 'high') demTierMult = 1.5;
+            else if (offerDemTier === 'low'  && targetDemTier === 'mid')  demTierMult = 1.2;
+            else if (offerDemTier === 'mid'  && targetDemTier === 'high') demTierMult = 1.2;
+            else if (offerDemTier === 'high' && targetDemTier === 'low')  demTierMult = 0.4;
+            else if (offerDemTier === 'high' && targetDemTier === 'mid')  demTierMult = 0.8;
+            else if (targetDemTier === 'low') demTierMult = 0.6;
+
+            // ── Category score ────────────────────────────────────────────
+            const catScore = targetCat === 'Exotic' ? 2.5 : targetCat === 'High Tier' ? 2.2 :
+                             targetCat === 'Preppy' ? 2.0 : targetCat === 'Classy' ? 1.0 :
+                             targetCat === 'Mid Tier' ? 0.5 : -0.5;
+
+            // ── Category downgrade protection ─────────────────────────────
+            const catDrop = offerTier - targetTier;
+            const catDropPenalty = catDrop >= 3 ? -5 : catDrop >= 2 ? -3 : catDrop >= 1 ? -1 :
+                                   catDrop <= -1 ? 0.8 : 0;
+
+            // ── Overpay psychology factor ─────────────────────────────────
+            // If they're giving a Preppy pet, the effective value is higher than listed
+            const offerPsych  = offerBundle ? offerBundle.reduce((s,p) => s + getOverpayFactor(p), 0) / offerBundle.length : 1;
+            const targetPsych = getOverpayFactor(target);
+            const psychBonus  = (targetPsych - offerPsych) * 3; // positive if target has higher overpay factor
+
+            // ── Trend velocity (double-win / double-loss detection) ────────
+            const targetTrend = getCachedTrend(target.n);
+            const offerTrendScore = offerBundle ? offerBundle.reduce((s,p) => {
+                const t = getCachedTrend(p.n);
+                return s + (t.direction === 'rising' ? 1 : t.direction === 'falling' ? -1 : 0);
+            }, 0) / Math.max(1, offerBundle.length) : 0;
+
+            let trendBonus = 0;
+            if (targetTrend.direction === 'rising'  && offerTrendScore < 0)  trendBonus += 2;  // DOUBLE WIN
+            else if (targetTrend.direction === 'rising')                       trendBonus += 0.8;
+            else if (targetTrend.direction === 'falling' && offerTrendScore > 0) trendBonus -= 2; // DOUBLE LOSS
+            else if (targetTrend.direction === 'falling')                      trendBonus -= 1.2;
+            // Acceleration bonus
+            if (targetTrend.acceleration > 10) trendBonus += 0.5;
+
+            // ── Liquidity & trade frequency ───────────────────────────────
+            const liq = getLiquidityScore(target.n);
+            const liqBonus = (liq - 0.3) * 2; // neutral at 0.3, max +1.4, min -0.6
+
+            // ── Bundle readability (affects acceptance, not value) ─────────
+            const readability = offerBundle ? getBundleReadabilityScore(offerBundle) / 10 : 1;
+            const readBonus = (readability - 0.7) * 1.5;
+
+            // ── Demand parity protection ──────────────────────────────────
+            let parityPenalty = 0;
+            if (offerAvgDemand >= 7 && targetDemand < 4)  parityPenalty = -4;
+            else if (offerAvgDemand >= 5 && targetDemand < 2) parityPenalty = -2;
+
+            // ── HTT penalty ───────────────────────────────────────────────
+            const httPenalty = isHTT(target.n) ? -4 : 0;
+
+            // ── Manipulation flag ──────────────────────────────────────────
+            const manipPenalty = getManipulationFlag(target.n) ? -2.5 : 0;
+
+            // ── Composite score (base 5, multiplicative demand tier) ───────
+            const rawScore = 5
+                + valueScore
+                + (demandScore * demTierMult)
+                + catScore
+                + catDropPenalty
+                + psychBonus
+                + trendBonus
+                + liqBonus
+                + readBonus
+                + parityPenalty
+                + httPenalty
+                + manipPenalty;
+
+            return Math.max(0, Math.min(10, parseFloat(rawScore.toFixed(2))));
+        }
+
+        // ── REASON TEXT v2 ────────────────────────────────────────────────
+        function buildReasonText(target, offerVal, offerAvgDemand, offerBundle) {
+            const catLabel  = getCatLabel(target);
+            const targetVal = calculatePetVal({...target,type:'reg',f_st:false,r_st:false},'value');
+            const valGapPct = ((targetVal - offerVal) / Math.max(offerVal, 0.01) * 100).toFixed(0);
+            const trend     = getCachedTrend(target.n);
+            const liq       = getLiquidityScore(target.n);
+            const overpay   = getOverpayFactor(target);
+            const parts     = [];
+
+            // Demand
+            if (target.d >= 9)      parts.push(`🔥 exceptional demand (${target.d}) — moves instantly`);
+            else if (target.d >= 7) parts.push(`⚡ high demand (${target.d}) — gets offers fast`);
+            else if (target.d >= 5) parts.push(`moderate demand (${target.d})`);
+            else if (target.d >= 3) parts.push(`low demand (${target.d}) — may take time`);
+            else                    parts.push(`❄️ very low demand (${target.d}) — could sit for weeks`);
+
+            // Category insight
+            if (catLabel === 'Preppy')    parts.push('Preppy — community pays emotional premium');
+            else if (catLabel === 'High Tier') parts.push('High Tier — liquid and always tradeable');
+            else if (catLabel === 'Exotic')    parts.push('Exotic — niche but strong demand');
+            else if (catLabel === 'Classy')    parts.push('Classy — decent category');
+            else if (catLabel === 'Randoms')   parts.push('Randoms — needs significant overpay to move');
+
+            // Trend velocity
+            if (trend.direction === 'rising')  parts.push(`📈 rising +${trend.pctChange.toFixed(0)}% recently${trend.acceleration > 5 ? ' (accelerating)' : ''}`);
+            else if (trend.direction === 'falling') parts.push(`📉 falling ${trend.pctChange.toFixed(0)}% recently — verify before accepting`);
+
+            // Liquidity
+            if (liq >= 0.6)       parts.push('🌊 frequently traded');
+            else if (liq <= 0.15) parts.push('🧊 rarely traded');
+
+            // Overpay psychology
+            if (overpay >= 1.12)  parts.push('community often overpays for this type');
+
+            // HTT
+            if (isHTT(target.n)) parts.push('⚠️ community-flagged HTT — re-trading will be hard');
+
+            // Manipulation
+            const manip = getManipulationFlag(target.n);
+            if (manip) parts.push(`⚠️ ${manip}`);
+
             // Value gap
-            if (parseFloat(valGap) > 5) parts.push(`+${valGap}% value gain`);
-            else if (parseFloat(valGap) < -5) parts.push(`${Math.abs(valGap)}% value loss (buying demand/liquidity)`);
+            const vg = parseFloat(valGapPct);
+            if (vg > 10)       parts.push(`+${valGapPct}% value gain`);
+            else if (vg < -5)  parts.push(`${Math.abs(vg).toFixed(0)}% value loss — buying demand/category`);
+
+            // Double win/loss detection
+            if (offerBundle) {
+                const offerTrend = offerBundle.reduce((s,p) => {
+                    const t = getCachedTrend(p.n);
+                    return s + (t.direction === 'rising' ? 1 : t.direction === 'falling' ? -1 : 0);
+                }, 0);
+                if (trend.direction === 'rising' && offerTrend < 0)
+                    parts.push('🚀 DOUBLE WIN: you\'re giving falling pets for a rising one');
+                else if (trend.direction === 'falling' && offerTrend > 0)
+                    parts.push('⛔ DOUBLE LOSS: giving rising pets for a falling one');
+            }
+
             return parts.join(' · ');
         }
 
-        // Smart deterministic bundle builder
         function buildSmartBundle(inventory, targetVal, mode) {
             const maxPets = mode === 'velocity' ? 6 : 4;
-            // Sort: highest demand first, then highest value
             const sorted = [...inventory].sort((a, b) => {
-                const dA = a.type === 'neon' ? (a.nd||a.d) : (a.type === 'mega' ? (a.md||a.d) : a.d);
-                const dB = b.type === 'neon' ? (b.nd||b.d) : (b.type === 'mega' ? (b.md||b.d) : b.d);
+                const dA = getEffDemand(a), dB = getEffDemand(b);
                 if (dB !== dA) return dB - dA;
                 return calculatePetVal(b, 'value') - calculatePetVal(a, 'value');
             });
@@ -2718,15 +3120,13 @@
             for (const p of sorted) {
                 if (bundle.length >= maxPets) break;
                 const v = calculatePetVal(p, 'value');
-                if (sum + v <= targetVal * 1.18) {
-                    bundle.push(p);
-                    sum += v;
-                }
+                if (sum + v <= targetVal * 1.18) { bundle.push(p); sum += v; }
                 if (sum >= targetVal * 0.88) break;
             }
             return { bundle, sum };
         }
 
+        // ── MAIN AI SUGGESTIONS (v2) ──────────────────────────────────────
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
             const dreamContainer = document.getElementById('dreamPetContainer');
@@ -2740,10 +3140,8 @@
                 const dreamVal = freshDream ? calculatePetVal({...freshDream, type:'reg', f_st:false, r_st:false}, 'value') : state.dreamPet.v;
                 const pct = Math.min((totalInvVal / dreamVal) * 100, 100).toFixed(1);
                 let html = `<div class="ai-summary"><b>Dream Progress:</b> ${pct}%<div class="dream-progress-bg"><div class="dream-progress-fill" style="width:${pct}%"></div></div></div>`;
-                // Build deterministic combos by value proximity
                 const candidates = [...inventory].sort((a,b) => calculatePetVal(b,'value') - calculatePetVal(a,'value'));
-                const seen = new Set();
-                let combos = [];
+                const seen = new Set(); let combos = [];
                 for (let start = 0; start < Math.min(candidates.length, 8); start++) {
                     let combo = [], sum = 0;
                     for (const p of candidates) {
@@ -2765,9 +3163,13 @@
                 dreamContainer.innerHTML = `<button class="nav-btn" style="width:100%;font-size:0.8em;padding:8px" onclick="openSearch('dream')">★ Set Dream Pet</button>`;
             }
 
-            if (inventory.length === 0) { box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate smart trade strategies.</div>`; return; }
+            if (inventory.length === 0) {
+                box.innerHTML = `<div class="ai-suggestion">Add pets to your inventory to generate smart trade strategies.</div>`;
+                return;
+            }
 
-            // Progress summary — real tier milestone, not hardcoded Shadow Dragon
+            // ── INVENTORY HEALTH REPORT ───────────────────────────────────
+            const health = getInventoryHealthReport(inventory);
             const tierMilestones = [
                 { val:2, label:'Starter', color:'#94a3b8' }, { val:8, label:'Commons', color:'#81c784' },
                 { val:25, label:'Mid-Tier', color:'#4fc3f7' }, { val:60, label:'High-Tier', color:'#fbbf24' },
@@ -2777,35 +3179,80 @@
             const prevMilestone = tierMilestones[Math.max(0, tierMilestones.indexOf(nextMilestone)-1)];
             const milePct = nextMilestone === prevMilestone ? 100 : Math.min(100, ((totalInvVal - prevMilestone.val) / (nextMilestone.val - prevMilestone.val) * 100)).toFixed(0);
 
-            // Check for mega project opportunity
+            // Mega project detection
             const nfrGroups = {};
             inventory.forEach(p => { if (p.type === 'neon' && p.f_st && p.r_st) nfrGroups[p.n] = (nfrGroups[p.n]||0)+1; });
             const megaProject = Object.entries(nfrGroups).find(([,c]) => c >= 3);
 
-            // Avg demand of inventory
-            const invAvgDem = inventory.reduce((s,p) => s + (p.d||0), 0) / inventory.length;
+            const invAvgDem = inventory.reduce((s,p) => s + (parseFloat(getEffDemand(p))||0), 0) / inventory.length;
             const invDemTier = invAvgDem >= 7 ? 'High' : invAvgDem >= 4 ? 'Mid' : 'Low';
 
             let html = `<div class="ai-summary">
-                <b>Tier:</b> ${tier.name} • <b>Next:</b> ${nextMilestone.label} <span style="color:var(--subtext);font-size:0.85em">(${milePct}%)</span>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <span><b>Tier:</b> ${tier.name} · <b>Next:</b> ${nextMilestone.label} <span style="color:var(--subtext);font-size:0.85em">(${milePct}%)</span></span>
+                    ${health ? `<span style="font-size:1.1em;font-weight:900;color:${health.gradeColor};border:2px solid ${health.gradeColor};border-radius:6px;padding:2px 8px">Grade: ${health.grade}</span>` : ''}
+                </div>
                 <div class="dream-progress-bg"><div class="dream-progress-fill" style="width:${milePct}%;background:${nextMilestone.color}"></div></div>
                 <span style="font-size:0.8em;color:var(--subtext)">Path: ${tier.next}</span>
             </div>`;
 
-            if (megaProject) {
-                html += `<div class="ai-suggestion" style="border-left-color:#fbbf24">🔥 <b>Mega Project:</b> You have ${megaProject[1]} NFR ${megaProject[0]}s — you need just 1 more to make a MFR. This is the highest-value play available to you right now.</div>`;
+            // Health breakdown
+            if (health) {
+                html += `<div style="background:#0f172a;border-radius:10px;padding:10px;margin-bottom:12px;border:1px solid #1e293b">
+                    <div style="font-size:0.7em;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Inventory Health Score: <span style="color:${health.gradeColor}">${health.score}/100 (${health.grade})</span></div>
+                    ${health.breakdown.map(b => `
+                        <div style="margin-bottom:5px">
+                            <div style="display:flex;justify-content:space-between;font-size:0.72em;margin-bottom:2px">
+                                <span style="color:#94a3b8">${b.label}</span>
+                                <span style="color:white;font-weight:700">${b.score}/${b.max}</span>
+                            </div>
+                            <div style="background:#1e293b;border-radius:4px;height:5px">
+                                <div style="background:${b.score/b.max >= 0.7 ? '#34d399' : b.score/b.max >= 0.4 ? '#fbbf24' : '#f87171'};width:${(b.score/b.max*100).toFixed(0)}%;height:100%;border-radius:4px;transition:width 0.4s"></div>
+                            </div>
+                            <div style="font-size:0.68em;color:#64748b;margin-top:2px">${b.tip}</div>
+                        </div>
+                    `).join('')}
+                    <div style="margin-top:8px;border-top:1px solid #1e293b;padding-top:8px">
+                        ${health.advice.map(a => `<div style="font-size:0.73em;color:#94a3b8;margin-bottom:3px">${a}</div>`).join('')}
+                    </div>
+                </div>`;
             }
 
-            // Build suggestions — different logic per mode
+            if (megaProject) {
+                html += `<div class="ai-suggestion" style="border-left-color:#fbbf24">🔥 <b>Mega Project:</b> You have ${megaProject[1]} NFR ${megaProject[0]}s — just 1 more to make a MFR. Highest-value play available right now.</div>`;
+            }
+
+            // ── PROACTIVE TARGETS SECTION ─────────────────────────────────
+            const proactive = getProactiveTargets(totalInvVal, 6);
+            if (proactive.length > 0) {
+                html += `<div style="font-size:0.7em;font-weight:900;color:#a855f7;text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px">🔮 BEST TARGETS IN YOUR RANGE RIGHT NOW</div>`;
+                html += `<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px">`;
+                proactive.forEach(({p, trend, liq}) => {
+                    const tv = calculatePetVal({...p,type:'reg',f_st:false,r_st:false},'value');
+                    const trendIcon = trend.direction === 'rising' ? '📈' : trend.direction === 'falling' ? '📉' : '';
+                    const catLabel = getCatLabel(p);
+                    const catColor = catLabel === 'Exotic' ? '#a855f7' : catLabel === 'High Tier' ? '#fbbf24' : catLabel === 'Preppy' ? '#f472b6' : '#94a3b8';
+                    html += `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:6px 8px;cursor:pointer;min-width:90px;max-width:120px;text-align:center" onclick="openSearch('inv')" title="${p.n}">
+                        ${petImgTag(p.n, 'width:36px;height:36px;object-fit:contain')}
+                        <div style="font-size:0.72em;font-weight:800;color:white;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.n}</div>
+                        <div style="font-size:0.65em;color:${catColor}">${catLabel}</div>
+                        <div style="font-size:0.65em;color:#94a3b8">Dem: ${p.d} ${trendIcon} · ${tv.toFixed(1)}</div>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
+
+            // ── DEMAND TIER ADVICE ────────────────────────────────────────
+            const demTierAdvice = invDemTier === 'Low'
+                ? 'Your inventory has low average demand — prioritise trading into higher-demand pets even at a slight value loss.'
+                : invDemTier === 'High' ? 'Strong demand across your inventory — focus on value gain, you have trading leverage.'
+                : 'Moderate demand. Aim for both value gain AND demand tier improvement where possible.';
+
             let results = [];
             const usedUids = new Set();
 
-            // ── BUILD BUNDLES FIRST, THEN FIND MATCHING TARGETS ──────────
-            // This ensures the % gap is always based on actual offer value
-            
             if (state.aiMode === 'velocity') {
-                // Velocity: single-pet offers targeting demand 7+ only
-                // Accept slight value loss for liquidity gain
+                // Velocity v2: uses liquidity score, trade frequency, stability
                 const pool = [...inventory].sort((a,b) => calculatePetVal(b,'value') - calculatePetVal(a,'value'));
                 for (let i = 0; i < pool.length && results.length < state.strategyLimit; i++) {
                     const anchor = pool[i];
@@ -2816,78 +3263,74 @@
                         .filter(t => {
                             if (state.aiTargetPets.length > 0 && !state.aiTargetPets.some(x=>x.n===t.n)) return false;
                             const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
-                            return t.d >= 7 && tv >= anchorVal * 0.80 && tv <= anchorVal * 1.25;
+                            const liq = getLiquidityScore(t.n);
+                            return t.d >= 6.5                               // high demand required
+                                && liq >= 0.2                               // must actually trade
+                                && tv >= anchorVal * 0.82 && tv <= anchorVal * 1.25
+                                && !isHTT(t.n);
                         })
-                        .sort((a,b) => b.d - a.d)
+                        .sort((a,b) => {
+                            // Sort by composite: demand + liquidity
+                            const lA = getLiquidityScore(a.n), lB = getLiquidityScore(b.n);
+                            return (b.d * 0.6 + lB * 4) - (a.d * 0.6 + lA * 4);
+                        })
                         .slice(0, 2);
+
                     for (const target of targets) {
                         if (results.length >= state.strategyLimit) break;
                         const tv = calculatePetVal({...target,type:'reg',f_st:false,r_st:false},'value');
                         const valGapPct = ((tv - anchorVal) / anchorVal * 100);
-                        const tqs = scorePotentialTarget(target, anchorVal, anchor.d, [anchor]);
-                        results.push({ offer:[anchor], target, tqs,
-                            valGap: (tv - anchorVal).toFixed(2),
-                            valGapPct: valGapPct.toFixed(1),
-                            bundleAvgDem: anchor.d,
-                            reason: buildReasonText(target, anchorVal, anchor.d) });
+                        const tqs = scorePotentialTarget(target, anchorVal, parseFloat(getEffDemand(anchor)), [anchor]);
+                        const acceptPct = getAcceptanceProbability(anchorVal, parseFloat(getEffDemand(anchor)), target, [anchor]);
+                        results.push({ offer:[anchor], target, tqs, valGap:(tv-anchorVal).toFixed(2),
+                            valGapPct: valGapPct.toFixed(1), bundleAvgDem: parseFloat(getEffDemand(anchor)),
+                            acceptPct,
+                            reason: buildReasonText(target, anchorVal, parseFloat(getEffDemand(anchor)), [anchor]) });
                     }
                     usedUids.add(anchor.uid);
                 }
             } else {
-                // Normal mode: build bundles of inventory pets, then find targets
-                // that match the actual bundle value (not total inventory)
-                // Try different bundle sizes: single pet, 2-pet, 3-pet, 4-pet
+                // Normal mode v2
                 const bundleSizes = [1, 2, 3, 4];
                 const invSorted = [...inventory].sort((a,b) => {
-                    // Sort by demand desc, then value desc (best pets first)
-                    const dA = a.type==='neon'?(a.nd||a.d):a.type==='mega'?(a.md||a.d):a.d;
-                    const dB = b.type==='neon'?(b.nd||b.d):b.type==='mega'?(b.md||b.d):b.d;
+                    const dA = parseFloat(getEffDemand(a)), dB = parseFloat(getEffDemand(b));
                     if (dB !== dA) return dB - dA;
                     return calculatePetVal(b,'value') - calculatePetVal(a,'value');
                 });
 
                 for (const bundleSize of bundleSizes) {
                     if (results.length >= state.strategyLimit) break;
-                    // Build all possible bundles of this size
-                    const bundlesOfSize = [];
                     const avail = invSorted.filter(p => !usedUids.has(p.uid));
                     if (avail.length < bundleSize) continue;
 
-                    // Greedy: always take the best pets first for each bundle
-                    // Generate a few different starting combinations
                     for (let start = 0; start < Math.min(avail.length, 6); start++) {
                         if (results.length >= state.strategyLimit) break;
                         let bundle = [], sum = 0;
-                        // Start with pet at index 'start', fill rest greedily
                         const anchor = avail[start];
                         bundle.push(anchor);
                         sum += calculatePetVal(anchor, 'value');
                         if (bundleSize > 1) {
                             for (const p of avail) {
-                                if (bundle.length >= bundleSize) break;
-                                if (bundle.includes(p)) continue;
+                                if (bundle.length >= bundleSize || bundle.includes(p)) continue;
                                 sum += calculatePetVal(p, 'value');
                                 bundle.push(p);
                             }
                         }
-                        if (bundle.length < bundleSize) continue;
-                        if (sum <= 0) continue;
+                        if (bundle.length < bundleSize || sum <= 0) continue;
 
-                        const bundleAvgDem = bundle.reduce((s,p)=>s+(p.d||0),0) / bundle.length;
+                        const bundleAvgDem = bundle.reduce((s,p)=>s+parseFloat(getEffDemand(p)),0) / bundle.length;
+                        const bundleTier   = getBundleTier(bundle);
+                        const bundleReadability = getBundleReadabilityScore(bundle);
 
-                        const bundleTier = getBundleTier(bundle);
-                        // Find targets matching actual bundle value — strict rules
+                        // Value tolerance scales with pet value
+                        const maxLoss = sum >= 200 ? 0.03 : sum >= 50 ? 0.05 : 0.08;
+
                         const candidates = ALL_PETS.filter(t => {
                             if (state.aiTargetPets.length > 0 && !state.aiTargetPets.some(x=>x.n===t.n)) return false;
                             const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
-                            // Must be within realistic value range of actual bundle
-                            if (tv > sum * 1.40) return false; // too expensive even with overpay
-                            // Normal mode: NEVER accept more than 5% value loss
-                            if (tv < sum * 0.95) return false;
-                            // Demand parity: if offering high demand, target can't be junk demand
+                            if (tv > sum * 1.40 || tv < sum * (1 - maxLoss)) return false;
                             if (bundleAvgDem >= 7 && t.d < 4) return false;
                             if (bundleAvgDem >= 5 && t.d < 2) return false;
-                            // Category floor: if giving Preppy/High Tier/Exotic, target must be Classy+ or demand 6+
                             const targetTier = getCatTier(t);
                             if (bundleTier >= 3 && targetTier < 2 && t.d < 6) return false;
                             return tv > 0;
@@ -2895,90 +3338,87 @@
 
                         if (candidates.length === 0) continue;
 
-                        // Score all candidates against this specific bundle
                         const best = candidates
-                            .map(t => ({
-                                t,
+                            .map(t => ({ t,
                                 tv: calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value'),
-                                tqs: scorePotentialTarget(t, sum, bundleAvgDem, bundle)
-                            }))
+                                tqs: scorePotentialTarget(t, sum, bundleAvgDem, bundle) }))
                             .filter(x => x.tqs >= 3.5)
-                            .sort((a,b) => b.tqs - a.tqs)
-                            .slice(0, 1)[0];
+                            .sort((a,b) => b.tqs - a.tqs)[0];
 
                         if (!best) continue;
 
                         const valGapPct = ((best.tv - sum) / sum * 100);
-                        // Skip if already have a very similar suggestion
                         const isDupe = results.some(r => r.target.n === best.t.n && Math.abs(r.valGapPct - valGapPct) < 5);
                         if (isDupe) continue;
+
+                        const acceptPct = getAcceptanceProbability(sum, bundleAvgDem, best.t, bundle);
 
                         results.push({
                             offer: bundle, target: best.t, tqs: best.tqs,
                             valGap: (best.tv - sum).toFixed(2),
                             valGapPct: valGapPct.toFixed(1),
-                            bundleAvgDem, sum,
-                            reason: buildReasonText(best.t, sum, bundleAvgDem)
+                            bundleAvgDem, sum, acceptPct,
+                            bundleReadability,
+                            reason: buildReasonText(best.t, sum, bundleAvgDem, bundle)
                         });
                     }
                 }
             }
 
             // ── SMART DOWNGRADE SECTION ───────────────────────────────────
-            // Find pets in inventory worth trading down from for better liquidity
-            // Rule: received value >= given value, received avg demand >= 5
             let downgrades = [];
             const highValPets = [...inventory]
-                .filter(p => calculatePetVal(p,'value') >= 5) // only pets worth downgrading
+                .filter(p => calculatePetVal(p,'value') >= 5)
                 .sort((a,b) => calculatePetVal(b,'value') - calculatePetVal(a,'value'))
                 .slice(0, 5);
 
             for (const anchor of highValPets) {
                 const anchorVal = calculatePetVal(anchor, 'value');
-                const anchorDem = anchor.type==='neon'?(anchor.nd||anchor.d):anchor.type==='mega'?(anchor.md||anchor.d):anchor.d;
-                // Find 2–4 pets whose combined value equals or beats anchorVal
-                // and whose average demand is >= 5 AND >= anchorDem - 1 (decent demand)
+                const anchorDem = parseFloat(getEffDemand(anchor));
                 for (let count = 2; count <= 4; count++) {
-                    // Look for combinations of 'count' pets
                     const perPetTarget = anchorVal / count;
                     const receivables = ALL_PETS.filter(t => {
                         if (t.n === anchor.n) return false;
                         const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
-                        // Each pet should be roughly in range of perPetTarget ±50%
                         if (tv < perPetTarget * 0.5 || tv > perPetTarget * 1.5) return false;
-                        if (t.d < 5) return false; // must have decent demand
+                        if (t.d < 5 || isHTT(t.n)) return false;
                         return true;
-                    }).sort((a,b) => b.d - a.d).slice(0, 8);
+                    }).sort((a,b) => {
+                        const lA = getLiquidityScore(a.n), lB = getLiquidityScore(b.n);
+                        return (b.d * 0.5 + lB * 5) - (a.d * 0.5 + lA * 5);
+                    }).slice(0, 8);
 
                     if (receivables.length < count) continue;
-
-                    // Take top 'count' by demand
                     const combo = receivables.slice(0, count);
                     const comboVal = combo.reduce((s,t) => s + calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value'), 0);
                     const comboAvgDem = combo.reduce((s,t)=>s+t.d,0) / count;
+                    const comboAvgLiq = combo.reduce((s,t)=>s+getLiquidityScore(t.n),0) / count;
 
-                    // Value must be fair or overpay (never a loss)
-                    if (comboVal < anchorVal * 0.97) continue;
-                    // Average demand of received must be decent
-                    if (comboAvgDem < 5) continue;
+                    if (comboVal < anchorVal * 0.97 || comboAvgDem < 5) continue;
 
                     const valGainPct = ((comboVal - anchorVal) / anchorVal * 100).toFixed(1);
-                    const demGain = (comboAvgDem - anchorDem).toFixed(1);
-                    const isDupe = downgrades.some(d => d.anchor.n === anchor.n && d.combo.map(x=>x.n).join(',') === combo.map(x=>x.n).join(','));
+                    const demGain    = (comboAvgDem - anchorDem).toFixed(1);
+                    const isDupe = downgrades.some(d => d.anchor.n === anchor.n);
                     if (isDupe) continue;
 
-                    downgrades.push({ anchor, combo, comboVal, comboAvgDem, valGainPct, demGain, anchorVal });
-                    break; // one downgrade suggestion per anchor pet is enough
+                    downgrades.push({ anchor, combo, comboVal, comboAvgDem, comboAvgLiq, valGainPct, demGain, anchorVal });
+                    break;
                 }
             }
 
-            const demTierAdvice = invDemTier === 'Low'
-                ? 'Your inventory has low average demand — prioritise trading into higher-demand pets even at a slight value loss.'
-                : invDemTier === 'High' ? 'Strong demand across your inventory — focus on value gain, you have trading leverage.'
-                : 'Moderate demand. Aim for both value gain AND demand tier improvement where possible.';
+            // ── CHAIN TRADE SECTION ───────────────────────────────────────
+            let chainTrade = null;
+            if (results.length < 2 && inventory.length > 0) {
+                // Only suggest chain trade if direct suggestions are sparse
+                const topCat = results[0]?.target ? getCatLabel(results[0].target) : 'High Tier';
+                chainTrade = findChainTrade(inventory, totalInvVal, 6, topCat);
+            }
 
+            // ── RENDER ────────────────────────────────────────────────────
             if (results.length === 0 && downgrades.length === 0) {
-                box.innerHTML = html + `<div class="ai-suggestion">No suitable trades found with your current inventory. Try adding more pets or switching to Velocity Mode.</div>`;
+                html += `<div style="font-size:0.75em;color:var(--subtext);margin-bottom:10px;padding:8px;background:#0f172a;border-radius:8px">${demTierAdvice}</div>`;
+                html += `<div class="ai-suggestion">No suitable trades found. Try adding more pets or switching to Velocity Mode.</div>`;
+                box.innerHTML = html;
                 return;
             }
 
@@ -2988,18 +3428,22 @@
             }
 
             results.forEach(r => {
-                const catLabel = getCatLabel(r.target);
-                const catBadge = catLabel === 'High Tier' ? 'badge-hightier' : catLabel === 'Preppy' ? 'badge-preppy' : catLabel === 'Exotic' ? 'badge-exotic' : 'badge-randoms';
-                const tqsCls = r.tqs >= 7 ? 'high' : r.tqs >= 4 ? 'mid' : 'low';
-                const tqsLabel = r.tqs >= 7 ? '🔥 Strong' : r.tqs >= 4 ? '〽️ Decent' : '⚠️ Weak';
-                const isRising = r.target.vt && r.target.vt.includes('📈');
+                const catLabel  = getCatLabel(r.target);
+                const catBadge  = catLabel === 'High Tier' ? 'badge-hightier' : catLabel === 'Preppy' ? 'badge-preppy' : catLabel === 'Exotic' ? 'badge-exotic' : 'badge-randoms';
+                const tqsCls    = r.tqs >= 7 ? 'high' : r.tqs >= 4 ? 'mid' : 'low';
+                const tqsLabel  = r.tqs >= 7 ? '🔥 Strong' : r.tqs >= 4 ? '〽️ Decent' : '⚠️ Weak';
+                const isRising  = r.target.vt && r.target.vt.includes('📈');
                 const isFalling = r.target.dt && r.target.dt.includes('❄️');
-                const ugly = isHTT(r.target.n);
-                const manip = !!getManipulationFlag(r.target.n);
+                const ugly      = isHTT(r.target.n);
+                const manip     = !!getManipulationFlag(r.target.n);
                 const valGapNum = parseFloat(r.valGapPct);
-                const valColor = valGapNum >= 0 ? 'var(--win)' : 'var(--lose)';
+                const valColor  = valGapNum >= 0 ? 'var(--win)' : 'var(--lose)';
                 const bundleVal = (r.sum || r.offer.reduce((s,p)=>s+calculatePetVal(p,'value'),0)).toFixed(2);
                 const targetVal = calculatePetVal({...r.target,type:'reg',f_st:false,r_st:false},'value').toFixed(2);
+                const acceptColor = r.acceptPct >= 65 ? '#34d399' : r.acceptPct >= 40 ? '#fbbf24' : '#f87171';
+                const readScore = r.bundleReadability !== undefined ? r.bundleReadability : 10;
+                const readLabel = readScore >= 8 ? '✅ Clean' : readScore >= 5 ? '〽️ OK' : '⚠️ Messy';
+                const targetTrend = getCachedTrend(r.target.n);
 
                 html += `<div class="ai-suggestion">
                     <div style="margin-bottom:5px">
@@ -3016,28 +3460,45 @@
                             <span style="font-size:0.75em;color:var(--subtext);margin-left:4px">(${targetVal})</span>
                         </div>
                         <span class="target-badge ${catBadge}">${catLabel}</span>
-                        ${isRising ? '<span class="target-badge badge-rising">📈</span>' : ''}
+                        ${isRising  ? '<span class="target-badge badge-rising">📈</span>' : ''}
                         ${isFalling ? '<span class="target-badge badge-falling">❄️</span>' : ''}
-                        ${ugly ? '<span class="target-badge badge-ugly">HTT</span>' : ''}
-                        ${manip ? '<span class="target-badge badge-manip">⚠️Spike</span>' : ''}
+                        ${ugly   ? '<span class="target-badge badge-ugly">HTT</span>' : ''}
+                        ${manip  ? '<span class="target-badge badge-manip">⚠️Spike</span>' : ''}
+                        ${targetTrend.acceleration > 8 ? '<span class="target-badge badge-rising">🚀Accel</span>' : ''}
                     </div>
                     <div style="font-size:0.73em;color:#94a3b8;margin-bottom:5px">${r.reason}</div>
                     <div class="ai-stats-row">
                         <span class="ai-stat-pill tqs-${tqsCls}">${tqsLabel} ${r.tqs.toFixed(1)}/10</span>
                         <span class="ai-stat-pill" style="color:${valColor};background:rgba(255,255,255,0.05)">${valGapNum>=0?'+':''}${r.valGapPct}%</span>
-                        <span class="ai-stat-pill pill-dem">Dem: ${r.target.d}</span>
+                        <span class="ai-stat-pill pill-dem">Dem: ${r.target.d.toFixed(1)}</span>
+                        <span class="ai-stat-pill" style="color:${acceptColor};background:rgba(255,255,255,0.05)">~${r.acceptPct}% accept</span>
+                        <span class="ai-stat-pill" style="color:${readScore>=8?'#34d399':readScore>=5?'#fbbf24':'#f87171'};background:rgba(255,255,255,0.05)">Bundle: ${readLabel}</span>
                     </div>
                 </div>`;
             });
 
-            // ── SMART DOWNGRADE SECTION ───────────────────────────────────
+            // Chain trade suggestion
+            if (chainTrade) {
+                html += `<div class="ai-suggestion" style="border-left-color:#06b6d4;margin-top:4px">
+                    <div style="font-size:0.7em;font-weight:900;color:#06b6d4;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">⛓️ 2-STEP CHAIN TRADE</div>
+                    <div style="font-size:0.82em;color:#cbd5e1;margin-bottom:4px">
+                        Step 1: Trade inventory → <b>${chainTrade.bridge.n}</b> (${chainTrade.bridgeVal.toFixed(2)}, Dem ${chainTrade.bridge.d})
+                    </div>
+                    <div style="font-size:0.82em;color:#cbd5e1">
+                        Step 2: Use <b>${chainTrade.bridge.n}</b> → <b>${chainTrade.step2.n}</b> (Dem ${chainTrade.step2.d}, ${getCatLabel(chainTrade.step2)})
+                    </div>
+                    <div style="font-size:0.73em;color:#94a3b8;margin-top:4px">Sometimes the direct path doesn't exist — use a liquid bridge pet to unlock the trade.</div>
+                </div>`;
+            }
+
+            // Smart downgrades
             if (downgrades.length > 0) {
                 html += `<div style="font-size:0.7em;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px">⬇️ SMART DOWNGRADES (gain liquidity)</div>`;
                 downgrades.forEach(d => {
                     const valGainNum = parseFloat(d.valGainPct);
                     const demGainNum = parseFloat(d.demGain);
-                    const gainColor = valGainNum >= 0 ? 'var(--win)' : 'var(--lose)';
-                    const demColor = demGainNum > 0 ? 'var(--win)' : demGainNum < -1 ? 'var(--lose)' : 'var(--subtext)';
+                    const gainColor  = valGainNum >= 0 ? 'var(--win)' : 'var(--lose)';
+                    const demColor   = demGainNum > 0 ? 'var(--win)' : demGainNum < -1 ? 'var(--lose)' : 'var(--subtext)';
                     html += `<div class="ai-suggestion" style="border-left-color:#f59e0b">
                         <div style="margin-bottom:4px">
                             <span style="font-size:0.8em;color:var(--subtext)">Give:</span>
@@ -3049,11 +3510,11 @@
                             <span style="font-weight:800;color:#fbbf24"> ${d.combo.map(t=>t.n).join(' + ')}</span>
                             <span style="font-size:0.75em;color:var(--subtext);margin-left:4px">(${d.comboVal.toFixed(2)})</span>
                         </div>
-                        <div style="font-size:0.73em;color:#94a3b8;margin-bottom:5px">1 pet → ${d.combo.length} faster-moving pets · avg demand ${d.comboAvgDem.toFixed(1)} · better liquidity</div>
+                        <div style="font-size:0.73em;color:#94a3b8;margin-bottom:5px">1 pet → ${d.combo.length} faster-moving pets · avg demand ${d.comboAvgDem.toFixed(1)} · liquidity ${(d.comboAvgLiq*100).toFixed(0)}%</div>
                         <div class="ai-stats-row">
                             <span class="ai-stat-pill" style="color:${gainColor};background:rgba(255,255,255,0.05)">Value: ${valGainNum>=0?'+':''}${d.valGainPct}%</span>
-                            <span class="ai-stat-pill" style="color:${demColor};background:rgba(255,255,255,0.05)">Dem shift: ${demGainNum>=0?'+':''}${d.demGain}</span>
-                            <span class="ai-stat-pill" style="background:#1e3a1e;color:#6ee7b7">${d.combo.length} pets received</span>
+                            <span class="ai-stat-pill" style="color:${demColor};background:rgba(255,255,255,0.05)">Dem: ${demGainNum>=0?'+':''}${d.demGain}</span>
+                            <span class="ai-stat-pill" style="background:#1e3a1e;color:#6ee7b7">${d.combo.length} received</span>
                         </div>
                     </div>`;
                 });
@@ -3062,7 +3523,9 @@
             box.innerHTML = html;
         }
 
-        function renderSide(s) {
+
+
+                function renderSide(s) {
             const list = state[s];
             const grid = document.getElementById(`grid${s}`);
             grid.innerHTML = '';
@@ -3272,18 +3735,24 @@
         // Feature 6: Smarter search helpers
         // ===================================================
         function getTrendingPets(limit = 5) {
-            // Score by upward momentum from trend data
+            // v2: uses actual trend velocity + demand + liquidity
             return [...ALL_PETS]
                 .map(p => {
+                    const trend = getCachedTrend(p.n);
+                    const liq   = getLiquidityScore(p.n);
                     let score = 0;
-                    if (p.vt && p.vt.includes('📈')) score += 3;
-                    if (p.dt && p.dt.includes('🔥')) score += 3;
-                    if (p.vt && p.vt.includes('📉')) score -= 2;
-                    if (p.dt && p.dt.includes('❄️')) score -= 2;
-                    score += (p.d || 0) * 0.3;
+                    score += (p.d || 0) * 1.5;
+                    score += trend.pctChange * 0.4;
+                    score += (trend.acceleration > 0 ? trend.acceleration * 0.2 : trend.acceleration * 0.1);
+                    score += liq * 10;
+                    if ((p.vt||'').includes('📈')) score += 4;
+                    if ((p.dt||'').includes('🔥')) score += 4;
+                    if ((p.vt||'').includes('📉')) score -= 5;
+                    if ((p.dt||'').includes('❄️')) score -= 5;
+                    if (isHTT(p.n)) score -= 10;
                     return { p, score };
                 })
-                .filter(x => x.score > 0)
+                .filter(x => x.score > 0 && !isHTT(x.p.n))
                 .sort((a, b) => b.score - a.score)
                 .slice(0, limit)
                 .map(x => x.p);
@@ -3631,7 +4100,7 @@
         // List state — type and zoom are independent per list
         const listState = {
             value:  { type: 'normal', zoom: 46 },
-            demand: { type: 'normal', zoom: 46 }
+            demand: { type: 'normal', zoom: 46, increment: 0.1 }
         };
 
         function setVListType(list, type) {
@@ -3651,6 +4120,15 @@
             listState[list].zoom = parseInt(val);
             if (list === 'value') renderValueList();
             else renderDemandList();
+        }
+
+        function setDemandIncrement(inc) {
+            listState.demand.increment = inc;
+            // Update button active states
+            document.getElementById('dInc01').classList.toggle('active', inc === 0.1);
+            document.getElementById('dInc05').classList.toggle('active', inc === 0.5);
+            document.getElementById('dInc1').classList.toggle('active',  inc === 1);
+            renderDemandList();
         }
 
         // Get the correct value for a pet based on list type
@@ -3732,7 +4210,8 @@
             const search = (document.getElementById('demandListSearch').value || '').toLowerCase();
             if (ALL_PETS.length === 0) { body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">Loading data...</div>'; return; }
 
-            const { type, zoom } = listState.demand;
+            const { type, zoom, increment } = listState.demand;
+            const inc = increment || 0.1;
             const imgSize = zoom;
             const tileSize = zoom + 10;
             const typeLabel = getTypeLabel(type);
@@ -3750,9 +4229,11 @@
             const groups = {};
             normalPets.forEach(p => {
                 const d = getPetListDemand(p, type);
-                // Bucket by 0.1 increments for all demand values
-                const bucket = Math.round(d * 10) / 10;
-                const key = bucket.toFixed(1);
+                // Bucket by chosen increment
+                const factor = Math.round(1 / inc);
+                const bucket = Math.round(d * factor) / factor;
+                const decimals = inc < 1 ? (inc === 0.1 ? 1 : 1) : 0;
+                const key = bucket.toFixed(decimals);
                 if (!groups[key]) groups[key] = { d: bucket, pets: [] };
                 groups[key].pets.push(p);
             });
@@ -3783,7 +4264,8 @@
 
             const groupsHtml = sorted.map(g => {
                 const color = getDemandColor(g.d);
-                const dStr = Number.isInteger(g.d) ? g.d.toFixed(1) : g.d.toFixed(1);
+                const dDecimals = inc < 1 ? 1 : 0;
+                const dStr = g.d.toFixed(dDecimals);
                 const label = g.d >= 9 ? '🔥 ' + dStr : g.d >= 7 ? '⚡ ' + dStr : g.d <= 2 ? '❄️ ' + dStr : dStr;
                 return `<div class="vlist-tier-row">
                     <div class="vlist-tier-label" style="color:${color}">${label}</div>
