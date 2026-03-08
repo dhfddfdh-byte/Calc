@@ -4895,6 +4895,17 @@ function tbGetVerdict(trade) {
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────
+function tbTogglePet(side, uid, type) {
+    const arr = side === 'offer' ? tbOfferPets : tbRequestPets;
+    const p = arr.find(x => x.uid === uid);
+    if (!p) return;
+    if (type === 'n') p.type = p.type === 'neon' ? 'reg' : 'neon';
+    else if (type === 'm') p.type = p.type === 'mega' ? 'reg' : 'mega';
+    else if (type === 'f') p.f_st = !p.f_st;
+    else if (type === 'r') p.r_st = !p.r_st;
+    renderTBCreateForm();
+}
+
 function renderTBPetChips(pets, side, editable) {
     let html = '';
     const hydrated = pets.map(p => {
@@ -4904,16 +4915,39 @@ function renderTBPetChips(pets, side, editable) {
     hydrated.forEach(p => {
         const val = calculatePetVal(p, 'value');
         const label = getPetLabel(p);
-        html += `<div style="display:flex;align-items:center;gap:6px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:5px 8px;position:relative">
-            ${petImgTag(p.n, 'width:28px;height:28px;object-fit:contain')}
-            <div>
-                <div style="font-size:0.78em;font-weight:800;color:white">${label}</div>
-                <div style="font-size:0.68em;color:#64748b">${val > 0 ? val.toFixed(2) : '?'}</div>
-            </div>
-            ${editable ? `<div onclick="tbRemovePet('${side}',${p.uid})" style="cursor:pointer;color:#ef4444;font-size:10px;margin-left:4px;font-weight:900">✕</div>` : ''}
-        </div>`;
+        // Use a uid string safe for HTML attributes
+        const uidStr = String(p.uid);
+        let chip = '<div style="display:flex;align-items:flex-start;gap:6px;background:#0f172a;border:1px solid #1e293b;border-radius:8px;padding:5px 8px;position:relative">';
+        chip += petImgTag(p.n, 'width:28px;height:28px;object-fit:contain');
+        chip += '<div>';
+        chip += '<div style="font-size:0.78em;font-weight:800;color:white">' + label + '</div>';
+        chip += '<div style="font-size:0.68em;color:#64748b">' + (val > 0 ? val.toFixed(2) : '?') + '</div>';
+        if (editable) {
+            const nBg = p.type === 'neon' ? '#3b82f6' : '#0f172a';
+            const mBg = p.type === 'mega' ? '#a855f7' : '#0f172a';
+            const fBg = p.f_st ? '#06b6d4' : '#0f172a';
+            const rBg = p.r_st ? '#10b981' : '#0f172a';
+            const nCol = p.type === 'neon' ? 'white' : '#475569';
+            const mCol = p.type === 'mega' ? 'white' : '#475569';
+            const fCol = p.f_st ? 'white' : '#475569';
+            const rCol = p.r_st ? 'white' : '#475569';
+            const s = side; // closure-safe alias
+            const tbtn = 'width:18px;height:18px;border-radius:3px;font-size:0.6em;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+            chip += '<div style="display:flex;gap:2px;margin-top:3px">';
+            chip += '<div onclick="tbTogglePet(\'' + s + '\',' + uidStr + ',\'n\')" style="' + tbtn + 'background:' + nBg + ';color:' + nCol + ';border:1px solid ' + (p.type==='neon'?'#3b82f6':'#334155') + '">N</div>';
+            chip += '<div onclick="tbTogglePet(\'' + s + '\',' + uidStr + ',\'m\')" style="' + tbtn + 'background:' + mBg + ';color:' + mCol + ';border:1px solid ' + (p.type==='mega'?'#a855f7':'#334155') + '">M</div>';
+            chip += '<div onclick="tbTogglePet(\'' + s + '\',' + uidStr + ',\'f\')" style="' + tbtn + 'background:' + fBg + ';color:' + fCol + ';border:1px solid ' + (p.f_st?'#06b6d4':'#334155') + '">F</div>';
+            chip += '<div onclick="tbTogglePet(\'' + s + '\',' + uidStr + ',\'r\')" style="' + tbtn + 'background:' + rBg + ';color:' + rCol + ';border:1px solid ' + (p.r_st?'#10b981':'#334155') + '">R</div>';
+            chip += '</div>';
+        }
+        chip += '</div>';
+        if (editable) {
+            chip += '<div onclick="tbRemovePet(\'' + side + '\',' + uidStr + ')" style="cursor:pointer;color:#ef4444;font-size:10px;margin-left:4px;font-weight:900;flex-shrink:0">&#x2715;</div>';
+        }
+        chip += '</div>';
+        html += chip;
     });
-    return html || `<div style="font-size:0.75em;color:#475569;padding:4px">None</div>`;
+    return html || '<div style="font-size:0.75em;color:#475569;padding:4px">None</div>';
 }
 
 function renderTBCreateForm() {
