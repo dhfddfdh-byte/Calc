@@ -26,6 +26,86 @@
             --rarity-uncommon: #81c784;
             --rarity-common: #bdbdbd;
         }
+
+        /* ── ELVEBREDD LIGHT THEME ── */
+        body.theme-elve {
+            --bg: #ede8e3;
+            --panel: #f5f0eb;
+            --card: #faf5f0;
+            --border: #e8b4ad;
+            --text: #2d2420;
+            --subtext: #7a6560;
+            --accent: #e05a3a;
+            --frost: #c0392b;
+            --win: #2e7d32;
+            --lose: #c0392b;
+            --trap: #e07020;
+            --demand-color: #c05030;
+            --rarity-legendary: #d4770a;
+            --rarity-ultra: #c2185b;
+            --rarity-rare: #1565c0;
+            --rarity-uncommon: #2e7d32;
+            --rarity-common: #78909c;
+        }
+        body.theme-elve { background-color: var(--bg); color: var(--text); }
+        body.theme-elve .trade-panel { background: var(--panel); border-color: var(--border); }
+        body.theme-elve .card { background: #fce8e4; border-color: #e8b4ad; box-shadow: 0 2px 8px rgba(200,80,60,0.08); }
+        body.theme-elve .card:hover { border-color: var(--accent); }
+        body.theme-elve .nav-btn { background: #f5f0eb; border-color: #d4968e; color: var(--text); }
+        body.theme-elve .nav-btn:hover { background: #fce8e4; border-color: var(--accent); }
+        body.theme-elve .tab-bar { background: #ede0da; border-color: #d4968e; }
+        body.theme-elve .tab-btn { color: #7a6560; }
+        body.theme-elve .tab-btn.active { background: var(--accent); color: white; box-shadow: 0 2px 12px rgba(224,90,58,0.3); }
+        body.theme-elve .tab-btn:not(.active):hover { background: rgba(224,90,58,0.1); color: var(--accent); }
+        body.theme-elve .verdict-box { background: #f5f0eb; border-color: #d4968e; box-shadow: 0 20px 50px rgba(180,80,60,0.15); }
+        body.theme-elve .gauge-bar { background: linear-gradient(90deg, #c0392b 0%, #e07020 50%, #2e7d32 100%); }
+        body.theme-elve .sw-btn.active { background: var(--accent); color: white; }
+        body.theme-elve .sw-btn { color: #7a6560; }
+        body.theme-elve .switches { background: #ede0da; }
+        body.theme-elve .save-trade-btn { background: #d4968e; color: white; }
+        body.theme-elve .save-trade-btn:hover { background: var(--accent); }
+        body.theme-elve .p-title, body.theme-elve .p-total { color: var(--text); }
+        body.theme-elve .p-dem { color: var(--accent); }
+        body.theme-elve .plus { border-color: #d4968e; color: #d4968e; }
+        body.theme-elve .plus:hover { border-color: var(--accent); color: var(--accent); }
+        body.theme-elve .del { background: #c0392b; }
+        body.theme-elve .t-btn { background: #ede0da; color: #7a6560; }
+        body.theme-elve .t-btn.active { background: var(--accent); color: white; }
+        body.theme-elve .card-val { color: #c0392b; }
+        body.theme-elve .card-name { color: #2d2420; }
+        body.theme-elve .loading-screen { background: var(--bg); }
+        body.theme-elve .search-overlay { background: rgba(237,224,218,0.97); }
+        body.theme-elve .search-container { background: #f5f0eb; border-color: #d4968e; }
+        body.theme-elve .search-header { background: #ede0da; border-color: #d4968e; }
+        body.theme-elve #mainSearch { background: #faf5f0; border-color: #d4968e; color: var(--text); }
+        body.theme-elve #sortSelect, body.theme-elve #rarityFilter { background: #faf5f0; border-color: #d4968e; color: var(--text); }
+        body.theme-elve .results-grid { background: #f0ebe6; }
+        body.theme-elve .search-item-card { background: #fce8e4; border-color: transparent; }
+        body.theme-elve .search-item-card:hover { background: #f5d5d0; border-color: var(--accent); }
+        body.theme-elve .search-item-name { color: #2d2420; }
+        body.theme-elve .search-item-val { color: #2d2420; }
+        body.theme-elve .vlist-container { background: var(--panel); border-color: var(--border); }
+        body.theme-elve .vlist-header { background: #ede0da; border-color: #d4968e; }
+        body.theme-elve .vlist-pet { background: #fce8e4; border-color: #d4968e; }
+        body.theme-elve .vlist-pet:hover { background: #f5d5d0; border-color: var(--accent); }
+        body.theme-elve .inv-overlay { background: rgba(237,224,218,0.97); }
+        body.theme-elve .inv-container { background: #f5f0eb; border-color: #d4968e; }
+        body.theme-elve .inv-header { background: #ede0da; border-color: #d4968e; }
+        body.theme-elve .inv-stats { background: #f0ebe6; }
+        body.theme-elve .stat-card { background: var(--panel); border-color: #d4968e; }
+        body.theme-elve .stat-label { color: #7a6560; }
+        body.theme-elve .stat-value { color: var(--text); }
+        body.theme-elve .ai-box { background: rgba(224,90,58,0.06); border-color: var(--accent); }
+        body.theme-elve .ai-suggestion { background: #fce8e4; border-left-color: var(--accent); }
+        body.theme-elve .ai-summary { background: #fce8e4; border-color: #d4968e; }
+        body.theme-elve .ai-toggle-group { background: #ede0da; }
+        body.theme-elve .ai-tog.active { background: var(--accent); }
+        body.theme-elve .milestone-container { background: #ede0da; border-color: #d4968e; }
+        body.theme-elve #tradeBoardContent { background: var(--bg); }
+        body.theme-elve .settings-container { background: #f5f0eb; border-color: #d4968e; }
+        body.theme-elve .settings-header { background: #ede0da; border-color: #d4968e; }
+        body.theme-elve .settings-section { background: #faf5f0; border-color: #d4968e; }
+        body.theme-elve .theme-toggle-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -999,7 +1079,19 @@
         <div class="settings-container">
             <div class="settings-header">
                 <span style="font-weight:900;font-size:1.05em">⚙️ SETTINGS</span>
-                <button class="nav-btn" onclick="closeSettings()">Close</button>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <div style="display:flex;gap:4px;background:#0f172a;border-radius:10px;padding:3px;border:1px solid var(--border)">
+                        <button class="theme-toggle-btn active" id="themeDark" onclick="setTheme('dark')"
+                            style="padding:5px 12px;border-radius:8px;border:none;font-size:0.75em;font-weight:900;cursor:pointer;transition:0.2s;background:var(--accent);color:white">
+                            🌙 Dark
+                        </button>
+                        <button class="theme-toggle-btn" id="themeElve" onclick="setTheme('elve')"
+                            style="padding:5px 12px;border-radius:8px;border:none;font-size:0.75em;font-weight:900;cursor:pointer;transition:0.2s;background:transparent;color:var(--subtext)">
+                            ☀️ Elvebredd
+                        </button>
+                    </div>
+                    <button class="nav-btn" onclick="closeSettings()">Close</button>
+                </div>
             </div>
             <div class="settings-body">
 
@@ -4063,6 +4155,24 @@
             });
         }
 
+        function setTheme(theme) {
+            document.body.classList.remove('theme-elve');
+            if (theme === 'elve') document.body.classList.add('theme-elve');
+            localStorage.setItem('appTheme', theme);
+            // Update toggle button states
+            const dark = document.getElementById('themeDark');
+            const elve = document.getElementById('themeElve');
+            if (dark && elve) {
+                if (theme === 'dark') {
+                    dark.style.background = 'var(--accent)'; dark.style.color = 'white';
+                    elve.style.background = 'transparent'; elve.style.color = 'var(--subtext)';
+                } else {
+                    elve.style.background = '#e05a3a'; elve.style.color = 'white';
+                    dark.style.background = 'transparent'; dark.style.color = 'var(--subtext)';
+                }
+            }
+        }
+
         function openSettings() {
             document.getElementById('settingsOverlay').style.display = 'flex';
             renderKeybindList();
@@ -4508,6 +4618,11 @@
         }
 
         loadPetData();
+        // Restore saved theme
+        (function() {
+            const saved = localStorage.getItem('appTheme');
+            if (saved === 'elve') setTheme('elve');
+        })();
 
 // ================================================================
 // TRADE BOARD
@@ -5073,6 +5188,7 @@ function renderTBCard(t) {
             </div>
             <div class="results-grid" id="searchResults"></div>
         </div>
+    </div>
 
 </body>
 </html>
