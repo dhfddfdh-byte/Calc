@@ -1105,41 +1105,6 @@
         </div>
     </div>
 
-    <div class="search-overlay" id="searchOverlay" onclick="closeSearch()">
-        <div class="search-container" onclick="event.stopPropagation()">
-            <div class="search-header">
-                <div class="search-input-wrapper">
-                    <span class="search-icon-fixed">🔍</span>
-                    <input type="text" id="mainSearch" placeholder="Search for a pet..." autocomplete="off">
-                </div>
-                
-                <select id="rarityFilter" onchange="updateFilter()">
-                    <option value="none">Rarity: None</option>
-                    <option value="high tier">High Tier</option>
-                    <option value="mid tier">Mid Tier</option>
-                    <option value="classy">Classy</option>
-                    <option value="randoms">Randoms</option>
-                    <option value="default legs">Default Legs</option>
-                    <option value="preppy">Preppy</option>
-                    <option value="exotic">Exotic</option>
-                    <option value="legendary">Legendary</option>
-                    <option value="ultra-rare">Ultra-Rare</option>
-                    <option value="rare">Rare</option>
-                    <option value="uncommon">Uncommon</option>
-                    <option value="common">Common</option>
-                </select>
-
-                <select id="sortSelect" onchange="updateFilter()">
-                    <option value="default">Default</option>
-                    <option value="valHigh">Value (High → Low)</option>
-                    <option value="valLow">Value (Low → High)</option>
-                    <option value="demHigh">Demand (High → Low)</option>
-                    <option value="demLow">Demand (Low → High)</option>
-                </select>
-                <div class="close-modal-btn" onclick="closeSearch()">✕</div>
-            </div>
-            <div class="results-grid" id="searchResults"></div>
-        </div>
     </div>
 
     <div class="container">
@@ -4686,6 +4651,13 @@ function tbRepost(id) {
     window.open(url, '_blank');
 }
 
+function setTBZoom(val) {
+    const board = document.getElementById('tradeBoardContent');
+    if (board) board.style.fontSize = (val / 100) + 'em';
+    const lbl = document.getElementById('tbZoomLabel');
+    if (lbl) lbl.textContent = val + '%';
+}
+
 function tbMarkAccepted(id) {
     tbTrades = tbTrades.filter(t => t.id !== id);
     tbSave(tbTrades);
@@ -4934,6 +4906,13 @@ function renderTradeBoard() {
                 <span style="font-weight:900;font-size:1.1em;color:white">📋 Trade Board</span>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                     ${notifBtnHtml}
+                    <div style="display:flex;align-items:center;gap:6px;background:#0f172a;border:1.5px solid var(--accent);border-radius:8px;padding:4px 10px">
+                        <span style="font-size:0.72em;color:var(--accent);font-weight:900">🔍</span>
+                        <input type="range" id="tbZoomSlider" min="70" max="130" value="100"
+                            oninput="setTBZoom(this.value)"
+                            style="width:70px;accent-color:var(--accent);cursor:pointer">
+                        <span id="tbZoomLabel" style="font-size:0.72em;color:var(--accent);font-weight:800;min-width:30px">100%</span>
+                    </div>
                     <button onclick="tbOpenCreate()" style="background:var(--accent);border:none;color:white;border-radius:8px;padding:8px 16px;font-size:0.85em;font-weight:900;cursor:pointer">+ New Trade</button>
                 </div>
             </div>
@@ -5057,6 +5036,43 @@ function renderTBCard(t) {
             </div>
         </div>
     </div>
+
+
+    <div class="search-overlay" id="searchOverlay" onclick="closeSearch()">
+        <div class="search-container" onclick="event.stopPropagation()">
+            <div class="search-header">
+                <div class="search-input-wrapper">
+                    <span class="search-icon-fixed">🔍</span>
+                    <input type="text" id="mainSearch" placeholder="Search for a pet..." autocomplete="off">
+                </div>
+                
+                <select id="rarityFilter" onchange="updateFilter()">
+                    <option value="none">Rarity: None</option>
+                    <option value="high tier">High Tier</option>
+                    <option value="mid tier">Mid Tier</option>
+                    <option value="classy">Classy</option>
+                    <option value="randoms">Randoms</option>
+                    <option value="default legs">Default Legs</option>
+                    <option value="preppy">Preppy</option>
+                    <option value="exotic">Exotic</option>
+                    <option value="legendary">Legendary</option>
+                    <option value="ultra-rare">Ultra-Rare</option>
+                    <option value="rare">Rare</option>
+                    <option value="uncommon">Uncommon</option>
+                    <option value="common">Common</option>
+                </select>
+
+                <select id="sortSelect" onchange="updateFilter()">
+                    <option value="default">Default</option>
+                    <option value="valHigh">Value (High → Low)</option>
+                    <option value="valLow">Value (Low → High)</option>
+                    <option value="demHigh">Demand (High → Low)</option>
+                    <option value="demLow">Demand (Low → High)</option>
+                </select>
+                <div class="close-modal-btn" onclick="closeSearch()">✕</div>
+            </div>
+            <div class="results-grid" id="searchResults"></div>
+        </div>
 
 </body>
 </html>
