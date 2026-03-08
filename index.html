@@ -5104,7 +5104,7 @@ function renderTBCard(t) {
     const elapsedStr = elapsed < 3600 ? `${Math.floor(elapsed/60)}m ago` : `${Math.floor(elapsed/3600)}h ${Math.floor((elapsed%3600)/60)}m ago`;
     const verdict   = tbGetVerdict(t);
     const siteColor = t.site === 'elvebredd' ? '#a855f7' : '#38bdf8';
-    const siteUrl   = t.site === 'elvebredd' ? 'https://elvebredd.com/trade-center' : 'https://amvgg.com/trade';
+    const siteUrl   = t.site === 'elvebredd' ? 'https://elvebredd.com/profile' : 'https://amvgg.com/profile/10237717020';
 
     let verdictHtml = '';
     if (verdict) {
@@ -5232,4 +5232,5 @@ function renderTBCard(t) {
 
 </body>
 </html>
+
 
