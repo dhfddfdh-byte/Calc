@@ -4831,7 +4831,7 @@ function checkTBAlerts() {
                 // Auto repost: reset timer and open site
                 t.postedAt = Date.now();
                 t.alertFired = false;
-                window.open(t.site === 'elvebredd' ? 'https://elvebredd.com/trade-center' : 'https://amvgg.com/trade', '_blank');
+                window.open(t.site === 'elvebredd' ? 'https://elvebredd.com/profile' : 'https://amvgg.com/profile/10237717020', '_blank');
                 showTBToast(`♻️ Auto-reposted trade on ${t.site === 'elvebredd' ? 'Elvebredd' : 'AMVGG'}!`, '#a855f7');
             } else {
                 showTBToast(`⏰ Time to repost your ${t.site === 'elvebredd' ? 'Elvebredd' : 'AMVGG'} trade!`, '#f59e0b');
@@ -5232,3 +5232,4 @@ function renderTBCard(t) {
 
 </body>
 </html>
+
