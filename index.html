@@ -1197,8 +1197,6 @@
         </div>
     </div>
 
-    </div>
-
     <div class="container">
         <div class="trade-panel" id="panelA">
             <div class="p-header">
@@ -4294,6 +4292,13 @@
                 if (tabEl) tabEl.classList.toggle('active', t === tab);
                 if (btnEl) btnEl.classList.toggle('active', t === tab);
             });
+            // verdict-box and extras are position:fixed — hide on non-calc tabs
+            const vb = document.querySelector('.verdict-box');
+            const ve = document.getElementById('verdictExtras');
+            const vl = document.getElementById('verdictExtrasLeft');
+            if (vb) vb.style.display = tab === 'calc' ? '' : 'none';
+            if (ve) ve.style.display = tab === 'calc' ? '' : 'none';
+            if (vl) vl.style.display = tab === 'calc' ? '' : 'none';
             if (tab === 'value'  && ALL_PETS.length > 0) renderValueList();
             if (tab === 'demand' && ALL_PETS.length > 0) renderDemandList();
             if (tab === 'trades') { renderTradeBoard(); startTBTimers(); }
@@ -4509,8 +4514,8 @@
         // Uses inline SVG data URIs so they ALWAYS work, no CDN needed
         // ================================================================
         const IMAGE_OVERRIDES = {
-            'ride-a-pet potion': 'https://static.wikia.nocookie.net/adoptme/images/3/30/AM_Ride-A-Pet_Potion.png/revision/latest?cb=20220427134837',
-            'fly-a-pet potion':  'https://static.wikia.nocookie.net/adoptme/images/2/2a/Fly-A-Pet_Potion.png/revision/latest?cb=20231206204208',
+            'ride-a-pet potion': 'https://static.wikia.nocookie.net/adoptme/images/3/30/AM_Ride-A-Pet_Potion.png',
+            'fly-a-pet potion':  'https://static.wikia.nocookie.net/adoptme/images/2/2a/Fly-A-Pet_Potion.png',
         };
 
         // Pets with "Artifact Demand" — custom demand tier you created
