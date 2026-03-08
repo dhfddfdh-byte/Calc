@@ -2176,12 +2176,12 @@
             filterAndRender(document.getElementById('mainSearch').value.toLowerCase());
         }
 
-        document.getElementById('mainSearch').addEventListener('input', (e) => {
-            searchState.renderLimit = 50; 
+        document.addEventListener('DOMContentLoaded', () => {
+          document.getElementById('mainSearch').addEventListener('input', (e) => {
+            searchState.renderLimit = 50;
             filterAndRender(e.target.value.toLowerCase());
-        });
-
-        document.getElementById('searchResults').addEventListener('scroll', () => {
+          });
+          document.getElementById('searchResults').addEventListener('scroll', () => {
             const box = document.getElementById('searchResults');
             if (box.scrollTop + box.clientHeight >= box.scrollHeight - 50) {
                 if (searchState.renderLimit < searchState.currentMatches.length) {
@@ -2190,6 +2190,7 @@
                 }
             }
         });
+        }); // end DOMContentLoaded
 
         function filterAndRender(query) {
             let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
