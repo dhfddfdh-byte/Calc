@@ -4865,7 +4865,11 @@ function renderTBCreateForm() {
 
 function tbAddPetSide(side) {
     state.target = side === 'offer' ? 'tbOffer' : 'tbRequest';
-    openSearch('tbOffer');
+    // openSearch is defined in the main script block - call it directly
+    document.getElementById('searchOverlay').classList.add('open');
+    searchState.renderLimit = 50;
+    filterAndRender(document.getElementById('mainSearch').value.toLowerCase());
+    setTimeout(() => document.getElementById('mainSearch').focus(), 50);
 }
 
 function renderTradeBoard() {
