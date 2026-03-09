@@ -2247,7 +2247,7 @@
                 const demandColor = getDemandColor(p.d);
                 return `
                 <div class="search-item-card" 
-                     onclick="addItem(this, '${p.n.replace(/'/g, "\\'")}', 1)" 
+                     onclick="handleSearchClick(event, this, '${p.n.replace(/'/g, "\\'")}')" 
                      oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
                      style="border-color: ${rarityColor}">
                     <div class="search-item-name">${p.n}${getTrendIcons(p)}</div>
@@ -2277,6 +2277,15 @@
                 addItem(null, selectedPetForQty, count);
             }
             closeQtyModal();
+        }
+
+        function handleSearchClick(e, el, name) {
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                openQtyModal(name);
+            } else {
+                addItem(el, name, 1);
+            }
         }
 
         function addItem(element, name, quantity = 1) {
