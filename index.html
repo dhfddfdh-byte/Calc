@@ -574,235 +574,131 @@
            ======================================== */
         
         /* Mobile Devices (phones) */
+        /* ========================================
+           MOBILE RESPONSIVE — complete overhaul
+           ======================================== */
         @media screen and (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
 
-    .nav-bar {
-        flex-wrap: wrap;
-        gap: 5px;
-    }
+            body { padding: 0; overflow-x: hidden; }
 
-    .nav-btn {
-        padding: 8px 12px;
-        font-size: 0.85em;
-    }
+            .home-screen { width: 100%; max-width: 100%; padding: 0; align-items: stretch; }
 
-    .container {
-        margin-top: 20px;
-        margin-bottom: 200px;
-        gap: 15px;
-        flex-direction: row;
-    }
-        .trade-panel {
-    min-width: 340px;
-    flex: 1;
-}
+            /* Tab bar: sticky scrollable strip */
+            .tab-bar {
+                width: 100%; box-sizing: border-box;
+                border-radius: 0 0 14px 14px; margin-bottom: 0;
+                padding: 6px 10px; gap: 6px;
+                overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+                border-left: none; border-right: none; border-top: none;
+                justify-content: flex-start;
+                position: sticky; top: 0; z-index: 100; background: #111827;
+            }
+            .tab-bar::-webkit-scrollbar { display: none; }
+            .tab-btn { padding: 8px 16px; font-size: 0.78em; white-space: nowrap; flex-shrink: 0; gap: 5px; }
+            .tab-btn svg { width: 12px; height: 12px; }
 
-        .grid {
-            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-            gap: 10px;
-            padding: 15px;
+            .tab-content { width: 100%; box-sizing: border-box; padding: 10px; }
+
+            /* Calc: stack panels vertically */
+            .container {
+                flex-direction: column; gap: 12px;
+                margin-top: 12px; margin-bottom: 160px;
+                padding: 0; width: 100%;
+            }
+            .trade-panel { min-width: unset; width: 100%; min-height: unset; border-radius: 16px; }
+            .p-header { padding: 14px 16px; }
+            .p-title { font-size: 1.05em; }
+            .grid { padding: 12px; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 8px; }
+            .card { padding: 9px 6px; border-radius: 10px; }
+            .card-img-container { width: 50px; height: 50px; }
+            .card-name { font-size: 0.6em; }
+            .card-val { font-size: 0.85em; }
+            .plus { height: 100px; font-size: 1.8em; }
+
+            /* Verdict: full-width bottom bar */
+            .verdict-box {
+                left: 0; right: 0; bottom: 0;
+                width: 100%; max-width: 100%;
+                border-radius: 20px 20px 0 0;
+                padding: 14px 16px 20px;
+                box-sizing: border-box; transform: none;
+            }
+            .verdict-extras { display: none !important; }
+            .v-text { font-size: 1.8em; }
+            .switches { flex-wrap: wrap; gap: 5px; }
+            .sw-btn { padding: 5px 12px; font-size: 0.76em; }
+
+            /* Nav buttons */
+            .nav-bar { flex-wrap: wrap; gap: 6px; padding: 0; justify-content: center; }
+            .nav-btn { padding: 9px 16px; font-size: 0.8em; border-radius: 12px; }
+
+            /* Value/Demand list */
+            .vlist-container { border-radius: 14px; }
+            .vlist-header { flex-direction: column; gap: 8px; padding: 12px 14px; align-items: flex-start; }
+            .vlist-header > div { width: 100%; }
+            .vlist-search { width: 100%; box-sizing: border-box; min-width: unset; }
+            #sortSelect, #rarityFilter { width: 100%; box-sizing: border-box; }
+            .results-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; padding: 10px; }
+            .search-item-card { padding: 9px 6px; }
+            .search-item-img { width: 52px; height: 52px; }
+
+            /* Search overlay: bottom sheet */
+            .search-container {
+                max-width: 100%; max-height: 92vh;
+                border-radius: 20px 20px 0 0;
+                width: 100%;
+            }
+            .search-header { flex-direction: column; gap: 8px; padding: 14px; }
+            .search-input-wrapper { width: 100%; }
+
+            /* Inventory: bottom sheet style */
+            .inv-container {
+                max-width: 100%; max-height: 92vh;
+                border-radius: 20px 20px 0 0; width: 100%;
+            }
+            .inv-header { flex-direction: column; gap: 8px; padding: 14px; }
+            .inv-header > div { flex-direction: row; flex-wrap: wrap; width: 100%; gap: 6px; }
+            .inv-header .nav-btn { flex: 1; min-width: 100px; text-align: center; }
+            .inv-body { flex-direction: column; }
+            .inv-list { border-right: none; border-bottom: 1.5px solid var(--border); padding: 14px; }
+
+            /* Trade board: stack columns */
+            #tradeBoardContent > div { max-width: 100% !important; }
+            .tb-active-grid { display: flex !important; flex-direction: column !important; }
+
+            /* Modals */
+            .graph-container, .info-container, .analytics-container, .history-container {
+                max-width: 100%; max-height: 92vh; border-radius: 20px 20px 0 0; width: 100%;
+            }
+            .graph-body { height: 250px; padding: 12px; }
+            .info-body { padding: 16px; }
+            .qty-modal { width: 92%; padding: 18px; border-radius: 18px; }
+            .ai-suggestion { font-size: 0.82em; padding: 12px; }
+            .ai-toggle-group { flex-direction: column; }
+            .ai-tog { padding: 10px; font-size: 0.78em; }
         }
 
-        .card {
-            padding: 8px 6px;
+        /* Tablet */
+        @media screen and (min-width: 769px) and (max-width: 1024px) {
+            .container { max-width: 100%; }
+            .trade-panel { min-width: 45%; }
+            .grid { grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); }
         }
 
-        .card-img-container {
-            width: 50px;
-            height: 50px;
+        /* iOS: no zoom on input focus */
+        @media screen and (max-width: 768px) {
+            input, select, textarea { font-size: 16px !important; }
         }
 
-        .card-name {
-            font-size: 0.65em;
+        /* Touch */
+        @media (hover: none) and (pointer: coarse) {
+            .card:hover { transform: none; }
+            .card:active { transform: scale(0.98); }
+            .nav-btn:hover { background: var(--panel); }
+            .nav-btn:active { background: var(--card); }
+            .plus:hover { border-color: var(--border); color: var(--border); }
+            .plus:active { border-color: var(--accent); color: var(--accent); }
         }
-
-        .card-val {
-            font-size: 0.85em;
-        }
-
-        .verdict-box {
-            bottom: 10px;
-            padding: 15px;
-            max-width: 95%;
-        }
-
-        .v-text {
-            font-size: 2em;
-        }
-
-        .switches {
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-
-        .sw-btn {
-            padding: 6px 16px;
-            font-size: 0.85em;
-        }
-
-        .save-trade-btn {
-            padding: 6px 12px;
-            font-size: 0.75em;
-            margin-left: 0;
-            margin-top: 5px;
-        }
-
-        /* Search Modal Mobile */
-        .search-container {
-            max-width: 100%;
-            max-height: 95vh;
-        }
-
-        .search-header {
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .search-input-wrapper {
-            width: 100%;
-            min-width: 100%;
-        }
-
-        #sortSelect, #rarityFilter {
-            width: 100%;
-            min-width: 100%;
-        }
-
-        .results-grid {
-            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-            gap: 10px;
-            padding: 15px;
-        }
-
-        .search-item-card {
-            padding: 10px 8px;
-        }
-
-        .search-item-img {
-            width: 60px;
-            height: 60px;
-        }
-
-        /* Inventory Mobile */
-        .inv-container {
-            max-width: 100%;
-            max-height: 95vh;
-        }
-
-        .inv-header {
-            flex-direction: column;
-            gap: 10px;
-            padding: 15px;
-        }
-
-        .inv-header > div {
-            flex-direction: column;
-            width: 100%;
-            gap: 5px;
-        }
-
-        .inv-body {
-            flex-direction: column;
-        }
-
-        .inv-list {
-            border-right: none;
-            border-bottom: 1.5px solid var(--border);
-        }
-
-        /* Info/Graph Modals Mobile */
-        .graph-container,
-        .info-container,
-        .analytics-container,
-        .history-container {
-            max-width: 100%;
-            max-height: 90vh;
-        }
-
-        .graph-body {
-            height: 300px;
-            padding: 15px;
-        }
-
-        .info-body {
-            padding: 20px;
-        }
-
-        /* Quantity Modal Mobile */
-        .qty-modal {
-            width: 90%;
-            padding: 20px;
-        }
-
-        /* AI Box Mobile */
-        .ai-suggestion {
-            font-size: 0.85em;
-            padding: 12px;
-        }
-
-        .ai-toggle-group {
-            flex-direction: column;
-        }
-
-        .ai-tog {
-            padding: 10px;
-            font-size: 0.8em;
-        }
-    }
-
-    /* Tablet/Medium Screen Adjustments */
-    @media screen and (min-width: 769px) and (max-width: 1024px) {
-        .container {
-            max-width: 100%;
-        }
-
-        .trade-panel {
-            min-width: 45%;
-        }
-
-        .grid {
-            grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
-        }
-    }
-
-    /* Prevent zoom on input focus (iOS Safari) */
-    @media screen and (max-width: 768px) {
-        input, select, textarea {
-            font-size: 16px !important;
-        }
-    }
-
-    /* Touch-friendly interactions */
-    @media (hover: none) and (pointer: coarse) {
-        .card:hover {
-            transform: none;
-        }
-
-        .card:active {
-            transform: scale(0.98);
-        }
-
-        .nav-btn:hover {
-            background: var(--panel);
-        }
-
-        .nav-btn:active {
-            background: var(--card);
-        }
-
-        .plus:hover {
-            border-color: var(--border);
-            color: var(--border);
-        }
-
-        .plus:active {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-    }
 </style>
 </head>
 <body>
@@ -5228,7 +5124,7 @@ function renderTradeBoard() {
                 <div style="font-size:1em;font-weight:700;color:#64748b;margin-bottom:6px">No active trades</div>
                 <div style="font-size:0.82em">Click <b>+ New Trade</b> to start tracking your posted trades</div>
             </div>`;
-        return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+        return `<div class="tb-active-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
             <div>
                 <div style="font-size:0.68em;font-weight:900;color:#a855f7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px">
                     🟣 Elvebredd
