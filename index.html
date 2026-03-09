@@ -2301,7 +2301,20 @@
             saveTrade(); 
         }
 
-        function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
+        function openInventory() {
+    document.getElementById('invOverlay').style.display = 'flex';
+    renderInventory();
+    // Always reset to pets tab on open (mobile)
+    if (window.innerWidth <= 768) {
+        switchInvTab('pets');
+    } else {
+        // Desktop: ensure both panels visible
+        const pets  = document.getElementById('invPetsPanel');
+        const stats = document.getElementById('invStatsPanel');
+        if (pets)  pets.style.display  = '';
+        if (stats) stats.style.display = '';
+    }
+}
         function switchInvTab(tab) {
     const pets  = document.getElementById('invPetsPanel');
     const stats = document.getElementById('invStatsPanel');
@@ -2315,7 +2328,7 @@
         btnS.style.background = 'transparent';   btnS.style.color = 'var(--subtext)';
     } else {
         pets.style.display  = 'none';
-        stats.style.display = '';
+        stats.style.display = 'block';
         btnS.style.background = 'var(--accent)'; btnS.style.color = 'white';
         btnP.style.background = 'transparent';   btnP.style.color = 'var(--subtext)';
     }
