@@ -4882,7 +4882,7 @@ function tbCompleteTrade(id) {
             '<div style="font-size:0.72em;color:#475569;margin-bottom:14px">&#x2715; click any pet to remove it from this completion (e.g. if a pet was not actually traded)</div>' +
             '<div style="display:flex;gap:8px;justify-content:flex-end">' +
                 '<button onclick="document.getElementById(\'tbCompleteModal\').remove()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:8px;padding:8px 16px;font-size:0.83em;cursor:pointer">Cancel</button>' +
-                '<button onclick="tbFinalizeComplete(' + JSON.stringify(id) + ')" style="background:#059669;border:none;color:white;border-radius:8px;padding:8px 18px;font-size:0.83em;font-weight:900;cursor:pointer">✅ Confirm & Update Inventory</button>' +
+                '<button onclick="tbFinalizeComplete()" style="background:#059669;border:none;color:white;border-radius:8px;padding:8px 18px;font-size:0.83em;font-weight:900;cursor:pointer">✅ Confirm &amp; Update Inventory</button>' +
             '</div>' +
         '</div>';
     }
@@ -4901,9 +4901,10 @@ function tbCompleteRemovePet(side, _uid) {
     s.modal.innerHTML = s.buildModalHTML();
 }
 
-function tbFinalizeComplete(id) {
+function tbFinalizeComplete() {
     const s = window._tbCompleteState;
     if (!s) return;
+    const id = s.id;
 
     // Remove offered pets from inventory (one at a time, respecting quantity)
     s.finalOffer.forEach(offeredPet => {
