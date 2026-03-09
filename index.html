@@ -5231,16 +5231,16 @@ function renderTradeBoard() {
             <div>
                 <div style="font-size:0.68em;font-weight:900;color:#a855f7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px">
                     🟣 Elvebredd
-                    <span style="background:#a855f722;color:#a855f7;border-radius:5px;padding:1px 7px">\${elveTrades.length}</span>
+                    <span style="background:#a855f722;color:#a855f7;border-radius:5px;padding:1px 7px">${elveTrades.length}</span>
                 </div>
-                \${elveTrades.length > 0 ? elveTrades.map(t => renderTBCard(t)).join('') : '<div style="font-size:0.78em;color:#334155;background:#0f172a;border:1.5px dashed #1e293b;border-radius:12px;padding:20px;text-align:center">No Elvebredd trades</div>'}
+                ${elveTrades.length > 0 ? elveTrades.map(t => renderTBCard(t)).join('') : '<div style="font-size:0.78em;color:#334155;background:#0f172a;border:1.5px dashed #1e293b;border-radius:12px;padding:20px;text-align:center">No Elvebredd trades</div>'}
             </div>
             <div>
                 <div style="font-size:0.68em;font-weight:900;color:#38bdf8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px">
                     🔵 AMVGG
-                    <span style="background:#38bdf822;color:#38bdf8;border-radius:5px;padding:1px 7px">\${amvggTrades.length}</span>
+                    <span style="background:#38bdf822;color:#38bdf8;border-radius:5px;padding:1px 7px">${amvggTrades.length}</span>
                 </div>
-                \${amvggTrades.length > 0 ? amvggTrades.map(t => renderTBCard(t)).join('') : '<div style="font-size:0.78em;color:#334155;background:#0f172a;border:1.5px dashed #1e293b;border-radius:12px;padding:20px;text-align:center">No AMVGG trades</div>'}
+                ${amvggTrades.length > 0 ? amvggTrades.map(t => renderTBCard(t)).join('') : '<div style="font-size:0.78em;color:#334155;background:#0f172a;border:1.5px dashed #1e293b;border-radius:12px;padding:20px;text-align:center">No AMVGG trades</div>'}
             </div>
         </div>`;
     })();
