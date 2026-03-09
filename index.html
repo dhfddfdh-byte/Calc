@@ -674,68 +674,45 @@
             .search-header { flex-direction: column; gap: 7px; padding: 12px; }
             .search-input-wrapper { width: 100%; min-width: unset; }
 
-            /* ── INVENTORY: full-screen modal, tabs for list vs stats ── */
-            .inv-overlay {
-                align-items: flex-end;
-            }
+            /* ── INVENTORY: full-screen bottom sheet with tab switcher ── */
+            .inv-overlay { align-items: flex-end; }
             .inv-container {
-                width: 100%;
-                max-width: 100%;
-                max-height: 95vh;
+                width: 100%; max-width: 100%;
+                height: 95vh; max-height: 95vh;
                 border-radius: 20px 20px 0 0;
                 overflow: hidden;
+                display: flex; flex-direction: column;
             }
             .inv-header {
-                padding: 12px 14px;
+                padding: 12px 14px 10px;
                 flex-direction: column;
-                gap: 8px;
-                align-items: stretch;
-            }
-            /* Row 1: title + close */
-            .inv-header > div:first-child {
-                justify-content: space-between;
-                width: 100%;
-            }
-            /* Buttons row: wrap into 2-column grid */
-            .inv-header > div:first-child {
-                display: flex;
-                flex-wrap: wrap;
                 gap: 6px;
-                align-items: center;
+                align-items: stretch;
+                flex-shrink: 0;
             }
             .inv-header h2 { font-size: 1em; }
-            .inv-header .nav-btn {
-                flex: 1 1 calc(50% - 6px);
-                min-width: 0;
-                padding: 7px 8px;
-                font-size: 0.72em;
-                text-align: center;
-                box-sizing: border-box;
-            }
-            /* Close button full width */
-            .inv-header > .nav-btn:last-child {
-                width: 100%;
-                flex: unset;
-            }
-
-            /* Body: vertical tabs (Pet List / Stats) */
+            /* Hide desktop action buttons, show mobile tabs */
+            .inv-desktop-btns { display: none !important; }
+            .inv-mobile-tabs { display: flex !important; }
             .inv-body {
                 flex-direction: column;
+                flex: 1;
                 overflow: hidden;
-                height: calc(95vh - 120px);
             }
-            /* Show both sections scrollable */
+            /* Each panel takes full body height and scrolls */
             .inv-list {
                 border-right: none;
-                border-bottom: 1.5px solid var(--border);
                 padding: 12px;
-                max-height: 50%;
+                flex: 1;
                 overflow-y: auto;
+                height: 100%;
             }
             .inv-stats {
                 padding: 14px;
-                max-height: 50%;
+                flex: 1;
                 overflow-y: auto;
+                height: 100%;
+                display: none;
             }
 
             /* ── MODALS ── */
@@ -979,21 +956,29 @@
     <div class="inv-overlay" id="invOverlay">
         <div class="inv-container">
             <div class="inv-header">
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <h2 style="font-weight: 900;">INVENTORY</h2>
-                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em;" onclick="exportInv()">Export Data</button>
-                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em;" onclick="importInv()">Import Data</button>
-                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em; background: var(--accent); border-color: var(--accent);" onclick="openAnalytics()">View Portfolio</button>
-                    <button class="nav-btn" style="padding: 6px 12px; font-size: 0.7em; background: #059669; border-color: #047857;" onclick="openTradeAdvisor()">🎯 Trade Advisor</button>
+                <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+                    <h2 style="font-weight:900;font-size:1.1em">📦 INVENTORY</h2>
+                    <button class="nav-btn" style="padding:6px 14px;font-size:0.8em" onclick="closeInventory()">✕ Close</button>
                 </div>
-                <button class="nav-btn" onclick="closeInventory()">Close</button>
+                <!-- Desktop action buttons -->
+                <div class="inv-desktop-btns" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">
+                    <button class="nav-btn" style="padding:6px 12px;font-size:0.7em" onclick="exportInv()">Export Data</button>
+                    <button class="nav-btn" style="padding:6px 12px;font-size:0.7em" onclick="importInv()">Import Data</button>
+                    <button class="nav-btn" style="padding:6px 12px;font-size:0.7em;background:var(--accent);border-color:var(--accent)" onclick="openAnalytics()">View Portfolio</button>
+                    <button class="nav-btn" style="padding:6px 12px;font-size:0.7em;background:#059669;border-color:#047857" onclick="openTradeAdvisor()">🎯 Trade Advisor</button>
+                </div>
+                <!-- Mobile tab switcher -->
+                <div class="inv-mobile-tabs" style="display:none;gap:4px;background:#0f172a;border-radius:10px;padding:3px;border:1px solid var(--border);margin-top:8px">
+                    <button id="invTabPets" onclick="switchInvTab('pets')" style="flex:1;padding:7px 0;border-radius:7px;border:none;font-weight:800;font-size:0.8em;cursor:pointer;background:var(--accent);color:white;font-family:inherit">📦 My Pets</button>
+                    <button id="invTabStats" onclick="switchInvTab('stats')" style="flex:1;padding:7px 0;border-radius:7px;border:none;font-weight:800;font-size:0.8em;cursor:pointer;background:transparent;color:var(--subtext);font-family:inherit">📊 Stats & AI</button>
+                </div>
             </div>
             <div class="inv-body">
-                <div class="inv-list">
-                    <button class="nav-btn" style="width: 100%; margin-bottom: 20px;" onclick="openSearch('inv')">+ Add Item to Inventory</button>
+                <div class="inv-list" id="invPetsPanel">
+                    <button class="nav-btn" style="width:100%;margin-bottom:16px" onclick="openSearch('inv')">+ Add Item to Inventory</button>
                     <div class="grid" id="invGrid"></div>
                 </div>
-                <div class="inv-stats">
+                <div class="inv-stats" id="invStatsPanel">
                     <div class="stat-card">
                         <div class="stat-label">Total Normal Value</div>
                         <div class="stat-value" id="invTotalValue">0.00</div>
@@ -2317,7 +2302,26 @@
         }
 
         function openInventory() { document.getElementById('invOverlay').style.display = 'flex'; renderInventory(); }
-        function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
+        function switchInvTab(tab) {
+    const pets  = document.getElementById('invPetsPanel');
+    const stats = document.getElementById('invStatsPanel');
+    const btnP  = document.getElementById('invTabPets');
+    const btnS  = document.getElementById('invTabStats');
+    if (!pets || !stats) return;
+    if (tab === 'pets') {
+        pets.style.display  = '';
+        stats.style.display = 'none';
+        btnP.style.background = 'var(--accent)'; btnP.style.color = 'white';
+        btnS.style.background = 'transparent';   btnS.style.color = 'var(--subtext)';
+    } else {
+        pets.style.display  = 'none';
+        stats.style.display = '';
+        btnS.style.background = 'var(--accent)'; btnS.style.color = 'white';
+        btnP.style.background = 'transparent';   btnP.style.color = 'var(--subtext)';
+    }
+}
+
+function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
         function exportInv() {
             const data = JSON.stringify(state.inv);
