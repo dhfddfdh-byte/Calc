@@ -4781,17 +4781,17 @@ function tbRepost(id) {
     if (t.site === 'elvebredd') {
         window.open('https://elvebredd.com/profile', '_blank');
     } else {
-        // AMVGG - each user has their own profile link
         const saved = localStorage.getItem('amvgg_profile_url') || '';
-        const entered = prompt(
-            'Enter your AMVGG profile link to open for reposting:\n\n' +
-            'Example: https://amvgg.com/profile/10237717020\n\n' +
-            '(Your link will be saved for next time)',
-            saved
-        );
-        if (entered && entered.trim()) {
-            localStorage.setItem('amvgg_profile_url', entered.trim());
-            window.open(entered.trim(), '_blank');
+        if (saved) {
+            window.open(saved, '_blank');
+        } else {
+            const entered = prompt(
+                'Enter your AMVGG profile link (saved automatically, won\'t ask again):\nExample: https://amvgg.com/profile/10237717020'
+            );
+            if (entered && entered.trim()) {
+                localStorage.setItem('amvgg_profile_url', entered.trim());
+                window.open(entered.trim(), '_blank');
+            }
         }
     }
 }
