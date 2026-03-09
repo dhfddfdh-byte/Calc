@@ -4660,6 +4660,7 @@ let tbEditId = null;
 // Side being built (offering = A, requesting = B)
 let tbOfferPets = [];
 let tbRequestPets = [];
+let tbSubTab = 'active'; // 'active' | 'pending'
 
 // ── OPEN / CLOSE ──────────────────────────────────────────────────────────
 function openTradeBoard() {
@@ -5196,20 +5197,94 @@ function renderTradeBoard() {
         return;
     }
 
-    // Main board view
-    const elveTrades = tbTrades.filter(t => t.site === 'elvebredd');
+    // Main board view — subtabs
+    const elveTrades  = tbTrades.filter(t => t.site === 'elvebredd');
     const amvggTrades = tbTrades.filter(t => t.site === 'amvgg');
+    const pending     = tbPendingLoad();
 
     const notifBtnHtml = Notification.permission !== 'granted'
         ? `<button onclick="tbRequestNotifPerms()" style="background:#1e293b;border:1.5px solid #f59e0b;color:#f59e0b;border-radius:8px;padding:6px 12px;font-size:0.78em;cursor:pointer">🔔 Enable Notifications</button>`
         : `<span style="font-size:0.75em;color:#34d399">🔔 Notifications on</span>`;
 
+    const pendingBadge = pending.length > 0
+        ? `<span style="background:#f59e0b;color:#0d1117;border-radius:99px;font-size:0.65em;font-weight:900;padding:1px 7px;margin-left:5px">${pending.length}</span>`
+        : '';
+
+    // Build active trades panel (elve + amvgg side by side)
+    const activeHTML = (() => {
+        if (tbTrades.length === 0) return `
+            <div style="text-align:center;padding:60px 20px;color:#475569">
+                <div style="font-size:2.5em;margin-bottom:12px">📋</div>
+                <div style="font-size:1em;font-weight:700;color:#64748b;margin-bottom:6px">No active trades</div>
+                <div style="font-size:0.82em">Click <b>+ New Trade</b> to start tracking your posted trades</div>
+            </div>`;
+        return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+            <div>
+                <div style="font-size:0.68em;font-weight:900;color:#a855f7;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                    🟣 Elvebredd
+                    <span style="background:#a855f722;color:#a855f7;border-radius:5px;padding:1px 7px">\${elveTrades.length}</span>
+                </div>
+                \${elveTrades.length > 0 ? elveTrades.map(t => renderTBCard(t)).join('') : '<div style="font-size:0.78em;color:#334155;background:#0f172a;border:1.5px dashed #1e293b;border-radius:12px;padding:20px;text-align:center">No Elvebredd trades</div>'}
+            </div>
+            <div>
+                <div style="font-size:0.68em;font-weight:900;color:#38bdf8;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+                    🔵 AMVGG
+                    <span style="background:#38bdf822;color:#38bdf8;border-radius:5px;padding:1px 7px">\${amvggTrades.length}</span>
+                </div>
+                \${amvggTrades.length > 0 ? amvggTrades.map(t => renderTBCard(t)).join('') : '<div style="font-size:0.78em;color:#334155;background:#0f172a;border:1.5px dashed #1e293b;border-radius:12px;padding:20px;text-align:center">No AMVGG trades</div>'}
+            </div>
+        </div>`;
+    })();
+
+    // Build pending panel
+    const pendingHTML = (() => {
+        if (!pending.length) return `
+            <div style="text-align:center;padding:60px 20px;color:#475569">
+                <div style="font-size:2.5em;margin-bottom:12px">⏳</div>
+                <div style="font-size:1em;font-weight:700;color:#64748b;margin-bottom:6px">No pending trades</div>
+                <div style="font-size:0.82em">When a trade is accepted, it moves here for confirmation</div>
+            </div>`;
+        return pending.map(t => {
+            const offerChips   = renderTBPetChips(t.offerPets,   'offer',   false);
+            const requestChips = renderTBPetChips(t.requestPets, 'request', false);
+            const ago     = Math.floor((Date.now() - t.acceptedAt) / 60000);
+            const agoStr  = ago < 60 ? ago + 'm ago' : Math.floor(ago/60) + 'h ago';
+            const siteColor = t.site === 'elvebredd' ? '#a855f7' : '#38bdf8';
+            const siteName  = t.site === 'elvebredd' ? 'Elvebredd' : 'AMVGG';
+            return '<div style="background:#0f172a;border:1.5px solid #f59e0b44;border-radius:14px;padding:14px;margin-bottom:10px">' +
+                '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">' +
+                    '<span style="font-size:0.68em;font-weight:900;color:' + siteColor + ';background:' + siteColor + '22;border-radius:5px;padding:2px 7px">' + siteName + '</span>' +
+                    '<span style="font-size:0.68em;color:#f59e0b;font-weight:700">⏳ Pending</span>' +
+                    '<span style="font-size:0.68em;color:#475569">accepted ' + agoStr + '</span>' +
+                '</div>' +
+                '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">' +
+                    '<div style="flex:1;min-width:130px"><div style="font-size:0.65em;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">You Gave</div><div style="display:flex;flex-wrap:wrap;gap:4px">' + offerChips + '</div></div>' +
+                    '<div style="display:flex;align-items:center;color:#475569">⇄</div>' +
+                    '<div style="flex:1;min-width:130px"><div style="font-size:0.65em;color:#34d399;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">You Got</div><div style="display:flex;flex-wrap:wrap;gap:4px">' + requestChips + '</div></div>' +
+                '</div>' +
+                (t.notes ? '<div style="font-size:0.75em;color:#64748b;font-style:italic;margin-bottom:10px">&ldquo;' + t.notes + '&rdquo;</div>' : '') +
+                '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+                    '<button onclick="tbCompleteTrade(\'' + t.id + '\')" style="background:#059669;border:none;color:white;border-radius:7px;padding:5px 14px;font-size:0.78em;font-weight:800;cursor:pointer">✅ Completed</button>' +
+                    '<button onclick="tbFailTrade(\'' + t.id + '\')" style="background:#7f1d1d;border:1.5px solid #ef4444;color:#ef4444;border-radius:7px;padding:5px 14px;font-size:0.78em;cursor:pointer">❌ Failed</button>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    })();
+
     container.innerHTML = `
-        <div style="max-width:780px;margin:0 auto">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:8px">
-                <span style="font-weight:900;font-size:1.1em;color:white">📋 Trade Board</span>
+        <div style="max-width:900px;margin:0 auto">
+            <!-- Header row -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+                <div style="display:flex;gap:4px;background:#0f172a;border:1.5px solid #1e293b;border-radius:10px;padding:3px">
+                    <button onclick="tbSwitchSubTab('active')" style="background:\${tbSubTab==='active'?'var(--accent)':'transparent'};border:none;color:\${tbSubTab==='active'?'white':'#64748b'};border-radius:7px;padding:6px 16px;font-size:0.82em;font-weight:800;cursor:pointer;transition:0.15s">
+                        🟢 Active Trades
+                    </button>
+                    <button onclick="tbSwitchSubTab('pending')" style="background:\${tbSubTab==='pending'?'#f59e0b':'transparent'};border:none;color:\${tbSubTab==='pending'?'#0d1117':'#64748b'};border-radius:7px;padding:6px 16px;font-size:0.82em;font-weight:800;cursor:pointer;transition:0.15s">
+                        ⏳ Pending\${pendingBadge}
+                    </button>
+                </div>
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    ${notifBtnHtml}
+                    \${notifBtnHtml}
                     <div style="display:flex;align-items:center;gap:6px;background:#0f172a;border:1.5px solid var(--accent);border-radius:8px;padding:4px 10px">
                         <span style="font-size:0.72em;color:var(--accent);font-weight:900">🔍</span>
                         <input type="range" id="tbZoomSlider" min="70" max="130" value="100"
@@ -5217,68 +5292,21 @@ function renderTradeBoard() {
                             style="width:70px;accent-color:var(--accent);cursor:pointer">
                         <span id="tbZoomLabel" style="font-size:0.72em;color:var(--accent);font-weight:800;min-width:30px">100%</span>
                     </div>
-                    <button onclick="tbOpenCreate()" style="background:var(--accent);border:none;color:white;border-radius:8px;padding:8px 16px;font-size:0.85em;font-weight:900;cursor:pointer">+ New Trade</button>
+                    \${tbSubTab==='active' ? '<button onclick="tbOpenCreate()" style="background:var(--accent);border:none;color:white;border-radius:8px;padding:7px 16px;font-size:0.83em;font-weight:900;cursor:pointer">+ New Trade</button>' : ''}
                 </div>
             </div>
 
-            ${tbTrades.length === 0 ? `
-                <div style="text-align:center;padding:60px 20px;color:#475569">
-                    <div style="font-size:2.5em;margin-bottom:12px">📋</div>
-                    <div style="font-size:1em;font-weight:700;color:#64748b;margin-bottom:6px">No trades saved yet</div>
-                    <div style="font-size:0.82em">Click <b>+ New Trade</b> to start tracking your posted trades</div>
-                </div>
-            ` : ''}
-
-            ${elveTrades.length > 0 ? `
-                <div style="margin-bottom:24px">
-                    <div style="font-size:0.7em;font-weight:900;color:#a855f7;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🟣 ELVEBREDD · ${elveTrades.length} trade${elveTrades.length>1?'s':''}</div>
-                    ${elveTrades.map(t => renderTBCard(t)).join('')}
-                </div>
-            ` : ''}
-
-            ${amvggTrades.length > 0 ? `
-                <div>
-                    <div style="font-size:0.7em;font-weight:900;color:#38bdf8;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🔵 AMVGG · ${amvggTrades.length} trade${amvggTrades.length>1?'s':''}</div>
-                    ${amvggTrades.map(t => renderTBCard(t)).join('')}
-                </div>
-            ` : ''}
-
-            ${(()=>{
-                const pending = tbPendingLoad();
-                if (!pending.length) return '';
-                return '<div style="margin-top:28px">' +
-                    '<div style="font-size:0.7em;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">⏳ PENDING TRADES · ' + pending.length + ' awaiting confirmation</div>' +
-                    pending.map(t => {
-                        const offerChips  = renderTBPetChips(t.offerPets,'offer',false);
-                        const requestChips = renderTBPetChips(t.requestPets,'request',false);
-                        const ago = Math.floor((Date.now()-t.acceptedAt)/60000);
-                        const agoStr = ago < 60 ? ago+'m ago' : Math.floor(ago/60)+'h ago';
-                        const siteColor = t.site === 'elvebredd' ? '#a855f7' : '#38bdf8';
-                        const siteName  = t.site === 'elvebredd' ? 'Elvebredd' : 'AMVGG';
-                        return '<div style="background:#0f172a;border:1.5px solid #f59e0b44;border-radius:14px;padding:14px;margin-bottom:10px">' +
-                            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">' +
-                                '<div style="display:flex;align-items:center;gap:8px">' +
-                                    '<span style="font-size:0.68em;font-weight:900;color:'+siteColor+';background:'+siteColor+'22;border-radius:5px;padding:2px 7px">'+siteName+'</span>' +
-                                    '<span style="font-size:0.68em;color:#f59e0b;font-weight:700">⏳ Pending</span>' +
-                                    '<span style="font-size:0.68em;color:#475569">accepted '+agoStr+'</span>' +
-                                '</div>' +
-                            '</div>' +
-                            '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">' +
-                                '<div style="flex:1;min-width:130px"><div style="font-size:0.65em;color:#475569;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">You Gave</div><div style="display:flex;flex-wrap:wrap;gap:4px">'+offerChips+'</div></div>' +
-                                '<div style="display:flex;align-items:center;color:#475569">⇄</div>' +
-                                '<div style="flex:1;min-width:130px"><div style="font-size:0.65em;color:#475569;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px">You Got</div><div style="display:flex;flex-wrap:wrap;gap:4px">'+requestChips+'</div></div>' +
-                            '</div>' +
-                            (t.notes ? '<div style="font-size:0.75em;color:#64748b;font-style:italic;margin-bottom:10px">\"'+t.notes+'\"</div>' : '') +
-                            '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
-                                '<button onclick="tbCompleteTrade(\'' + t.id + '\')" style="background:#059669;border:none;color:white;border-radius:7px;padding:5px 14px;font-size:0.78em;font-weight:800;cursor:pointer">✅ Completed</button>' +
-                                '<button onclick="tbFailTrade(\'' + t.id + '\')" style="background:#7f1d1d;border:1.5px solid #ef4444;color:#ef4444;border-radius:7px;padding:5px 14px;font-size:0.78em;cursor:pointer">❌ Failed</button>' +
-                            '</div>' +
-                        '</div>';
-                    }).join('') +
-                '</div>';
-            })()}
+            <!-- Subtab content -->
+            <div id="tbSubTabContent">
+                \${tbSubTab === 'active' ? activeHTML : pendingHTML}
+            </div>
         </div>
     `;
+}
+
+function tbSwitchSubTab(tab) {
+    tbSubTab = tab;
+    renderTradeBoard();
 }
 
 function renderTBCard(t) {
