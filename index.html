@@ -575,7 +575,7 @@
         
         /* Mobile Devices (phones) */
         /* ========================================
-           MOBILE RESPONSIVE — complete overhaul
+           MOBILE RESPONSIVE
            ======================================== */
         @media screen and (max-width: 768px) {
 
@@ -583,99 +583,176 @@
 
             .home-screen { width: 100%; max-width: 100%; padding: 0; align-items: stretch; }
 
-            /* Tab bar: sticky scrollable strip */
+            /* ── TAB BAR: sticky scrollable pill strip ── */
             .tab-bar {
                 width: 100%; box-sizing: border-box;
-                border-radius: 0 0 14px 14px; margin-bottom: 0;
-                padding: 6px 10px; gap: 6px;
+                border-radius: 0; margin-bottom: 0;
+                padding: 5px 8px; gap: 5px;
                 overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
                 border-left: none; border-right: none; border-top: none;
                 justify-content: flex-start;
                 position: sticky; top: 0; z-index: 100; background: #111827;
+                border-bottom: 1.5px solid var(--border);
             }
             .tab-bar::-webkit-scrollbar { display: none; }
-            .tab-btn { padding: 8px 16px; font-size: 0.78em; white-space: nowrap; flex-shrink: 0; gap: 5px; }
-            .tab-btn svg { width: 12px; height: 12px; }
+            .tab-btn { padding: 7px 14px; font-size: 0.75em; white-space: nowrap; flex-shrink: 0; gap: 4px; }
+            .tab-btn svg { width: 11px; height: 11px; }
+            .tab-content { width: 100%; box-sizing: border-box; padding: 8px; }
 
-            .tab-content { width: 100%; box-sizing: border-box; padding: 10px; }
-
-            /* Calc: stack panels vertically */
+            /* ── CALCULATOR: side-by-side compact like Elvebredd ── */
             .container {
-                flex-direction: column; gap: 12px;
-                margin-top: 12px; margin-bottom: 160px;
-                padding: 0; width: 100%;
+                flex-direction: row;
+                gap: 7px;
+                margin-top: 8px;
+                margin-bottom: 200px;
+                padding: 0;
+                width: 100%;
+                align-items: flex-start;
             }
-            .trade-panel { min-width: unset; width: 100%; min-height: unset; border-radius: 16px; }
-            .p-header { padding: 14px 16px; }
-            .p-title { font-size: 1.05em; }
-            .grid { padding: 12px; grid-template-columns: repeat(auto-fill, minmax(82px, 1fr)); gap: 8px; }
-            .card { padding: 9px 6px; border-radius: 10px; }
-            .card-img-container { width: 50px; height: 50px; }
-            .card-name { font-size: 0.6em; }
-            .card-val { font-size: 0.85em; }
-            .plus { height: 100px; font-size: 1.8em; }
+            .trade-panel {
+                flex: 1;
+                min-width: 0;
+                min-height: unset;
+                border-radius: 14px;
+            }
+            .p-header {
+                padding: 10px 10px 8px;
+            }
+            .p-title { font-size: 0.88em; }
+            .p-total { font-size: 1.25em; }
+            .p-dem { font-size: 0.78em; }
+            .grid {
+                padding: 8px 6px;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            .card { padding: 7px 4px; border-radius: 10px; }
+            .card-img-container { width: 42px; height: 42px; }
+            .card-name { font-size: 0.55em; min-height: 2em; }
+            .card-val { font-size: 0.78em; margin: 3px 0 1px; }
+            .card-demand { font-size: 0.68em; }
+            .card-stack-badge { font-size: 0.6em; padding: 1px 5px; }
+            .del { width: 18px; height: 18px; font-size: 10px; top: -5px; right: -5px; }
+            .t-btn { width: 17px; height: 17px; font-size: 0.58em; }
+            .lock-btn { font-size: 11px; padding: 3px 5px; bottom: 20px; }
+            .plus { height: 80px; font-size: 1.6em; border-radius: 10px; }
 
-            /* Verdict: full-width bottom bar */
+            /* ── VERDICT BOX: full-width bottom sheet ── */
             .verdict-box {
                 left: 0; right: 0; bottom: 0;
                 width: 100%; max-width: 100%;
                 border-radius: 20px 20px 0 0;
-                padding: 14px 16px 20px;
+                padding: 12px 14px 18px;
                 box-sizing: border-box; transform: none;
             }
             .verdict-extras { display: none !important; }
-            .v-text { font-size: 1.8em; }
-            .switches { flex-wrap: wrap; gap: 5px; }
-            .sw-btn { padding: 5px 12px; font-size: 0.76em; }
+            .v-text { font-size: 1.7em; }
+            .switches { flex-wrap: wrap; gap: 4px; justify-content: center; }
+            .sw-btn { padding: 5px 10px; font-size: 0.72em; }
+            .save-trade-btn { padding: 5px 10px; font-size: 0.72em; }
 
-            /* Nav buttons */
+            /* ── NAV BUTTONS ── */
             .nav-bar { flex-wrap: wrap; gap: 6px; padding: 0; justify-content: center; }
-            .nav-btn { padding: 9px 16px; font-size: 0.8em; border-radius: 12px; }
+            .nav-btn { padding: 8px 14px; font-size: 0.78em; border-radius: 10px; }
 
-            /* Value/Demand list */
-            .vlist-container { border-radius: 14px; }
-            .vlist-header { flex-direction: column; gap: 8px; padding: 12px 14px; align-items: flex-start; }
+            /* ── VALUE / DEMAND LIST ── */
+            .vlist-container { border-radius: 12px; }
+            .vlist-header { flex-direction: column; gap: 8px; padding: 10px 12px; align-items: flex-start; }
             .vlist-header > div { width: 100%; }
             .vlist-search { width: 100%; box-sizing: border-box; min-width: unset; }
             #sortSelect, #rarityFilter { width: 100%; box-sizing: border-box; }
-            .results-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; padding: 10px; }
-            .search-item-card { padding: 9px 6px; }
-            .search-item-img { width: 52px; height: 52px; }
+            .results-grid { grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 7px; padding: 10px; }
+            .search-item-card { padding: 8px 5px; }
+            .search-item-img { width: 50px; height: 50px; }
 
-            /* Search overlay: bottom sheet */
+            /* ── SEARCH OVERLAY: bottom sheet ── */
             .search-container {
                 max-width: 100%; max-height: 92vh;
                 border-radius: 20px 20px 0 0;
                 width: 100%;
             }
-            .search-header { flex-direction: column; gap: 8px; padding: 14px; }
-            .search-input-wrapper { width: 100%; }
+            .search-header { flex-direction: column; gap: 7px; padding: 12px; }
+            .search-input-wrapper { width: 100%; min-width: unset; }
 
-            /* Inventory: bottom sheet style */
+            /* ── INVENTORY: full-screen modal, tabs for list vs stats ── */
+            .inv-overlay {
+                align-items: flex-end;
+            }
             .inv-container {
+                width: 100%;
+                max-width: 100%;
+                max-height: 95vh;
+                border-radius: 20px 20px 0 0;
+                overflow: hidden;
+            }
+            .inv-header {
+                padding: 12px 14px;
+                flex-direction: column;
+                gap: 8px;
+                align-items: stretch;
+            }
+            /* Row 1: title + close */
+            .inv-header > div:first-child {
+                justify-content: space-between;
+                width: 100%;
+            }
+            /* Buttons row: wrap into 2-column grid */
+            .inv-header > div:first-child {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                align-items: center;
+            }
+            .inv-header h2 { font-size: 1em; }
+            .inv-header .nav-btn {
+                flex: 1 1 calc(50% - 6px);
+                min-width: 0;
+                padding: 7px 8px;
+                font-size: 0.72em;
+                text-align: center;
+                box-sizing: border-box;
+            }
+            /* Close button full width */
+            .inv-header > .nav-btn:last-child {
+                width: 100%;
+                flex: unset;
+            }
+
+            /* Body: vertical tabs (Pet List / Stats) */
+            .inv-body {
+                flex-direction: column;
+                overflow: hidden;
+                height: calc(95vh - 120px);
+            }
+            /* Show both sections scrollable */
+            .inv-list {
+                border-right: none;
+                border-bottom: 1.5px solid var(--border);
+                padding: 12px;
+                max-height: 50%;
+                overflow-y: auto;
+            }
+            .inv-stats {
+                padding: 14px;
+                max-height: 50%;
+                overflow-y: auto;
+            }
+
+            /* ── MODALS ── */
+            .graph-container, .info-container, .analytics-container, .history-container {
                 max-width: 100%; max-height: 92vh;
                 border-radius: 20px 20px 0 0; width: 100%;
             }
-            .inv-header { flex-direction: column; gap: 8px; padding: 14px; }
-            .inv-header > div { flex-direction: row; flex-wrap: wrap; width: 100%; gap: 6px; }
-            .inv-header .nav-btn { flex: 1; min-width: 100px; text-align: center; }
-            .inv-body { flex-direction: column; }
-            .inv-list { border-right: none; border-bottom: 1.5px solid var(--border); padding: 14px; }
+            .graph-body { height: 240px; padding: 10px; }
+            .info-body { padding: 14px; }
+            .qty-modal { width: 90%; padding: 16px; border-radius: 16px; }
+            .ai-suggestion { font-size: 0.8em; padding: 10px; }
+            .ai-toggle-group { flex-direction: row; flex-wrap: wrap; gap: 5px; }
+            .ai-tog { padding: 8px 12px; font-size: 0.76em; flex: 1; text-align: center; }
 
-            /* Trade board: stack columns */
+            /* ── TRADE BOARD: stack columns ── */
             #tradeBoardContent > div { max-width: 100% !important; }
             .tb-active-grid { display: flex !important; flex-direction: column !important; }
-
-            /* Modals */
-            .graph-container, .info-container, .analytics-container, .history-container {
-                max-width: 100%; max-height: 92vh; border-radius: 20px 20px 0 0; width: 100%;
-            }
-            .graph-body { height: 250px; padding: 12px; }
-            .info-body { padding: 16px; }
-            .qty-modal { width: 92%; padding: 18px; border-radius: 18px; }
-            .ai-suggestion { font-size: 0.82em; padding: 12px; }
-            .ai-toggle-group { flex-direction: column; }
-            .ai-tog { padding: 10px; font-size: 0.78em; }
         }
 
         /* Tablet */
@@ -693,7 +770,7 @@
         /* Touch */
         @media (hover: none) and (pointer: coarse) {
             .card:hover { transform: none; }
-            .card:active { transform: scale(0.98); }
+            .card:active { transform: scale(0.97); }
             .nav-btn:hover { background: var(--panel); }
             .nav-btn:active { background: var(--card); }
             .plus:hover { border-color: var(--border); color: var(--border); }
