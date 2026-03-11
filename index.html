@@ -636,6 +636,47 @@
         /* ========================================
            MOBILE RESPONSIVE
            ======================================== */
+        /* ── MOBILE LONG-PRESS CONTEXT MENU ── */
+        .mobile-ctx-menu {
+            position: fixed; z-index: 9990; background: #1a2333;
+            border: 1.5px solid var(--border); border-radius: 14px;
+            padding: 6px; min-width: 210px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            display: none;
+        }
+        .mobile-ctx-menu.open { display: block; }
+        .mobile-ctx-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 11px 14px; border-radius: 9px; cursor: pointer;
+            font-size: 0.85em; font-weight: 700; color: #e2e8f0;
+            transition: background 0.12s;
+        }
+        .mobile-ctx-item:active { background: var(--accent); color: white; }
+        .mobile-ctx-bg { position: fixed; inset: 0; z-index: 9989; display: none; }
+        .mobile-ctx-bg.open { display: block; }
+
+        /* ── MOBILE FLOATING ACTION BAR ── */
+        .mobile-fab-bar { display: none; }
+
+        @media screen and (max-width: 768px) {
+        .mobile-fab-bar {
+            display: flex;
+            position: fixed; bottom: 74px; right: 12px;
+            flex-direction: column; gap: 7px; z-index: 5100;
+        }
+        .mobile-fab {
+            width: 46px; height: 46px; border-radius: 50%;
+            background: #1a2333; border: 1.5px solid var(--border);
+            color: #e2e8f0; font-size: 1.05em; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.55);
+            transition: transform 0.12s, background 0.12s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-fab:active { transform: scale(0.88); background: var(--accent); border-color: var(--accent); }
+        .mobile-fab.dim { opacity: 0.35; pointer-events: none; }
+        }
+
         @media screen and (max-width: 768px) {
 
             body { padding: 0; overflow-x: hidden; }
@@ -873,26 +914,8 @@
                 <h3 style="color: white; font-weight: 950;">ℹ️ CALCULATOR GUIDE</h3>
                 <button class="nav-btn" onclick="closeInfo()">Close</button>
             </div>
-            <div class="info-body">
-                <div class="info-section">
-                    <h4>Mouse Keybinds</h4>
-                    <div class="info-row"><span class="info-label">Right Click:</span><span class="info-val">Open Multi-Add (Quantity) Menu</span></div>
-                    <div class="info-row"><span class="info-label">Shift + Right Click:</span><span class="info-val">View Demand & Value History Graph</span></div>
-                    <div class="info-row"><span class="info-label">Double Click Image:</span><span class="info-val">Duplicate Pet Card</span></div>
-                    <div class="info-row"><span class="info-label">Hover on Emojis:</span><span class="info-val">See exact amount of change in tooltip</span></div>
-                </div>
-                <div class="info-section">
-                    <h4>Keyboard Keybinds</h4>
-                    <div class="info-row"><span class="info-label">Ctrl + Z:</span><span class="info-val">Undo Last Change</span></div>
-                        <div class="info-row"><span class="info-label">Ctrl + Y:</span><span class="info-val">Redo Last Change</span></div>
-                </div>
-                <div class="info-section">
-                    <h4>Trend Emojis</h4>
-                    <div class="info-row"><span class="info-label">🔥 :</span><span class="info-val">Demand is increasing</span></div>
-                    <div class="info-row"><span class="info-label">❄️ :</span><span class="info-val">Demand is decreasing</span></div>
-                    <div class="info-row"><span class="info-label">📈 :</span><span class="info-val">Value is increasing</span></div>
-                    <div class="info-row"><span class="info-label">📉 :</span><span class="info-val">Value is decreasing</span></div>
-                </div>
+            <div class="info-body" id="infoBody">
+                <!-- Filled dynamically by openInfo() based on device type -->
             </div>
         </div>
     </div>
@@ -1056,8 +1079,8 @@
                         <button class="nav-btn" style="padding:6px 12px;font-size:0.7em;background:#059669;border-color:#047857" onclick="openTradeAdvisor()">🎯 Trade Advisor</button>
                         <button class="nav-btn" style="padding:6px 14px;font-size:0.8em" onclick="closeInventory()">✕ Close</button>
                     </div>
-                    <!-- Mobile close -->
-                    <button class="inv-mobile-close nav-btn" style="padding:5px 12px;font-size:0.78em" onclick="closeInventory()">✕</button>
+                    <!-- Mobile close (shown via CSS on mobile, hidden on desktop) -->
+                    <button class="inv-mobile-close nav-btn" style="padding:5px 12px;font-size:0.78em;font-weight:900" onclick="closeInventory()">✕ Close</button>
                 </div>
                 <!-- Mobile: action buttons row -->
                 <div class="inv-mobile-btns" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px">
@@ -1365,7 +1388,8 @@
         }
         // Returns emoji icons showing value and demand trends for a pet.
         // 📈/📉 = value going up/down, 🔥/❄️ = demand going up/down.
-        // Used on pet cards and in the value list.
+        // On desktop, title attribute shows tooltip on hover.
+        // On mobile, tapping the emoji calls showTrendTooltip().
         function getTrendIcons(p) {
     if (!p || (!p.vt && !p.dt)) return "";
     let html = "";
@@ -1464,15 +1488,15 @@
         
         // FIXED: Trend icons show ONLY their trend data (no crash warning)
         const vData = generateSentence(p.vt, "Value");
-        if (vData) html += `<span title="${vData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
+        if (vData) html += `<span title="${vData.text}" onclick="showTrendTooltip(this,'${vData.text.replace(/'/g,'\'').replace(/\n/g,' | ')}')" style="margin-left:4px; cursor:pointer; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${vData.icon}</span>`;
         
         const dData = generateSentence(p.dt, "Demand");
-        if (dData) html += `<span title="${dData.text}" style="margin-left:4px; cursor:help; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
+        if (dData) html += `<span title="${dData.text}" onclick="showTrendTooltip(this,'${dData.text.replace(/'/g,'\'').replace(/\n/g,' | ')}')" style="margin-left:4px; cursor:pointer; font-size:1.2em; filter: drop-shadow(0 0 2px #fff);">${dData.icon}</span>`;
         
-        // FIXED: Crash siren shows ONLY crash warning (separate from trend icons)
+        // Crash siren: tap/click for details on mobile
         if (crashWarning) {
-            console.log(`✅ Adding crash siren for ${p.n}`);
-            html += `<span title="${crashWarning}" style="margin-left:4px; cursor:help; font-size:1.4em; color:#ef4444; filter: drop-shadow(0 0 4px #ef4444); animation: pulse 2s infinite;">🚨</span>`;
+            const cw = crashWarning.replace(/'/g,"\'").replace(/\n/g,' | ');
+            html += `<span title="${crashWarning}" onclick="showTrendTooltip(this,'${cw}')" style="margin-left:4px; cursor:pointer; font-size:1.4em; color:#ef4444; filter: drop-shadow(0 0 4px #ef4444); animation: pulse 2s infinite;">🚨</span>`;
         }
         
     } catch (err) { 
@@ -2090,7 +2114,82 @@
     }
 }
 
-        function openInfo() { document.getElementById('infoOverlay').style.display = 'flex'; }
+        function openInfo() {
+            const isMobile = window.innerWidth <= 768 || ('ontouchstart' in window);
+            const body = document.getElementById('infoBody');
+
+            if (isMobile) {
+                body.innerHTML = `
+                <div class="info-section">
+                    <h4>📱 Floating Action Buttons (bottom-right)</h4>
+                    <div class="info-row"><span class="info-label">↩ Undo</span><span class="info-val">Undo your last pet add, remove, or change. Dims when nothing left to undo.</span></div>
+                    <div class="info-row"><span class="info-label">↪ Redo</span><span class="info-val">Redo a change you undid. Dims when nothing left to redo.</span></div>
+                    <div class="info-row"><span class="info-label">📈 Graph</span><span class="info-val">Tap a pet card first, then tap this to view its full price & demand history chart.</span></div>
+                    <div class="info-row"><span class="info-label">＋ Quantity</span><span class="info-val">Tap a pet card first, then tap this to add multiple copies of that pet at once.</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>✋ Long-Press a Pet Image</h4>
+                    <div class="info-row"><span class="info-label">Hold ~0.5s on image</span><span class="info-val">Opens a context menu with: View Graph, Add Quantity, Duplicate, or Remove.</span></div>
+                    <div class="info-row"><span class="info-label">Double-tap image</span><span class="info-val">Duplicates that pet card instantly.</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>🔢 Trend Emoji Tooltips</h4>
+                    <div class="info-row"><span class="info-label">Tap any trend emoji</span><span class="info-val">Shows the exact value or demand change amount in a popup.</span></div>
+                    <div class="info-row"><span class="info-label">🔥</span><span class="info-val">Demand is rising</span></div>
+                    <div class="info-row"><span class="info-label">❄️</span><span class="info-val">Demand is falling</span></div>
+                    <div class="info-row"><span class="info-label">📈</span><span class="info-val">Value is rising</span></div>
+                    <div class="info-row"><span class="info-label">📉</span><span class="info-val">Value is falling</span></div>
+                    <div class="info-row"><span class="info-label">🚨</span><span class="info-val">Value crash detected — tap for full crash warning</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>📦 Inventory</h4>
+                    <div class="info-row"><span class="info-label">Stats & AI tab</span><span class="info-val">Switch to this tab inside inventory to see your health score and AI trade suggestions.</span></div>
+                    <div class="info-row"><span class="info-label">🔒 Lock button</span><span class="info-val">Locks a pet so the AI never suggests trading it away.</span></div>
+                    <div class="info-row"><span class="info-label">🔍 on card</span><span class="info-val">Find pets with similar value to trade into.</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>🎯 Trade Advisor</h4>
+                    <div class="info-row"><span class="info-label">Your Offer tab</span><span class="info-val">Add pets from your inventory to build your offer.</span></div>
+                    <div class="info-row"><span class="info-label">Targets tab</span><span class="info-val">See what you should be asking for based on your offer. Auto-switches when you add a pet.</span></div>
+                </div>`;
+            } else {
+                body.innerHTML = `
+                <div class="info-section">
+                    <h4>🖱️ Mouse Controls</h4>
+                    <div class="info-row"><span class="info-label">Right Click on pet image</span><span class="info-val">Open Multi-Add (Quantity) Menu — add multiple of the same pet at once</span></div>
+                    <div class="info-row"><span class="info-label">Shift + Right Click</span><span class="info-val">Open the full Price & Demand History Graph for that pet</span></div>
+                    <div class="info-row"><span class="info-label">Double Click image</span><span class="info-val">Instantly duplicate that pet card</span></div>
+                    <div class="info-row"><span class="info-label">Hover over trend emojis</span><span class="info-val">See a tooltip with the exact value/demand change amounts</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>⌨️ Keyboard Shortcuts</h4>
+                    <div class="info-row"><span class="info-label">Ctrl + Z</span><span class="info-val">Undo last pet change</span></div>
+                    <div class="info-row"><span class="info-label">Ctrl + Y</span><span class="info-val">Redo last undone change</span></div>
+                    <div class="info-row"><span class="info-label">Custom hotkeys</span><span class="info-val">Set up in Settings — press a key to instantly add a specific pet to either side</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>📊 Trend Emojis</h4>
+                    <div class="info-row"><span class="info-label">🔥</span><span class="info-val">Demand is rising</span></div>
+                    <div class="info-row"><span class="info-label">❄️</span><span class="info-val">Demand is falling</span></div>
+                    <div class="info-row"><span class="info-label">📈</span><span class="info-val">Value is rising</span></div>
+                    <div class="info-row"><span class="info-label">📉</span><span class="info-val">Value is falling</span></div>
+                    <div class="info-row"><span class="info-label">🚨</span><span class="info-val">Value crash detected — hover for details</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>📦 Inventory</h4>
+                    <div class="info-row"><span class="info-label">🔒 Lock button on card</span><span class="info-val">Locks a pet so the AI never suggests trading it away</span></div>
+                    <div class="info-row"><span class="info-label">🔍 button on card</span><span class="info-val">Find other pets with similar value to trade into</span></div>
+                    <div class="info-row"><span class="info-label">★ Dream Pet</span><span class="info-val">Set a pet you're working toward — AI tailors suggestions around it</span></div>
+                </div>
+                <div class="info-section">
+                    <h4>🎯 Trade Advisor</h4>
+                    <div class="info-row"><span class="info-label">Left panel</span><span class="info-val">Build your offer by clicking pets from your inventory</span></div>
+                    <div class="info-row"><span class="info-label">Right panel</span><span class="info-val">See ranked target pets based on your offer value, demand filters, and category</span></div>
+                    <div class="info-row"><span class="info-label">Filters bar</span><span class="info-val">Filter targets by demand, category (Preppy, Exotic, etc.) and value window</span></div>
+                </div>`;
+            }
+            document.getElementById('infoOverlay').style.display = 'flex';
+        }
         function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2132,16 +2231,13 @@
 
         function undo() {
             if (history.length === 0) return;
-            // Save current state to redo stack before reverting
             redoStack.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
             if (redoStack.length > 50) redoStack.shift();
             const last = JSON.parse(history.pop());
             state.A = (last.A || []);
             state.B = (last.B || []);
             state.inv = (last.inv || []);
-            render();
-            renderInventory();
-            saveTrade();
+            render(); renderInventory(); saveTrade(); updateFabState();
         }
 
         function redo() {
@@ -2151,9 +2247,7 @@
             state.A = (next.A || []);
             state.B = (next.B || []);
             state.inv = (next.inv || []);
-            render();
-            renderInventory();
-            saveTrade();
+            render(); renderInventory(); saveTrade(); updateFabState();
         }
 
         window.addEventListener('keydown', (e) => {
@@ -2202,13 +2296,17 @@
             });
         }
 
-        // Saves the current state (both calc sides + inventory) to localStorage.
+        // Saves the current state (both calc sides + inventory + keybinds + settings) to localStorage.
         // Called after every user action. Restores automatically on page load.
         function saveTrade() {
             const simplifiedState = {
                 A: state.A.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
                 B: state.B.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
-                inv: state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid }))
+                inv: state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
+                keybinds:      state.keybinds || [],
+                uiScale:       state.uiScale  || 1.0,
+                aiMode:        state.aiMode   || 'normal',
+                strategyLimit: state.strategyLimit || 10
             };
             localStorage.setItem('tradeData', JSON.stringify(simplifiedState));
         }
@@ -2226,6 +2324,10 @@
                 state.A = (parsed.A || []).map(hydrate).filter(x => x);
                 state.B = (parsed.B || []).map(hydrate).filter(x => x);
                 state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
+                if (parsed.keybinds)      state.keybinds      = parsed.keybinds;
+                if (parsed.uiScale)       { state.uiScale = parsed.uiScale; applyUIScale(parsed.uiScale); }
+                if (parsed.aiMode)        state.aiMode        = parsed.aiMode;
+                if (parsed.strategyLimit) state.strategyLimit = parsed.strategyLimit;
                 render();
             } catch (e) {
                 console.error("Failed to restore trade", e);
@@ -2303,6 +2405,111 @@
             searchState.rarityFilter = document.getElementById('rarityFilter').value.toLowerCase();
             searchState.renderLimit = 50; 
             filterAndRender(document.getElementById('mainSearch').value.toLowerCase());
+        }
+
+
+        // ================================================================
+        // MOBILE INTERACTIONS
+        // ================================================================
+        // On mobile, right-click doesn't exist. We replace it with:
+        //   Long-press (500ms) on any pet image → context menu
+        //   FAB bar (bottom-right) → undo, redo, graph, qty picker
+        //
+        // _mobileCtxTarget stores the pet data for the long-pressed card.
+        // ================================================================
+        let _mobileCtxTarget = null; // { petData, side, uid }
+        let _longPressTimer   = null;
+        let _longPressFired   = false;
+
+        // Attach long-press listeners to a card image element
+        function attachMobileLongPress(el, petData, side, uid) {
+            el.addEventListener('touchstart', function(e) {
+                _longPressFired = false;
+                _longPressTimer = setTimeout(() => {
+                    _longPressFired = true;
+                    _mobileCtxTarget = { petData, side, uid };
+                    openMobileCtx(e.touches[0].clientX, e.touches[0].clientY);
+                }, 480);
+            }, { passive: true });
+            el.addEventListener('touchend', function() {
+                clearTimeout(_longPressTimer);
+            }, { passive: true });
+            el.addEventListener('touchmove', function() {
+                clearTimeout(_longPressTimer);
+            }, { passive: true });
+        }
+
+        function openMobileCtx(x, y) {
+            const menu = document.getElementById('mobileCtxMenu');
+            const bg   = document.getElementById('mobileCtxBg');
+            if (!menu) return;
+            // Position near touch point but keep on screen
+            const mw = 220, mh = 160;
+            const left = Math.min(x, window.innerWidth  - mw - 10);
+            const top  = Math.min(y, window.innerHeight - mh - 10);
+            menu.style.left = left + 'px';
+            menu.style.top  = top  + 'px';
+            menu.classList.add('open');
+            bg.classList.add('open');
+        }
+
+        function closeMobileCtx() {
+            document.getElementById('mobileCtxMenu').classList.remove('open');
+            document.getElementById('mobileCtxBg').classList.remove('open');
+        }
+
+        function mobileCtxAction(action) {
+            closeMobileCtx();
+            const t = _mobileCtxTarget;
+            if (!action || !t) return;
+            if (action === 'graph') {
+                openGraph(t.petData);
+            } else if (action === 'qty') {
+                openQtyModal(t.petData.n);
+            } else if (action === 'dupe') {
+                if (t.side && t.uid != null) duplicate(t.side, t.uid);
+            } else if (action === 'remove') {
+                if (t.side && t.uid != null) remove(t.side, t.uid);
+            }
+            _mobileCtxTarget = null;
+        }
+
+        // FAB: graph and qty need the last-tapped pet — track it
+        let _lastTappedPet = null;
+        function setLastTappedPet(petData, side, uid) {
+            _lastTappedPet = { petData, side, uid };
+        }
+
+        function mobileFabGraph() {
+            if (_lastTappedPet) openGraph(_lastTappedPet.petData);
+            else showTBToast('Tap a pet first, then use 📈', '#f59e0b');
+        }
+        function mobileFabQty() {
+            if (_lastTappedPet) openQtyModal(_lastTappedPet.petData.n);
+            else showTBToast('Tap a pet first, then use ＋', '#f59e0b');
+        }
+
+        // Update FAB undo/redo dim state
+        function updateFabState() {
+            const u = document.getElementById('fabUndo');
+            const r = document.getElementById('fabRedo');
+            if (u) u.classList.toggle('dim', history.length === 0);
+            if (r) r.classList.toggle('dim', redoStack.length === 0);
+        }
+
+        // Emoji trend tooltip — show on tap on mobile
+        function showTrendTooltip(el, text) {
+            // Remove any existing tooltip
+            document.querySelectorAll('.trend-tip').forEach(t => t.remove());
+            const tip = document.createElement('div');
+            tip.className = 'trend-tip';
+            tip.textContent = text;
+            tip.style.cssText = 'position:fixed;background:#0f172a;border:1px solid var(--border);color:#e2e8f0;padding:5px 10px;border-radius:8px;font-size:0.75em;z-index:9999;pointer-events:none;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.5)';
+            document.body.appendChild(tip);
+            const rect = el.getBoundingClientRect();
+            tip.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+            tip.style.top  = (rect.top - 38) + 'px';
+            setTimeout(() => tip.remove(), 2200);
         }
 
         // ── ENTRY POINT ──────────────────────────────────────────────
@@ -2731,7 +2938,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                         <button class="lock-btn ${lockedPets.has(p.n) ? 'locked' : ''}" onclick="toggleLockPet('${p.n.replace(/'/g,"\'")}')" title="${lockedPets.has(p.n) ? 'Unlock from AI' : 'Lock from AI'}">${lockedPets.has(p.n) ? '🔒' : '🔓'}</button>
                         <div class="card-img-container" 
                              oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
-                             ondblclick="duplicate('inv', ${p.uid})" title="Right click for Qty | Shift + Right click for Graph">
+                             ondblclick="duplicate('inv', ${p.uid})"
+                             ontouchstart="setLastTappedPet(${JSON.stringify(p).replace(/'/g,'&apos;')}, 'inv', ${p.uid});"
+                             title="Right click for Qty | Shift + Right click for Graph | Long-press on mobile">
                              <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
                         </div>
                         <div class="card-name">${p.n}${getTrendIcons(p)}</div>
@@ -3902,7 +4111,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                         <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
                         <div class="card-img-container" 
                              oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
-                             ondblclick="duplicate('${s}', ${p.uid})" title="Right click for Qty | Shift + Right click for Graph">
+                             ondblclick="duplicate('${s}', ${p.uid})"
+                             ontouchstart="setLastTappedPet(${JSON.stringify(p).replace(/'/g,'&apos;')}, '${s}', ${p.uid});"
+                             title="Right click for Qty | Shift + Right click for Graph | Long-press on mobile">
                             ${imgTag}
                         </div>
                         <div class="card-name">${p.n}${getTrendIcons(p)}</div>
@@ -4510,16 +4721,19 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         // anywhere in the app instantly adds that pet.
         function addKeybind() {
             state.keybinds.push({ key: '?', petName: '', source: 'inv', type: 'reg', f_st: false, r_st: false });
+            saveTrade();
             renderKeybindList();
         }
 
         function removeKeybind(idx) {
             state.keybinds.splice(idx, 1);
+            saveTrade();
             renderKeybindList();
         }
 
         function setKeybindPet(idx, petName) {
             state.keybinds[idx].petName = petName;
+            saveTrade();
         }
 
         function setKeybindSource(idx, source) {
@@ -4551,7 +4765,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                     return;
                 }
                 state.keybinds[capturingKeyForIndex].key = capturedKey;
-                renderKeybindList();
+                saveTrade();
+            renderKeybindList();
             }
             cancelKeyCapture();
         }
@@ -6033,6 +6248,24 @@ function renderTBCard(t) {
             </div>
             <div class="results-grid" id="searchResults"></div>
         </div>
+    </div>
+
+
+    <!-- ── MOBILE FLOATING ACTION BAR ── -->
+    <div class="mobile-fab-bar" id="mobileFabBar">
+        <button class="mobile-fab" id="fabUndo" onclick="undo()" title="Undo">↩</button>
+        <button class="mobile-fab" id="fabRedo" onclick="redo()" title="Redo">↪</button>
+        <button class="mobile-fab" id="fabGraph" onclick="mobileFabGraph()" title="View Graph">📈</button>
+        <button class="mobile-fab" id="fabQty"   onclick="mobileFabQty()"   title="Add with Quantity">＋</button>
+    </div>
+
+    <!-- ── MOBILE LONG-PRESS CONTEXT MENU ── -->
+    <div class="mobile-ctx-bg" id="mobileCtxBg" onclick="closeMobileCtx()"></div>
+    <div class="mobile-ctx-menu" id="mobileCtxMenu">
+        <div class="mobile-ctx-item" onclick="mobileCtxAction('graph')">📈 View Price &amp; Demand History</div>
+        <div class="mobile-ctx-item" onclick="mobileCtxAction('qty')">＋ Add Multiple (Quantity)</div>
+        <div class="mobile-ctx-item" onclick="mobileCtxAction('dupe')">⧉ Duplicate Pet</div>
+        <div class="mobile-ctx-item" onclick="mobileCtxAction('remove')" style="color:#f87171">✕ Remove Pet</div>
     </div>
 
 </body>
