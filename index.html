@@ -1,6 +1,60 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!--
+    ================================================================
+    Adopt Me Trade Calculator — Single-file Web App
+    ================================================================
+    STRUCTURE:
+      <head>       — meta, fonts, Chart.js CDN
+      <style>
+    /*
+    ================================================================
+    CSS ARCHITECTURE
+    ================================================================
+    :root / body.theme-*
+      CSS variables for colors, used everywhere. Switching themes
+      (dark/elve) just swaps these variables — no other CSS changes.
+
+    .tab-btn / .tab-content
+      The 4 main navigation tabs (Value, Demand, Calc, Trades).
+      Only the active .tab-content is visible.
+
+    .card
+      Pet cards used in both calculator panels and inventory.
+      Stacked pets show a .card-stack-badge (x2, x3, etc.).
+
+    .verdict-box
+      The trade verdict bar — fixed position at bottom of screen.
+      Hidden on non-calc tabs.
+
+    .inv-overlay / .inv-container
+      Inventory is a full-screen overlay (bottom sheet on mobile).
+
+    .search-overlay
+      Pet search panel — slides in from left. Used everywhere
+      that needs a pet picker (calc, inventory, trade board).
+
+    Mobile (@media max-width: 768px)
+      Calculator panels go side by side (smaller cards).
+      Tab bar scrolls horizontally. Overlays become bottom sheets.
+    ================================================================
+    */      — ALL CSS (dark theme, mobile responsive, themes)
+      <body>       — HTML panels, overlays, tab layout
+      <script>     — ALL JavaScript logic (no external JS files)
+
+    DATA SOURCES (Google Sheets CSV, fetched on load):
+      MASTER_CSV_URL  — live pet values, demand, variants, trends
+      HISTORY_CSV_URL — historical value/demand data for graphs
+
+    LOCAL STORAGE KEYS:
+      tradeState    — calculator sides A/B + inventory
+      lockedPets    — pets locked from AI suggestions
+      tb_trades     — active trade board entries
+      tb_pending    — accepted trades awaiting confirmation
+      tb_completed  — finalized completed trade history
+    ================================================================
+    -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adopt Me Trade Calculator</title>
@@ -277,8 +331,12 @@
         .suggest-items-text { font-weight: 700; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%; }
         .suggest-val-text { font-weight: 900; color: var(--win); }
         .inv-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 3000; }
+        /* On desktop: hide mobile-only elements */
+        .inv-mobile-close { display: none; }
+        .inv-mobile-btns  { display: none; }
+        .inv-mobile-tabs  { display: none; }
         .inv-container { width: 95%; max-width: 1100px; background: #1a2333; border-radius: 28px; border: 1px solid var(--border); display: flex; flex-direction: column; max-height: 85vh; overflow: hidden; }
-        .inv-header { padding: 25px; border-bottom: 1.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: #111827; }
+        .inv-header { padding: 20px 25px; border-bottom: 1.5px solid var(--border); display: flex; flex-direction: column; justify-content: center; gap: 0; background: #111827; }
         .inv-body { display: flex; flex: 1; overflow: hidden; }
         .inv-list { flex: 1.5; padding: 25px; overflow-y: auto; border-right: 1.5px solid var(--border); }
         .inv-stats { flex: 1.2; padding: 30px; background: #0f172a; overflow-y: auto; }
@@ -674,7 +732,7 @@
             .search-header { flex-direction: column; gap: 7px; padding: 12px; }
             .search-input-wrapper { width: 100%; min-width: unset; }
 
-            /* ── INVENTORY: full-screen bottom sheet ── */
+            /* ── INVENTORY: full-screen bottom sheet on mobile ── */
             .inv-overlay { align-items: flex-end; }
             .inv-container {
                 width: 100%; max-width: 100%;
@@ -684,13 +742,18 @@
                 display: flex; flex-direction: column;
             }
             .inv-header {
-                padding: 12px 14px 10px;
+                padding: 12px 14px 8px;
                 flex-direction: column;
-                gap: 0;
-                align-items: stretch;
                 flex-shrink: 0;
             }
             .inv-header h2 { font-size: 0.95em; }
+            /* Desktop buttons: hidden on mobile */
+            .inv-desktop-btns { display: none !important; }
+            /* Desktop close: hidden on mobile (we have a separate one) */
+            .inv-mobile-close { display: block !important; }
+            /* Mobile-only buttons and tabs: show them */
+            .inv-mobile-btns { display: flex !important; }
+            .inv-mobile-tabs { display: flex !important; }
             .inv-body {
                 flex-direction: column;
                 flex: 1;
@@ -952,22 +1015,30 @@
     <div class="inv-overlay" id="invOverlay">
         <div class="inv-container">
             <div class="inv-header">
-                <!-- Title + close always visible -->
-                <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:8px">
-                    <h2 style="font-weight:900;font-size:1em;margin:0">📦 INVENTORY</h2>
-                    <button class="nav-btn" style="padding:5px 12px;font-size:0.75em" onclick="closeInventory()">✕ Close</button>
+                <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+                    <h2 style="font-weight:900;font-size:1.15em;margin:0">📦 INVENTORY</h2>
+                    <!-- Desktop buttons -->
+                    <div class="inv-desktop-btns" style="display:flex;gap:8px;align-items:center">
+                        <button class="nav-btn" style="padding:6px 12px;font-size:0.7em" onclick="exportInv()">Export Data</button>
+                        <button class="nav-btn" style="padding:6px 12px;font-size:0.7em" onclick="importInv()">Import Data</button>
+                        <button class="nav-btn" style="padding:6px 12px;font-size:0.7em;background:var(--accent);border-color:var(--accent)" onclick="openAnalytics()">View Portfolio</button>
+                        <button class="nav-btn" style="padding:6px 12px;font-size:0.7em;background:#059669;border-color:#047857" onclick="openTradeAdvisor()">🎯 Trade Advisor</button>
+                        <button class="nav-btn" style="padding:6px 14px;font-size:0.8em" onclick="closeInventory()">✕ Close</button>
+                    </div>
+                    <!-- Mobile close -->
+                    <button class="inv-mobile-close nav-btn" style="padding:5px 12px;font-size:0.78em" onclick="closeInventory()">✕</button>
                 </div>
-                <!-- Action buttons — always shown, wrap on mobile -->
-                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
-                    <button class="nav-btn" style="padding:5px 10px;font-size:0.68em;flex:1;min-width:80px" onclick="exportInv()">Export</button>
-                    <button class="nav-btn" style="padding:5px 10px;font-size:0.68em;flex:1;min-width:80px" onclick="importInv()">Import</button>
-                    <button class="nav-btn" style="padding:5px 10px;font-size:0.68em;flex:1;min-width:80px;background:var(--accent);border-color:var(--accent)" onclick="openAnalytics()">Portfolio</button>
-                    <button class="nav-btn" style="padding:5px 10px;font-size:0.68em;flex:1;min-width:80px;background:#059669;border-color:#047857" onclick="openTradeAdvisor()">🎯 Advisor</button>
+                <!-- Mobile: action buttons row -->
+                <div class="inv-mobile-btns" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px">
+                    <button class="nav-btn" style="padding:5px 10px;font-size:0.7em;flex:1" onclick="exportInv()">Export</button>
+                    <button class="nav-btn" style="padding:5px 10px;font-size:0.7em;flex:1" onclick="importInv()">Import</button>
+                    <button class="nav-btn" style="padding:5px 10px;font-size:0.7em;flex:1;background:var(--accent);border-color:var(--accent)" onclick="openAnalytics()">Portfolio</button>
+                    <button class="nav-btn" style="padding:5px 10px;font-size:0.7em;flex:1;background:#059669;border-color:#047857" onclick="openTradeAdvisor()">Advisor</button>
                 </div>
-                <!-- Tab switcher (always shown, controls pets vs stats panel) -->
-                <div class="inv-mobile-tabs" style="display:flex;gap:4px;background:#0f172a;border-radius:10px;padding:3px;border:1px solid var(--border)">
-                    <button id="invTabPets" onclick="switchInvTab('pets')" style="flex:1;padding:6px 0;border-radius:7px;border:none;font-weight:800;font-size:0.75em;cursor:pointer;background:var(--accent);color:white;font-family:inherit">My Pets</button>
-                    <button id="invTabStats" onclick="switchInvTab('stats')" style="flex:1;padding:6px 0;border-radius:7px;border:none;font-weight:800;font-size:0.75em;cursor:pointer;background:transparent;color:var(--subtext);font-family:inherit">Stats & AI</button>
+                <!-- Mobile: tab switcher -->
+                <div class="inv-mobile-tabs" style="display:none;gap:4px;background:#0f172a;border-radius:10px;padding:3px;border:1px solid var(--border);margin-top:8px">
+                    <button id="invTabPets" onclick="switchInvTab('pets')" style="flex:1;padding:7px 0;border-radius:7px;border:none;font-weight:800;font-size:0.8em;cursor:pointer;background:var(--accent);color:white;font-family:inherit">📦 My Pets</button>
+                    <button id="invTabStats" onclick="switchInvTab('stats')" style="flex:1;padding:7px 0;border-radius:7px;border:none;font-weight:800;font-size:0.8em;cursor:pointer;background:transparent;color:var(--subtext);font-family:inherit">📊 Stats & AI</button>
                 </div>
             </div>
             <div class="inv-body">
@@ -1000,7 +1071,7 @@
                             🤖 AI Strategist
                             <div style="display:flex;gap:6px;align-items:center">
                                 <button class="ai-fullscreen-btn" onclick="openAIFullscreen()" title="Fullscreen">⛶ Expand</button>
-                                <button class="ai-refresh-btn" onclick="renderInventory()">Refresh ↻</button>
+                                <button class="ai-refresh-btn" onclick="window._aiRefreshOffset=(window._aiRefreshOffset||0)+7;renderInventory()">Refresh ↻</button>
                             </div>
                         </div>
                         
@@ -1201,11 +1272,33 @@
         const MASTER_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=697881438&single=true&output=csv';
         const HISTORY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRpYtDhy048sVlxFk5obx9I2uSBxu89gzCCpyttrzza85TsVAtL-JsX0id93Q7q7WcNXLVms4SgR8Jg/pub?gid=1671406739&single=true&output=csv';
         
+        // ================================================================
+        // ALL_PETS — the master pet database loaded from Google Sheets CSV.
+        // Every pet object has: n (name), v (value), d (demand), cat (rarity
+        // category), f_v/r_v/fr_v/n_v/nfr_v/m_v/mfr_v (variant values),
+        // nd/md (neon/mega demand), vt (value trend emoji), dt (demand trend emoji).
+        // Loaded once on startup via fetchCSV(). All features read from this array.
+        // ================================================================
         let ALL_PETS = [];
+        // HISTORY_DATA — price/demand history rows from the second Google Sheet.
+        // Shape: [{ name, date, value, demand }, ...]. Used to draw line graphs
+        // when the user right-clicks (shift+right-click) a pet card.
         let HISTORY_DATA = []; 
+        // state — the single source of truth for the entire app.
+        //   A/B        : pets on each side of the calculator
+        //   inv        : the user's inventory pets
+        //   target     : where the search overlay will drop selected pets
+        //   aiMode     : 'normal' (value upgrades) or 'velocity' (fast movers)
+        //   dreamPet   : the pet the user is trying to eventually get
+        //   aiTargetPets: manually pinned target pets for AI suggestions
+        //   keybinds   : hotkeys that quick-add specific pets
+        //   uiScale    : zoom level for the overall UI (0.8–1.3)
         let state = { mode: 'value', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null, keybinds: [], uiScale: 1.0 };
         // Pet names locked from AI suggestions (persisted separately)
         const lockedPets = new Set(JSON.parse(localStorage.getItem('lockedPets') || '[]'));
+        // Locked pets are excluded from AI trade suggestions.
+        // The user can lock any inventory pet so the AI won't suggest trading it away.
+        // Stored in localStorage as a JSON array of pet names.
         function saveLockedPets() { try { localStorage.setItem('lockedPets', JSON.stringify([...lockedPets])); } catch(e) {} }
         function toggleLockPet(name) { if (lockedPets.has(name)) lockedPets.delete(name); else lockedPets.add(name); saveLockedPets(); renderInventory(); }
         let history = []; 
@@ -1214,6 +1307,8 @@
         let searchState = { currentMatches: [], renderLimit: 50, sortMode: 'default', rarityFilter: 'none' };
         let petChart = null;
         // Essential Helper Functions
+        // Returns a hex color for a pet's rarity/category label.
+        // Used to color card borders in the grid and value list.
         function getRarityColor(rarity) {
             if (!rarity) return 'var(--rarity-common)';
             const r = rarity.toLowerCase();
@@ -1223,11 +1318,16 @@
             if (r.includes('uncommon')) return 'var(--rarity-uncommon)';
             return 'var(--rarity-common)';
         }
+        // Returns a color based on demand number (red=low, yellow=mid, green=high).
+        // Used on card demand labels and in the value/demand list rows.
         function getDemandColor(demand) {
             if (demand >= 7) return '#4caf50';
             if (demand >= 4) return '#ffeb3b';
             return '#f44336';
         }
+        // Returns emoji icons showing value and demand trends for a pet.
+        // 📈/📉 = value going up/down, 🔥/❄️ = demand going up/down.
+        // Used on pet cards and in the value list.
         function getTrendIcons(p) {
     if (!p || (!p.vt && !p.dt)) return "";
     let html = "";
@@ -1343,6 +1443,12 @@
     }
     return html;
 }
+        // Loads historical price/demand data from the second sheet.
+        // Populates HISTORY_DATA which powers the graph overlay.
+        // Also calls buildManipCache() to flag suspicious price movements.
+        // Fetches historical price and demand data from the second Google Sheet.
+        // Populates HISTORY_DATA used by the graph overlay. Also calls
+        // buildManipCache() to detect pets with suspicious price movement patterns.
         async function fetchHistory() {
     if (HISTORY_DATA.length > 0) {
         console.log("📦 History already loaded:", HISTORY_DATA.length, "records");
@@ -1407,6 +1513,9 @@
 
         // Pre-computed manipulation cache — built once, looked up instantly
         const manipCache = new Map();
+        // Builds a cache of pets flagged as potentially value-manipulated.
+        // A pet is flagged if its stated value is far above what demand/history
+        // would suggest. Used in health score and AI suggestions to warn the user.
         function buildManipCache() {
             manipCache.clear();
             // Group history by pet name
@@ -1446,6 +1555,9 @@
             console.log(`🔍 Manipulation cache built: ${manipCache.size} flagged pets`);
         }
         function closeGraph() { document.getElementById('graphOverlay').style.display = 'none'; }
+        // Opens the price/demand history graph for a single pet.
+        // Plots value and demand over time using Chart.js line charts.
+        // Triggered by Shift+right-click on any pet card anywhere in the app.
         async function openGraph(petData) {
     await fetchHistory();
     
@@ -1928,6 +2040,9 @@
 }
         // CONTINUE WITH THE REST OF YOUR ORIGINAL FUNCTIONS HERE
         // (handlePetContext, openInfo, closeInfo, playSfx, pushState, undo, parseCSV, etc.)
+        // Right-click handler on search result cards.
+        // Shift + right-click = open the value/demand history graph for that pet.
+        // Plain right-click = open the quantity picker modal (add multiple at once).
         function handlePetContext(e, petData) {
     e.preventDefault();
     if (e.shiftKey) {
@@ -1941,6 +2056,9 @@
         function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        // Plays a short Web Audio API sound effect.
+        // 'pop' = adding a pet, 'remove' = deleting a pet.
+        // Uses AudioContext so it works without any audio files.
         function playSfx(type) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
@@ -1964,6 +2082,10 @@
 
         let redoStack = [];
 
+        // ── UNDO / REDO ──────────────────────────────────────────────
+        // undoStack and redoStack hold deep copies of the full state object.
+        // Max 30 undo steps. pushState() is called before every mutation.
+        // Ctrl+Z = undo, Ctrl+Y = redo (keyboard handler at bottom of script).
         function pushState() {
             if (history.length > 50) history.shift();
             history.push(JSON.stringify({ A: state.A, B: state.B, inv: state.inv }));
@@ -2021,6 +2143,9 @@
             if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
         });
 
+        // Parses raw CSV text into an array of objects keyed by header row.
+        // Handles quoted fields and commas inside values.
+        // Used to process both the master pet list and the price history CSV.
         function parseCSV(text) {
             const lines = text.trim().split('\n');
             const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
@@ -2039,6 +2164,8 @@
             });
         }
 
+        // Saves the current state (both calc sides + inventory) to localStorage.
+        // Called after every user action. Restores automatically on page load.
         function saveTrade() {
             const simplifiedState = {
                 A: state.A.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
@@ -2067,6 +2194,13 @@
             }
         }
 
+        // ── STARTUP DATA LOAD ────────────────────────────────────────
+        // Called immediately on DOMContentLoaded. Sequence:
+        //   1. Fetch MASTER_CSV from Google Sheets → parse into ALL_PETS
+        //   2. Hide loading screen, call buildDynamicHTT()
+        //   3. Call fetchHistory() for graph data + manipulation cache
+        //   4. Call restoreTrade() to reload last session from localStorage
+        //   5. Trigger render() and any tab-specific render (value, demand, trades)
         async function loadPetData() {
             try {
                 const response = await fetch(MASTER_CSV_URL + "&t=" + Date.now());
@@ -2113,6 +2247,9 @@
             }
         }
 
+        // Opens the pet search overlay and sets state.target to know where
+        // selected pets should go (A, B, inv, dream, tbOffer, tbRequest, tbComplete).
+        // The search box filters ALL_PETS in real time as the user types.
         function openSearch(side) {
             state.target = side;
             document.getElementById('searchOverlay').classList.add('open');
@@ -2130,6 +2267,9 @@
             filterAndRender(document.getElementById('mainSearch').value.toLowerCase());
         }
 
+        // ── ENTRY POINT ──────────────────────────────────────────────
+        // Everything starts here. Calls loadPetData() to kick off the
+        // CSV fetch + data init sequence. All other code waits for data.
         document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('mainSearch').addEventListener('input', (e) => {
             searchState.renderLimit = 50;
@@ -2146,6 +2286,9 @@
         });
         }); // end DOMContentLoaded
 
+        // Filters ALL_PETS by name/category query, applies sort + rarity filter,
+        // then calls renderDOM() to paint the result grid.
+        // Uses a render limit (lazy load) to keep performance smooth on mobile.
         function filterAndRender(query) {
             let matches = query === "" ? [...ALL_PETS] : ALL_PETS.filter(p => p.n.toLowerCase().includes(query));
             if (searchState.rarityFilter !== 'none') {
@@ -2235,6 +2378,9 @@
             closeQtyModal();
         }
 
+        // Handles clicks on search result cards.
+        // Ctrl/Cmd+click = open quantity modal (add multiple).
+        // Regular click = add 1 directly via addItem().
         function handleSearchClick(e, el, name) {
             if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
@@ -2244,6 +2390,10 @@
             }
         }
 
+        // Core function that adds a pet to the correct panel based on state.target.
+        // Handles: calc sides (A/B), inventory (inv), trade board offer/request,
+        // trade completion editing (tbComplete), and dream pet.
+        // After adding, re-renders the relevant panel and saves state.
         function addItem(element, name, quantity = 1) {
             if (state.target !== 'inv' && state.target !== 'dream') {
                 if ((state[state.target] ? state[state.target].length : 0) + quantity > 18) {
@@ -2315,7 +2465,16 @@
         function openInventory() {
     document.getElementById('invOverlay').style.display = 'flex';
     renderInventory();
-    switchInvTab('pets'); // always start on pets tab
+    if (window.innerWidth <= 768) {
+        // Mobile: tab-based, start on pets
+        switchInvTab('pets');
+    } else {
+        // Desktop: show both panels side by side (original layout)
+        const pets  = document.getElementById('invPetsPanel');
+        const stats = document.getElementById('invStatsPanel');
+        if (pets)  pets.style.display  = '';
+        if (stats) stats.style.display = '';
+    }
 }
         function switchInvTab(tab) {
     const pets  = document.getElementById('invPetsPanel');
@@ -2324,13 +2483,16 @@
     const btnS  = document.getElementById('invTabStats');
     if (!pets || !stats) return;
     if (tab === 'pets') {
-        pets.style.display  = '';
+        pets.style.display  = 'flex';
+        pets.style.flexDirection = 'column';
         stats.style.display = 'none';
         if (btnP) { btnP.style.background = 'var(--accent)'; btnP.style.color = 'white'; }
         if (btnS) { btnS.style.background = 'transparent';   btnS.style.color = 'var(--subtext)'; }
     } else {
         pets.style.display  = 'none';
-        stats.style.display = '';
+        // Use flex so the stats panel fills available height and scrolls properly
+        stats.style.display = 'flex';
+        stats.style.flexDirection = 'column';
         if (btnS) { btnS.style.background = 'var(--accent)'; btnS.style.color = 'white'; }
         if (btnP) { btnP.style.background = 'transparent';   btnP.style.color = 'var(--subtext)'; }
     }
@@ -2338,6 +2500,8 @@
 
 function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
+        // Exports the user's inventory as a JSON file download.
+        // The exported file can be re-imported on any device via importInv().
         function exportInv() {
             const data = JSON.stringify(state.inv);
             const encoded = btoa(unescape(encodeURIComponent(data))); 
@@ -2369,6 +2533,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         }
 
         let rarityChartInst = null, catChartInst = null;
+        // Opens the Portfolio analytics overlay.
+        // Analyzes the user's inventory: value distribution by rarity tier,
+        // top pets by value, demand breakdown, and trend summary.
         function openAnalytics() {
             const overlay = document.getElementById('analyticsOverlay');
             const body = document.getElementById('analyticsBody');
@@ -2431,6 +2598,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         function openHistory() { document.getElementById('historyOverlay').style.display = 'flex'; renderHistoryLog(); }
         function closeHistory() { document.getElementById('historyOverlay').style.display = 'none'; }
         
+        // Saves a snapshot of the current calculator state to the trade history log.
+        // The history log (separate from trade board history) lets the user flip back
+        // to any previously logged calculator setup. Stored in localStorage.
         function logCurrentTrade() {
             if (state.A.length === 0 && state.B.length === 0) return;
             if (tradeLog.length >= 10) tradeLog.shift();
@@ -2466,6 +2636,10 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             }).join('');
         }
 
+        // Returns the numeric value for a pet given its type (reg/neon/mega)
+        // and fly/ride status. Reads from the variant value fields on the pet object
+        // (f_v, r_v, fr_v, n_v, nfr_v, m_v, mfr_v).
+        // Falls back to base value (p.v) if a variant field is missing.
         function calculatePetVal(p, mode) {
             // Always uses value mode - frost values removed
             let val = 0;
@@ -2488,6 +2662,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             return val || 0;
         }
 
+        // Renders the inventory grid and updates all stat displays.
+        // Groups identical pets (same name+type+fly+ride) into stacks shown with x2/x3 badge.
+        // Also updates: total value, avg demand, milestone badges, and AI suggestions.
         function renderInventory() {
             const list = state.inv;
             const grid = document.getElementById('invGrid');
@@ -2577,6 +2754,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         }
         function closeSimilarPopup() { document.getElementById('similarOverlay').style.display = 'none'; renderInventory(); }
 
+        // Switches AI suggestion mode between 'normal' and 'velocity'.
+        // Normal = maximize value and demand tier in trade targets.
+        // Velocity = prioritize pets that trade fast (high liquidity score).
         function setAiStrategy(mode) {
             state.aiMode = mode;
             state.aiTargetPets = []; 
@@ -2662,6 +2842,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             return 'low';
         }
 
+        // Maps a pet's cat (rarity) field to a human-readable category label.
+        // Categories: Exotic, High Tier, Preppy, Mid Tier, Random, etc.
+        // Used in health score, AI suggestions, and the value list.
         function getCatLabel(p) {
             const c = (p.cat || '').toLowerCase();
             if (c.includes('high tier')) return 'High Tier';
@@ -2690,11 +2873,16 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         }
 
         // Effective demand of a pet accounting for neon/mega demand fields
+        // Returns the effective demand number for a pet given its current type.
+        // Neon pets use nd (neon demand), Mega pets use md (mega demand),
+        // regular pets use d. Falls back to base d if variant demand is missing.
         function getEffDemand(p) {
             return p.type === 'neon' ? (p.nd || p.d) : p.type === 'mega' ? (p.md || p.d) : p.d;
         }
 
 
+        // Builds the short display label for a pet (used in trade chips).
+        // E.g. "Shadow Dragon NFR" or "Frost Dragon Neon FR".
         function getPetLabel(p) {
             // Returns a human-readable label like "NFR Crow", "Neon Bat Dragon", "FR Turtle"
             let prefix = '';
@@ -2732,6 +2920,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
 
         // Dynamic HTT cache — built from live data after pets load
         const dynamicHTT = new Set();
+        // Builds the dynamic Hard-To-Trade (HTT) pet set from live pet data.
+        // A pet is HTT if: it's in the seed list, OR has demand ≤ 2 + falling trend + value ≥ 1.
+        // HTT pets are flagged in the health score, AI suggestions, and trade board verdict.
         function buildDynamicHTT() {
             dynamicHTT.clear();
             ALL_PETS.forEach(p => {
@@ -2770,6 +2961,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             return tradeFreqMap.get((name || '').toLowerCase().trim()) || 0;
         }
         // Normalised 0–1 liquidity score (higher = trades more often)
+        // Returns a 0–1 liquidity score for a pet based on demand and category.
+        // High demand + premium category = high liquidity (trades quickly).
+        // Used in the inventory health score (Market Liquidity component).
         function getLiquidityScore(name) {
             const freq = getTradeFreq(name);
             const maxFreq = 5; // cap at 5 trades/day = max liquidity
@@ -2940,6 +3134,10 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         // ── CHAIN TRADE ENGINE ────────────────────────────────────────────
         // Finds a 2-step path: inventory → bridge → target
         // Returns best chain trade suggestion if direct path doesn't exist
+        // Finds a 2-step chain trade path when a direct trade is unlikely.
+        // Step 1: trade inventory → a high-demand bridge pet.
+        // Step 2: trade bridge pet → the actual target pet.
+        // Used in AI suggestions when the user's inventory is hard to trade directly.
         function findChainTrade(inventory, targetVal, targetDem, targetCat) {
             if (!inventory || inventory.length === 0) return null;
             const invVal = inventory.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
@@ -3223,6 +3421,12 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         }
 
         // ── MAIN AI SUGGESTIONS (v2) ──────────────────────────────────────
+        // The main AI brain. Given the user's inventory:
+        // 1. Calculates the inventory health score (demand, liquidity, category, trends, HTT).
+        // 2. Generates trade strategy suggestions based on aiMode (normal vs velocity).
+        //    Normal mode = best value/demand upgrades and chain trades.
+        //    Velocity mode = fastest-moving pets, prioritizes tradability over value.
+        // 3. Renders the health score card + suggestion list into #aiSuggestions.
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
             const dreamContainer = document.getElementById('dreamPetContainer');
@@ -3351,10 +3555,16 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             const usedUids = new Set();
             // Never suggest a pet the user already owns as a target
             const invNames = new Set(inventory.map(p => p.n));
+            // Refresh offset: each call rotates the starting position so
+            // the Refresh button produces different suggestions each time
+            if (!window._aiRefreshOffset) window._aiRefreshOffset = 0;
+            window._aiRefreshOffset = (window._aiRefreshOffset + 3) % Math.max(1, ALL_PETS.length);
 
             if (state.aiMode === 'velocity') {
                 // Velocity v2: uses liquidity score, trade frequency, stability
-                const pool = [...inventory].sort((a,b) => calculatePetVal(b,'value') - calculatePetVal(a,'value'));
+                const pool = [...inventory]
+                    .sort((a,b) => calculatePetVal(b,'value') - calculatePetVal(a,'value'))
+                    .map((p,i,arr) => arr[(i + (window._aiRefreshOffset||0)) % arr.length]);
                 for (let i = 0; i < pool.length && results.length < state.strategyLimit; i++) {
                     const anchor = pool[i];
                     if (usedUids.has(anchor.uid)) continue;
@@ -3393,7 +3603,10 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 }
             } else {
                 // Normal mode v2
-                const bundleSizes = [1, 2, 3, 4];
+                // Rotate bundle sizes so refresh shows different suggestion combos
+                const allBundleSizes = [1, 2, 3, 4];
+                const off2 = (window._aiRefreshOffset || 0) % 4;
+                const bundleSizes = [...allBundleSizes.slice(off2), ...allBundleSizes.slice(0, off2)];
                 const invSorted = [...inventory].sort((a,b) => {
                     const dA = parseFloat(getEffDemand(a)), dB = parseFloat(getEffDemand(b));
                     if (dB !== dA) return dB - dA;
@@ -3630,7 +3843,10 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
 
 
 
-                function renderSide(s) {
+                // Renders one side (A or B) of the calculator.
+        // Draws all pet cards with their value, demand, type toggles (N/M/F/R),
+        // duplicate button, and remove button. Updates the side total value.
+        function renderSide(s) {
             const list = state[s];
             const grid = document.getElementById(`grid${s}`);
             grid.innerHTML = '';
@@ -3668,6 +3884,10 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
         }
 
+        // Computes the trade verdict shown in the bottom verdict bar.
+        // Compares total value of side A vs side B and assigns a label:
+        //   OVERPAYING / SLIGHTLY OVERPAYING / FAIR / WIN / BIG WIN
+        // Also checks for HTT pets, manipulation flags, and demand mismatch.
         function calculate() {
             const vA = parseFloat(document.getElementById('totA').innerText);
             const vB = parseFloat(document.getElementById('totB').innerText);
@@ -3701,6 +3921,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             updateVerdictExtras();
         }
 
+        // Master render function for the Value Calculator tab.
+        // Repaints both trade panels (A = You Give, B = You Get),
+        // recalculates the verdict, and updates the trade speed suggestions.
         function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
         function setMode(m) { state.mode = 'value'; document.getElementById('btnValue').classList.add('active'); render(); }
         function tog(s, uid, type) {
@@ -3713,6 +3936,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             saveTrade(); if (s === 'inv') renderInventory(); else render();
         }
 
+        // Updates the "Trade Speed" panel below the verdict bar.
+        // Analyzes both sides for: HTT pets, demand mismatch, manipulation flags.
+        // Gives actionable tips like "Add a high-demand pet to improve odds".
         function updateTradeSuggestions() {
             const container = document.getElementById('sideASuggestions');
             const list = document.getElementById('suggestList');
@@ -3940,6 +4166,11 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             refreshAdvisorTargets();
         }
 
+        // Renders the Trade Advisor panel inside the AI fullscreen overlay.
+        // Analyzes inventory + target pets to generate a structured offer:
+        //   - Which pets to give (from inventory, excluding locked pets)
+        //   - Which pets to request (based on dream pet or aiTargetPets)
+        //   - A human-readable strategy summary and estimated success probability
         function renderAdvisorOffer() {
             const slotsEl = document.getElementById('advisorOfferSlots');
             const statsEl = document.getElementById('advisorOfferStats');
@@ -4155,13 +4386,22 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             overlay.addEventListener('click', function(e) {
                 if (e.target === this) closeAIFullscreen();
             });
-            document.addEventListener('keydown', function(e) {
+            // ── GLOBAL KEYBOARD HANDLER ──────────────────────────────────
+        // Listens for global keypresses:
+        //   Ctrl+Z   = undo last pet action
+        //   Ctrl+Y   = redo
+        //   Escape   = close any open overlay (search, graph, inventory, etc.)
+        //   Custom keybinds = user-defined pet hotkeys from Settings
+        document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape' && document.getElementById('aiFullscreenOverlay').classList.contains('open')) {
                     closeAIFullscreen();
                 }
             });
         }
 
+        // Switches the visual theme by toggling CSS classes on <body>.
+        // 'dark' = default dark blue theme. 'elve' = lighter Elvebredd-inspired theme.
+        // The active theme changes CSS variable values defined in :root overrides.
         function setTheme(theme) {
             document.body.classList.remove('theme-elve');
             if (theme === 'elve') document.body.classList.add('theme-elve');
@@ -4191,6 +4431,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             document.getElementById('settingsOverlay').style.display = 'none';
         }
 
+        // Applies the UI zoom level (0.8–1.3) to the root font-size.
+        // Scales the whole interface up or down. Saved in state.uiScale.
         function applyUIScale(val) {
             const pct = parseInt(val);
             state.uiScale = pct / 100;
@@ -4199,6 +4441,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             document.getElementById('uiScaleLabel').textContent = pct + '%';
         }
 
+        // Adds a new keybind slot in Settings. The user assigns a pet name,
+        // target side (A/B/inv), and a keyboard shortcut. Pressing that key
+        // anywhere in the app instantly adds that pet.
         function addKeybind() {
             state.keybinds.push({ key: '?', petName: '', source: 'inv', type: 'reg', f_st: false, r_st: false });
             renderKeybindList();
@@ -4292,6 +4537,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         // ================================================================
         let currentTab = 'calc';
 
+        // Switches between the 4 main tabs: value, demand, calc, trades.
+        // Hides the verdict box and fixed overlays when leaving the calc tab.
+        // Triggers the relevant render function for value/demand lists and trade board.
         function switchTab(tab) {
             currentTab = tab;
             ['value','demand','calc','trades'].forEach(t => {
@@ -4366,6 +4614,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             return '';
         }
 
+        // Renders the full sortable/filterable Value List tab.
+        // Supports zoom, search, rarity filter, and type toggle (normal/neon/mega).
+        // Each row shows: pet image, name, value, demand, trends, rarity badge.
         function renderValueList() {
             const body = document.getElementById('valueListBody');
             const search = (document.getElementById('valueListSearch').value || '').toLowerCase();
@@ -4420,6 +4671,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             `).join('');
         }
 
+        // Renders the Demand List tab, sorted by demand descending by default.
+        // Same structure as value list but ranked by demand.
+        // Includes demand increment filter (show only pets at specific demand step).
         function renderDemandList() {
             const body = document.getElementById('demandListBody');
             const search = (document.getElementById('demandListSearch').value || '').toLowerCase();
@@ -4502,6 +4756,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
 
         // Click a pet on the value/demand list → add to Side A, switch to calc tab
         // Respects the type selected (adds as neon/mega if that type is active)
+        // Adds a pet from the Value/Demand list directly to the active calc side
+        // (A or B, whichever is currently targeted). Used by the + button on list rows.
         function quickAddFromList(petName, type) {
             const pet = ALL_PETS.find(p => p.n === petName);
             if (!pet) return;
@@ -4534,6 +4790,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         ]);
 
         // Returns true if this pet is an egg (should only show in Normal type)
+        // Returns true if the pet name ends with 'Egg' — used to skip
+        // eggs from certain AI suggestions and list filters.
         function isEgg(name) {
             const n = (name || '').toLowerCase();
             return n.includes(' egg') || n.endsWith('egg') || n === 'egg';
@@ -4544,11 +4802,15 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         // AMVGG filenames often differ in capitalisation from CSV names
         // e.g. "ride-a-pet potion" → "Ride-A-Pet Potion"
         // ================================================================
+        // Converts a string to Title Case. Used when constructing image URL
+        // variants since some CDN filenames are title-cased.
         function toTitleCase(str) {
             return str.replace(/([^\s\-])[^\s\-]*/g, (w, first) => first.toUpperCase() + w.slice(1).toLowerCase());
         }
 
         // Strip accents/diacritics: Tió → Tio, é → e, ñ → n etc.
+        // Removes accent/diacritic marks from characters (e.g. é → e).
+        // Used in search to match accented pet names without exact typing.
         function stripAccents(str) {
             return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         }
@@ -4594,6 +4856,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
 
         // Build an img element with smart fallback chain
         // Returns an <img> tag string for use in innerHTML
+        // Returns an <img> HTML string for a pet from the AMVGG CDN.
+        // Tries multiple image name variants (lowercase, title case, with/without
+        // spaces) via petImgFallback(). Shows a placeholder if all fail.
         function petImgTag(name, style) {
             const styleAttr = style || 'width:36px;height:36px;object-fit:contain';
             const key = (name || '').toLowerCase().trim();
@@ -4612,6 +4877,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 alt="${name.replace(/"/g,'&quot;')}">`;
         }
 
+        // Called when a pet image 404s. Tries the next URL variant from
+        // getPetImageVariants(). Falls back to a grey placeholder square.
         function petImgFallback(img) {
             try {
                 const fallbacks = JSON.parse(img.dataset.fallbacks || '[]');
@@ -4649,6 +4916,16 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
 const TB_KEY = 'tradeBoardTrades';
 
 // Load trades from localStorage
+// ================================================================
+// TRADE BOARD — tracks trades the user has posted on Elvebredd or AMVGG.
+// All trade board data is stored in localStorage under separate keys:
+//   TB_KEY       = active trades (posted, timer running)
+//   tb_pending   = trades marked as accepted, waiting for completion confirmation
+//   tb_completed = finalized completed trades (trade history)
+// The trade board has 3 subtabs: Active, Pending, All Trades.
+// ================================================================
+
+// Loads the active trades array from localStorage.
 function tbLoad() {
     try { return JSON.parse(localStorage.getItem(TB_KEY) || '[]'); } catch(e) { return []; }
 }
@@ -4674,6 +4951,10 @@ function openTradeBoard() {
     startTBTimers();
 }
 
+// Starts a 1-second interval that updates all trade countdown timers.
+// Each trade has a cooldown (Elvebredd = 120s, AMVGG = 120s) before
+// the Repost button becomes active. Fires browser notifications when
+// a trade is ready to repost (if user granted notification permission).
 function startTBTimers() {
     if (tbTimerInterval) clearInterval(tbTimerInterval);
     tbTimerInterval = setInterval(() => {
@@ -4696,6 +4977,10 @@ function tbOpenCreate() {
     }
 }
 
+// Pre-fills the trade board's New Trade form with whatever is currently
+// in the calculator sides (A = offer, B = request).
+// Lets the user set up a trade in the calculator first, then post it
+// to the trade board without re-entering all the pets.
 function tbImportFromCalc() {
     tbOfferPets   = state.A.map(p => ({...p, uid: Math.random()}));
     tbRequestPets = state.B.map(p => ({...p, uid: Math.random()}));
@@ -4721,6 +5006,9 @@ function tbRemovePet(side, uid) {
     renderTBCreateForm();
 }
 
+// Validates and saves a new or edited trade to the active trades list.
+// Requires at least 1 pet on the offer side and 1 on the request side.
+// Generates a unique ID, sets the timer, and re-renders the board.
 function tbSaveTrade() {
     const site    = document.getElementById('tbSiteSelect').value;
     const notes   = document.getElementById('tbNotes').value.trim();
@@ -4765,6 +5053,9 @@ function tbDeleteTrade(id) {
     renderTradeBoard();
 }
 
+// Handles the Repost Now button. Resets the trade timer to now.
+// For Elvebredd: opens the Elvebredd profile page directly.
+// For AMVGG: uses the saved profile URL (prompts once if not set yet).
 function tbRepost(id) {
     const trades = tbLoad();
     const t = trades.find(x => x.id === id);
@@ -4812,6 +5103,9 @@ function tbCompletedSave(arr) {
     try { localStorage.setItem('tb_completed', JSON.stringify(arr)); } catch(e) {}
 }
 
+// Moves a trade from the active list to the pending list.
+// Called when the user clicks the ✅ Accepted button on a trade card.
+// The trade stays in pending until the user confirms it completed or failed.
 function tbMarkAccepted(id) {
     const trade = tbTrades.find(t => t.id === id);
     if (!trade) return;
@@ -4831,6 +5125,9 @@ function tbFailTrade(id) {
     renderTradeBoard();
 }
 
+// Opens the Complete Trade modal for a pending trade.
+// The user can review/edit what was actually traded (add or remove pets
+// from either side) before confirming. This lets them handle partial deals.
 function tbCompleteTrade(id) {
     const pending = tbPendingLoad();
     const trade = pending.find(t => t.id === id);
@@ -4908,12 +5205,20 @@ function tbCompleteRemovePet(side, _uid) {
     s.modal.innerHTML = s.buildModalHTML();
 }
 
+// Opens the pet search overlay so the user can add a pet to either side
+// of the Complete Trade modal. Stores which side (offer/request) in
+// window._tbCompleteAddSide so addItem() knows where to put the result.
 function tbCompleteAddPet(side) {
     // Store which side we're adding to, then open search
     window._tbCompleteAddSide = side;
     openSearch('tbComplete');
 }
 
+// Called when the user confirms the Complete Trade modal.
+// 1. Removes offered pets from the user's inventory (one-at-a-time matching).
+// 2. Adds received pets to the user's inventory.
+// 3. Saves the trade to the completed history (tb_completed in localStorage).
+// 4. Removes the trade from pending and re-renders the board.
 function tbFinalizeComplete() {
     const s = window._tbCompleteState;
     if (!s) return;
@@ -4973,6 +5278,9 @@ function tbFinalizeComplete() {
     showTBToast('🎉 Trade completed & saved to history!', '#34d399');
 }
 
+// Toggles the ⚡ Auto-repost flag on a trade.
+// When enabled, the trade is automatically reposted when its cooldown
+// expires (via the startTBTimers interval). No manual click required.
 function tbToggleAutoRepost(id) {
     const trades = tbLoad();
     const t = trades.find(x => x.id === id);
@@ -5007,6 +5315,10 @@ function renderTBTimers() {
     });
 }
 
+// Checks all active trades to see if any cooldown timers just expired.
+// If so, fires a browser push notification (if permission was granted)
+// telling the user the trade is ready to repost.
+// Called every second by the startTBTimers interval.
 function checkTBAlerts() {
     const trades = tbLoad();
     let changed = false;
@@ -5036,6 +5348,9 @@ function checkTBAlerts() {
     if (changed) { tbSave(trades); tbTrades = trades; renderTradeBoard(); }
 }
 
+// Shows a brief floating toast notification at the bottom of the screen.
+// Used for non-blocking status messages like "Trade saved!" or
+// "Repost cooldown active". Auto-dismisses after 2.5 seconds.
 function showTBToast(msg, color) {
     let toast = document.getElementById('tbToast');
     if (!toast) {
@@ -5061,6 +5376,10 @@ function tbRequestNotifPerms() {
 }
 
 // ── VERDICT ───────────────────────────────────────────────────────────────
+// Calculates a W/L/FAIR/BIG W/BIG L verdict for an Elvebredd trade.
+// Compares the total calculated value of offer pets vs request pets.
+// Only runs for Elvebredd trades (AMVGG values are not in our dataset).
+// Returns: label, color, offerVal, requestVal, diff.
 function tbGetVerdict(trade) {
     if (trade.site !== 'elvebredd') return null;
     // Hydrate pets from ALL_PETS
@@ -5083,6 +5402,8 @@ function tbGetVerdict(trade) {
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────
+// Toggles Neon/Mega/Fly/Ride on a pet inside the trade board form.
+// Works the same as the N/M/F/R toggles on calculator cards.
 function tbTogglePet(side, uid, type) {
     const arr = side === 'offer' ? tbOfferPets : tbRequestPets;
     const p = arr.find(x => x.uid === uid);
@@ -5094,6 +5415,9 @@ function tbTogglePet(side, uid, type) {
     renderTBCreateForm();
 }
 
+// Renders a row of small pet chips (image + label) for the trade board.
+// If editable=true, each chip shows N/M/F/R toggles and a remove button.
+// Used in: active trade cards, pending cards, complete modal, history cards.
 function renderTBPetChips(pets, side, editable) {
     let html = '';
     const hydrated = pets.map(p => {
@@ -5187,6 +5511,15 @@ function tbAddPetSide(side) {
     setTimeout(() => document.getElementById('mainSearch').focus(), 50);
 }
 
+// Main render function for the Trade Board tab.
+// If tbCreating is true, shows the New/Edit Trade form instead.
+// Otherwise, builds 3 subtab panels:
+//   Active    = posted trades split into Elvebredd | AMVGG columns
+//   Pending   = accepted trades awaiting completion confirmation
+//   All Trades = completed trade history + trader profile analysis
+// The trader profile reads win rate, avg gain, and trade patterns to
+// assign a type (The Shark, The Grinder, The Diplomat, etc.) with
+// detailed written analysis of the user's trading behavior.
 function renderTradeBoard() {
     const container = document.getElementById('tradeBoardContent');
     if (!container) return;
@@ -5481,6 +5814,8 @@ function renderTradeBoard() {
     `;
 }
 
+// Switches between the 3 trade board subtabs: 'active', 'pending', 'completed'.
+// Just updates the tbSubTab variable and re-renders the board.
 function tbSwitchSubTab(tab) {
     tbSubTab = tab;
     renderTradeBoard();
@@ -5499,6 +5834,10 @@ function tbDeleteCompleted(id) {
     renderTradeBoard();
 }
 
+// Renders a single active trade card.
+// Shows: site badge, time elapsed, verdict (W/L), countdown timer,
+// offer/request pet chips with N/M/F/R toggles, and action buttons
+// (Edit, Repost, Auto-repost toggle, Open Site, Accepted, Delete).
 function renderTBCard(t) {
     const left      = getTBTimeLeft(t);
     const timeColor = left === 0 ? '#34d399' : left < 60 ? '#fbbf24' : '#94a3b8';
