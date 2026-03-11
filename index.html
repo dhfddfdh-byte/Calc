@@ -528,6 +528,7 @@
         .ks-tog.active { background:var(--accent);color:white;border-color:var(--accent); }
 
         /* ===== TRADE ADVISOR STYLES ===== */
+        .advisor-mobile-tabs { display: none; } /* shown only on mobile via @media */
         .advisor-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2,6,23,0.96); backdrop-filter: blur(14px); display: none; align-items: center; justify-content: center; z-index: 5200; }
         .advisor-container { width: 97%; max-width: 1050px; background: #1a2333; border-radius: 28px; border: 1.5px solid var(--border); max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.8); }
         .advisor-header { padding: 18px 25px; background: #111827; border-bottom: 1.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
@@ -773,6 +774,36 @@
                 height: 100%;
                 display: none;
             }
+
+            /* ── TRADE ADVISOR: tab-based on mobile ── */
+            .advisor-container {
+                width: 100%; max-width: 100%;
+                height: 100vh; max-height: 100vh;
+                border-radius: 0;
+            }
+            .advisor-header { padding: 12px 14px; }
+            .advisor-header > div > span:last-child { display: none; } /* hide subtitle */
+            .advisor-body { flex-direction: column; overflow: hidden; }
+            /* Mobile tab bar sits between header and body */
+            .advisor-mobile-tabs { display: flex !important; }
+            /* Left and right panels stack, controlled by JS tabs */
+            .advisor-left {
+                width: 100%; flex-shrink: 0;
+                border-right: none;
+                border-bottom: 1.5px solid var(--border);
+                padding: 12px;
+                overflow-y: auto;
+                flex: 1;
+                min-height: 0;
+            }
+            .advisor-right {
+                width: 100%; flex: 1;
+                overflow: hidden;
+                display: none; /* hidden by default on mobile, JS toggles */
+            }
+            .advisor-filters { padding: 8px 10px; gap: 6px; }
+            .advisor-filter-select { font-size: 0.7em; padding: 4px 8px; }
+            .advisor-results { padding: 10px; gap: 8px; }
 
             /* ── MODALS ── */
             .graph-container, .info-container, .analytics-container, .history-container {
@@ -1174,6 +1205,13 @@
                     <span style="font-size:0.75em; color:var(--subtext); margin-left:10px;">Build your offer → see what you should be targeting</span>
                 </div>
                 <button class="nav-btn" onclick="closeTradeAdvisor()">Close</button>
+            </div>
+            <!-- Mobile tab switcher (hidden on desktop via CSS) -->
+            <div class="advisor-mobile-tabs" style="gap:4px;background:#0f172a;border-bottom:1.5px solid var(--border);padding:8px 12px">
+                <div style="display:flex;gap:4px;background:#1e293b;border-radius:10px;padding:3px;width:100%">
+                    <button id="advTabOffer" onclick="switchAdvisorTab('offer')" style="flex:1;padding:7px 0;border-radius:7px;border:none;font-weight:800;font-size:0.8em;cursor:pointer;background:var(--accent);color:white;font-family:inherit">📦 Your Offer</button>
+                    <button id="advTabTargets" onclick="switchAdvisorTab('targets')" style="flex:1;padding:7px 0;border-radius:7px;border:none;font-weight:800;font-size:0.8em;cursor:pointer;background:transparent;color:var(--subtext);font-family:inherit">🎯 Targets</button>
+                </div>
             </div>
             <div class="advisor-body">
                 <div class="advisor-left">
@@ -4114,8 +4152,32 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         let advisorOfferPets = [];
         let advisorCharts = {};
 
+        // Switches between "Your Offer" and "Targets" panels on mobile.
+        // On desktop both panels are always visible side by side.
+        function switchAdvisorTab(tab) {
+            const left  = document.querySelector('.advisor-left');
+            const right = document.querySelector('.advisor-right');
+            const btnO  = document.getElementById('advTabOffer');
+            const btnT  = document.getElementById('advTabTargets');
+            if (!left || !right) return;
+            if (tab === 'offer') {
+                left.style.display  = '';
+                right.style.display = 'none';
+                if (btnO) { btnO.style.background = 'var(--accent)'; btnO.style.color = 'white'; }
+                if (btnT) { btnT.style.background = 'transparent';   btnT.style.color = 'var(--subtext)'; }
+            } else {
+                left.style.display  = 'none';
+                right.style.display = 'flex';
+                right.style.flexDirection = 'column';
+                if (btnT) { btnT.style.background = 'var(--accent)'; btnT.style.color = 'white'; }
+                if (btnO) { btnO.style.background = 'transparent';   btnO.style.color = 'var(--subtext)'; }
+            }
+        }
+
         function openTradeAdvisor() {
             document.getElementById('advisorOverlay').style.display = 'flex';
+            // Always start on offer tab on mobile
+            if (window.innerWidth <= 768) switchAdvisorTab('offer');
             advisorOfferPets = [];
             renderAdvisorOffer();
             renderAdvisorInvGrid();
@@ -4158,6 +4220,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             advisorOfferPets.push({ ...pet, type: type || 'reg', f_st: !!f_st, r_st: !!r_st, uid: Math.random() });
             renderAdvisorOffer();
             refreshAdvisorTargets();
+            // On mobile: auto-switch to Targets tab so they can see suggestions
+            if (window.innerWidth <= 768) switchAdvisorTab('targets');
         }
 
         function advisorRemovePet(uid) {
