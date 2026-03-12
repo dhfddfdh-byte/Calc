@@ -2433,8 +2433,8 @@
                 const card = e.target.closest('.card');
                 if (!card) return;
 
-                // Prevent browser from showing its native image context menu
-                if (e.target.tagName === 'IMG') e.preventDefault();
+                // Prevent native image popup AND prevent scroll from racing the long-press
+                e.preventDefault();
 
                 const petName = card.dataset.petname;
                 const side    = card.dataset.side;
@@ -2450,7 +2450,8 @@
                     if (!pet) return;
                     _longPressFired = true;
                     _mobileCtxTarget = { petData: pet, side, uid };
-                    openMobileCtx(e.touches[0].clientX, e.touches[0].clientY);
+                    // Use the stored start position so menu appears where finger landed
+                    openMobileCtx(_touchStartX, _touchStartY);
                 }, 500);
             }, { passive: false });
 
@@ -2458,14 +2459,17 @@
                 if (!_longPressTimer) return;
                 const dx = Math.abs(e.touches[0].clientX - _touchStartX);
                 const dy = Math.abs(e.touches[0].clientY - _touchStartY);
-                // Cancel long-press if finger moved more than 8px
-                if (dx > 8 || dy > 8) { clearTimeout(_longPressTimer); _longPressTimer = null; }
+                // Only cancel if finger moved a significant amount (20px)
+                // Small movements are normal when pressing on a scrollable list
+                if (dx > 20 || dy > 20) { clearTimeout(_longPressTimer); _longPressTimer = null; }
             }, { passive: true });
 
-            document.addEventListener('touchend', function() {
+            document.addEventListener('touchend', function(e) {
                 clearTimeout(_longPressTimer);
+                // If long press fired, prevent the tap from also triggering onclick
+                if (_longPressFired) { e.preventDefault(); _longPressFired = false; }
                 _longPressTimer = null;
-            }, { passive: true });
+            }, { passive: false });
         }
 
         function openMobileCtx(x, y) {
