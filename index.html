@@ -61,8 +61,6 @@
     <!-- Feature: Chart.js for History Graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Safari iOS: toggled by JS after restore to force CSS variable re-evaluation */
-        html.force-repaint * { outline-color: transparent; }
         :root {
             --bg: #0b1120;
             --panel: #161e2e;
@@ -249,10 +247,10 @@
         .card-img-container img { max-width: 100%; max-height: 100%; object-fit: contain; -webkit-user-drag: none; user-select: none; -webkit-touch-callout: none; pointer-events: none; }
         .card-name {
             font-size: 0.7em; font-weight: 800; text-align: center; min-height: 2.4em;
-            line-height: 1.2; color: #cbd5e1 !important; overflow: visible; word-wrap: break-word;
+            line-height: 1.2; color: #cbd5e1; overflow: visible; word-wrap: break-word;
             max-width: 100%;
         }
-        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost) !important; margin: 6px 0 2px 0; }
+        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost); margin: 6px 0 2px 0; }
         .card-demand {
             font-size: 0.8em; font-weight: 800; color: var(--demand-color); margin-bottom: 4px;
         }
@@ -615,6 +613,7 @@
         .tag-downgrade { background: rgba(239,68,68,0.18); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); }
         .tag-penalty { background: rgba(245,158,11,0.18); color: #fcd34d; border: 1.5px solid rgba(245,158,11,0.5); }
         .tag-played { background: rgba(239,68,68,0.22); color: #f87171; border: 2px solid #ef4444; font-size: 0.8em; font-weight: 900; padding: 5px 14px; border-radius: 20px; animation: pulse 2s infinite; }
+        .verdict-mobile-info { display: none; } /* shown only on mobile */
         .speed-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; font-size: 0.75em; font-weight: 900; }
         .speed-pill { padding: 3px 10px; border-radius: 12px; }
         .speed-fast { background: rgba(16,185,129,0.15); color: #34d399; }
@@ -750,6 +749,11 @@
             }
             .verdict-extras { display: none !important; }
             .v-text { font-size: 1.7em; }
+            /* Mobile-only speed+flip shown inside verdict box */
+            .verdict-mobile-info { display: block; margin: 4px 0 6px; }
+            .verdict-mobile-info .speed-row { font-size: 0.7em; justify-content: center; }
+            .verdict-mobile-info .flip-row { font-size: 0.72em; text-align: center; margin-top: 3px; }
+            .verdict-mobile-info .speed-pill { padding: 2px 7px; }
             .switches { flex-wrap: wrap; gap: 4px; justify-content: center; }
             .sw-btn { padding: 5px 10px; font-size: 0.72em; }
             .save-trade-btn { padding: 5px 10px; font-size: 0.72em; }
@@ -1324,6 +1328,8 @@
         <div id="verdict" class="v-text">--</div>
         <div id="vDiff" class="v-diff">Difference: 0.000 (0.0%)</div>
         <div id="vSub" class="v-sub">Add pets to calculate trade results</div>
+        <!-- Mobile-only speed+flip info (hidden on desktop via CSS) -->
+        <div id="verdictMobileInfo" class="verdict-mobile-info"></div>
         <div class="switches">
             <button class="sw-btn active" id="btnValue" onclick="setMode('value')">Value</button>
             <button class="save-trade-btn" onclick="logCurrentTrade()">Save to History</button>
@@ -2381,19 +2387,7 @@
                 fetchHistory();
                 restoreTrade();
                 render();
-                // Safari/iOS bug: after restoring saved trade, CSS variable-colored
-                // text can be invisible due to stale compositor layers.
-                // Fix: force a full style recalc + repaint via classList toggle.
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        // Toggle a class that changes nothing visually but forces
-                        // Safari to re-evaluate all CSS variables on every element
-                        document.documentElement.classList.add('force-repaint');
-                        requestAnimationFrame(() => {
-                            document.documentElement.classList.remove('force-repaint');
-                        });
-                    });
-                });
+
                 // Render lists if already on those tabs
                 if (currentTab === 'value') renderValueList();
                 if (currentTab === 'demand') renderDemandList();
@@ -4335,6 +4329,27 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             }
 
             box.innerHTML = html;
+
+            // Also push speed+flip into the mobile verdict box div
+            // (the desktop verdictExtras panel is hidden on mobile)
+            const mobileInfo = document.getElementById('verdictMobileInfo');
+            if (mobileInfo) {
+                let mHtml = '';
+                if (cntA > 0 || cntB > 0) {
+                    const avgDA2 = parseFloat(document.getElementById('demA').innerText.replace('Avg Demand: ','')) || 0;
+                    const avgDB2 = parseFloat(document.getElementById('demB').innerText.replace('Avg Demand: ','')) || 0;
+                    const sA2 = getTradeSpeed(avgDA2), sB2 = getTradeSpeed(avgDB2);
+                    mHtml += `<div class="speed-row">
+                        <span class="speed-pill ${sA2.cls}">${sA2.emoji} You Give: ${sA2.label}</span>
+                        <span class="speed-pill ${sB2.cls}">${sB2.emoji} You Receive: ${sB2.label}</span>
+                    </div>`;
+                }
+                if (cntB > 0) {
+                    const fp2 = getFlipScore(listB);
+                    if (fp2) mHtml += `<div class="flip-row">Flip Potential: <span class="${fp2.cls}">${fp2.label}</span></div>`;
+                }
+                mobileInfo.innerHTML = mHtml;
+            }
         }
 
         // ===================================================
