@@ -61,6 +61,8 @@
     <!-- Feature: Chart.js for History Graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Safari iOS: toggled by JS after restore to force CSS variable re-evaluation */
+        html.force-repaint * { outline-color: transparent; }
         :root {
             --bg: #0b1120;
             --panel: #161e2e;
@@ -165,7 +167,6 @@
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background-color: var(--bg);
             color: var(--text);
-            -webkit-text-fill-color: initial;
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -249,11 +250,11 @@
         .card-name {
             font-size: 0.7em; font-weight: 800; text-align: center; min-height: 2.4em;
             line-height: 1.2; color: #cbd5e1 !important; overflow: visible; word-wrap: break-word;
-            max-width: 100%; -webkit-text-fill-color: #cbd5e1;
+            max-width: 100%;
         }
-        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost) !important; margin: 6px 0 2px 0; -webkit-text-fill-color: var(--frost); }
+        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost) !important; margin: 6px 0 2px 0; }
         .card-demand {
-            font-size: 0.8em; font-weight: 800; color: var(--demand-color); margin-bottom: 4px; -webkit-text-fill-color: var(--demand-color);
+            font-size: 0.8em; font-weight: 800; color: var(--demand-color); margin-bottom: 4px;
         }
         .del {
             position: absolute; top: -6px; right: -6px; width: 22px; height: 22px;
@@ -744,17 +745,11 @@
                 left: 0; right: 0; bottom: 0;
                 width: 100%; max-width: 100%;
                 border-radius: 20px 20px 0 0;
-                padding: 10px 14px 16px;
+                padding: 12px 14px 18px;
                 box-sizing: border-box; transform: none;
             }
-            /* Show speed/flip on mobile — keep it compact */
-            .verdict-extras { display: block !important; }
-            .speed-row { font-size: 0.68em; gap: 5px; }
-            .flip-row { font-size: 0.7em; margin-top: 2px; }
-            /* BIG LOSE / BIG WIN readable size */
-            .v-text { font-size: 2em; letter-spacing: -1px; }
-            .v-diff { font-size: 0.82em; margin-bottom: 3px; }
-            .v-sub { font-size: 0.72em; margin-bottom: 8px; padding: 0 4px; }
+            .verdict-extras { display: none !important; }
+            .v-text { font-size: 1.7em; }
             .switches { flex-wrap: wrap; gap: 4px; justify-content: center; }
             .sw-btn { padding: 5px 10px; font-size: 0.72em; }
             .save-trade-btn { padding: 5px 10px; font-size: 0.72em; }
@@ -2386,6 +2381,19 @@
                 fetchHistory();
                 restoreTrade();
                 render();
+                // Safari/iOS bug: after restoring saved trade, CSS variable-colored
+                // text can be invisible due to stale compositor layers.
+                // Fix: force a full style recalc + repaint via classList toggle.
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        // Toggle a class that changes nothing visually but forces
+                        // Safari to re-evaluate all CSS variables on every element
+                        document.documentElement.classList.add('force-repaint');
+                        requestAnimationFrame(() => {
+                            document.documentElement.classList.remove('force-repaint');
+                        });
+                    });
+                });
                 // Render lists if already on those tabs
                 if (currentTab === 'value') renderValueList();
                 if (currentTab === 'demand') renderDemandList();
