@@ -237,13 +237,14 @@
             background: var(--card); border-radius: 14px; padding: 12px 8px;
             display: flex; flex-direction: column; align-items: center; position: relative;
             border: 1.5px solid transparent; transition: all 0.2s;
+            touch-action: manipulation; -webkit-user-select: none; user-select: none;
         }
         .card:hover { border-color: var(--accent); transform: translateY(-2px); }
         .card-img-container {
             width: 65px; height: 65px; display: flex; align-items: center;
             justify-content: center; margin-bottom: 5px; cursor: copy;
         }
-        .card-img-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .card-img-container img { max-width: 100%; max-height: 100%; object-fit: contain; -webkit-user-drag: none; user-select: none; -webkit-touch-callout: none; pointer-events: none; }
         .card-name {
             font-size: 0.7em; font-weight: 800; text-align: center; min-height: 2.4em;
             line-height: 1.2; color: #cbd5e1; overflow: visible; word-wrap: break-word;
@@ -2121,16 +2122,17 @@
             if (isMobile) {
                 body.innerHTML = `
                 <div class="info-section">
-                    <h4>📱 Floating Action Buttons (bottom-right)</h4>
-                    <div class="info-row"><span class="info-label">↩ Undo</span><span class="info-val">Undo your last pet add, remove, or change. Dims when nothing left to undo.</span></div>
-                    <div class="info-row"><span class="info-label">↪ Redo</span><span class="info-val">Redo a change you undid. Dims when nothing left to redo.</span></div>
-                    <div class="info-row"><span class="info-label">📈 Graph</span><span class="info-val">Tap a pet card first, then tap this to view its full price & demand history chart.</span></div>
-                    <div class="info-row"><span class="info-label">＋ Quantity</span><span class="info-val">Tap a pet card first, then tap this to add multiple copies of that pet at once.</span></div>
+                    <h4>📱 Floating Buttons (bottom-right of screen)</h4>
+                    <div class="info-row"><span class="info-label">↩ Undo</span><span class="info-val">Undoes your last change — adding, removing, or toggling a pet. Fades out when nothing left to undo.</span></div>
+                    <div class="info-row"><span class="info-label">↪ Redo</span><span class="info-val">Redoes a change you just undid.</span></div>
                 </div>
                 <div class="info-section">
-                    <h4>✋ Long-Press a Pet Image</h4>
-                    <div class="info-row"><span class="info-label">Hold ~0.5s on image</span><span class="info-val">Opens a context menu with: View Graph, Add Quantity, Duplicate, or Remove.</span></div>
-                    <div class="info-row"><span class="info-label">Double-tap image</span><span class="info-val">Duplicates that pet card instantly.</span></div>
+                    <h4>✋ Hold Down a Pet Card (Long-Press)</h4>
+                    <div class="info-row"><span class="info-label">Press and hold ~0.5s</span><span class="info-val">A menu pops up with four options:</span></div>
+                    <div class="info-row"><span class="info-label">📈 View History Graph</span><span class="info-val">Opens the price & demand chart for that pet</span></div>
+                    <div class="info-row"><span class="info-label">＋ Add Multiple</span><span class="info-val">Add more than one copy of that pet at once</span></div>
+                    <div class="info-row"><span class="info-label">⧉ Duplicate</span><span class="info-val">Adds one more copy of that card</span></div>
+                    <div class="info-row"><span class="info-label">✕ Remove</span><span class="info-val">Removes that pet from the trade or inventory</span></div>
                 </div>
                 <div class="info-section">
                     <h4>🔢 Trend Emoji Tooltips</h4>
@@ -2409,33 +2411,59 @@
 
 
         // ================================================================
-        // MOBILE INTERACTIONS
+        // MOBILE INTERACTIONS — event delegation approach
         // ================================================================
-        // On mobile, right-click doesn't exist. We replace it with:
-        //   Long-press (500ms) on any pet image → context menu
-        //   FAB bar (bottom-right) → undo, redo, graph, qty picker
+        // Long-press detection uses a single delegated listener on document.
+        // Cards store pet data in data-* attributes so we can read it on press.
+        // We prevent the browser's native image save/zoom with e.preventDefault()
+        // and CSS touch-action + user-select on the img tags.
         //
-        // _mobileCtxTarget stores the pet data for the long-pressed card.
+        // FAB bar: just Undo and Redo. Everything else is via long-press menu.
         // ================================================================
-        let _mobileCtxTarget = null; // { petData, side, uid }
-        let _longPressTimer   = null;
-        let _longPressFired   = false;
+        let _mobileCtxTarget = null;
+        let _longPressTimer  = null;
+        let _longPressFired  = false;
+        let _touchStartX     = 0;
+        let _touchStartY     = 0;
 
-        // Attach long-press listeners to a card image element
-        function attachMobileLongPress(el, petData, side, uid) {
-            el.addEventListener('touchstart', function(e) {
+        // Called once after DOM ready — hooks touch events on the document
+        function initMobileInteractions() {
+            document.addEventListener('touchstart', function(e) {
+                const card = e.target.closest('.card');
+                if (!card) return;
+
+                // Prevent browser from showing its native image context menu
+                if (e.target.tagName === 'IMG') e.preventDefault();
+
+                const petName = card.dataset.petname;
+                const side    = card.dataset.side;
+                const uid     = parseFloat(card.dataset.uid);
+                if (!petName) return;
+
                 _longPressFired = false;
+                _touchStartX = e.touches[0].clientX;
+                _touchStartY = e.touches[0].clientY;
+
                 _longPressTimer = setTimeout(() => {
+                    const pet = ALL_PETS.find(p => p.n === petName);
+                    if (!pet) return;
                     _longPressFired = true;
-                    _mobileCtxTarget = { petData, side, uid };
+                    _mobileCtxTarget = { petData: pet, side, uid };
                     openMobileCtx(e.touches[0].clientX, e.touches[0].clientY);
-                }, 480);
+                }, 500);
+            }, { passive: false });
+
+            document.addEventListener('touchmove', function(e) {
+                if (!_longPressTimer) return;
+                const dx = Math.abs(e.touches[0].clientX - _touchStartX);
+                const dy = Math.abs(e.touches[0].clientY - _touchStartY);
+                // Cancel long-press if finger moved more than 8px
+                if (dx > 8 || dy > 8) { clearTimeout(_longPressTimer); _longPressTimer = null; }
             }, { passive: true });
-            el.addEventListener('touchend', function() {
+
+            document.addEventListener('touchend', function() {
                 clearTimeout(_longPressTimer);
-            }, { passive: true });
-            el.addEventListener('touchmove', function() {
-                clearTimeout(_longPressTimer);
+                _longPressTimer = null;
             }, { passive: true });
         }
 
@@ -2443,50 +2471,31 @@
             const menu = document.getElementById('mobileCtxMenu');
             const bg   = document.getElementById('mobileCtxBg');
             if (!menu) return;
-            // Position near touch point but keep on screen
-            const mw = 220, mh = 160;
+            const mw = 230, mh = 180;
             const left = Math.min(x, window.innerWidth  - mw - 10);
-            const top  = Math.min(y, window.innerHeight - mh - 10);
-            menu.style.left = left + 'px';
-            menu.style.top  = top  + 'px';
+            const top  = Math.min(y - mh - 10, window.innerHeight - mh - 20);
+            menu.style.left = Math.max(8, left) + 'px';
+            menu.style.top  = Math.max(8, top)  + 'px';
             menu.classList.add('open');
             bg.classList.add('open');
         }
 
         function closeMobileCtx() {
-            document.getElementById('mobileCtxMenu').classList.remove('open');
-            document.getElementById('mobileCtxBg').classList.remove('open');
+            const menu = document.getElementById('mobileCtxMenu');
+            const bg   = document.getElementById('mobileCtxBg');
+            if (menu) menu.classList.remove('open');
+            if (bg)   bg.classList.remove('open');
         }
 
         function mobileCtxAction(action) {
             closeMobileCtx();
             const t = _mobileCtxTarget;
             if (!action || !t) return;
-            if (action === 'graph') {
-                openGraph(t.petData);
-            } else if (action === 'qty') {
-                openQtyModal(t.petData.n);
-            } else if (action === 'dupe') {
-                if (t.side && t.uid != null) duplicate(t.side, t.uid);
-            } else if (action === 'remove') {
-                if (t.side && t.uid != null) remove(t.side, t.uid);
-            }
+            if      (action === 'graph')  openGraph(t.petData);
+            else if (action === 'qty')    openQtyModal(t.petData.n);
+            else if (action === 'dupe')   { if (t.side && t.uid != null) duplicate(t.side, t.uid); }
+            else if (action === 'remove') { if (t.side && t.uid != null) remove(t.side, t.uid); }
             _mobileCtxTarget = null;
-        }
-
-        // FAB: graph and qty need the last-tapped pet — track it
-        let _lastTappedPet = null;
-        function setLastTappedPet(petData, side, uid) {
-            _lastTappedPet = { petData, side, uid };
-        }
-
-        function mobileFabGraph() {
-            if (_lastTappedPet) openGraph(_lastTappedPet.petData);
-            else showTBToast('Tap a pet first, then use 📈', '#f59e0b');
-        }
-        function mobileFabQty() {
-            if (_lastTappedPet) openQtyModal(_lastTappedPet.petData.n);
-            else showTBToast('Tap a pet first, then use ＋', '#f59e0b');
         }
 
         // Update FAB undo/redo dim state
@@ -2516,6 +2525,7 @@
         // Everything starts here. Calls loadPetData() to kick off the
         // CSV fetch + data init sequence. All other code waits for data.
         document.addEventListener('DOMContentLoaded', () => {
+            initMobileInteractions(); // set up long-press event delegation
           document.getElementById('mainSearch').addEventListener('input', (e) => {
             searchState.renderLimit = 50;
             filterAndRender(e.target.value.toLowerCase());
@@ -2931,7 +2941,7 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(currentDemand);
                 grid.innerHTML += `
-                    <div class="card ${lockedPets.has(p.n) ? 'pet-locked' : ''}" style="border-color: ${lockedPets.has(p.n) ? '#f59e0b' : rarityColor}">
+                    <div class="card ${lockedPets.has(p.n) ? 'pet-locked' : ''}" style="border-color: ${lockedPets.has(p.n) ? '#f59e0b' : rarityColor}" data-petname="${p.n}" data-side="inv" data-uid="${p.uid}">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
                         <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
                         <div style="position: absolute; top: 5px; right: 28px; background: var(--panel); border-radius: 5px; padding: 2px 4px; font-size: 10px; cursor: pointer; border: 1px solid var(--border); z-index: 12;" onclick="findSimilarToPet(${valTotal})">🔍</div>
@@ -2939,7 +2949,6 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                         <div class="card-img-container" 
                              oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
                              ondblclick="duplicate('inv', ${p.uid})"
-                             ontouchstart="setLastTappedPet(${JSON.stringify(p).replace(/'/g,'&apos;')}, 'inv', ${p.uid});"
                              title="Right click for Qty | Shift + Right click for Graph | Long-press on mobile">
                              <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
                         </div>
@@ -4107,12 +4116,11 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(currentDemand);
                 grid.innerHTML += `
-                    <div class="card" style="border-color: ${rarityColor}">
+                    <div class="card" style="border-color: ${rarityColor}" data-petname="${p.n}" data-side="${s}" data-uid="${p.uid}">
                         <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
                         <div class="card-img-container" 
                              oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
                              ondblclick="duplicate('${s}', ${p.uid})"
-                             ontouchstart="setLastTappedPet(${JSON.stringify(p).replace(/'/g,'&apos;')}, '${s}', ${p.uid});"
                              title="Right click for Qty | Shift + Right click for Graph | Long-press on mobile">
                             ${imgTag}
                         </div>
@@ -6252,11 +6260,10 @@ function renderTBCard(t) {
 
 
     <!-- ── MOBILE FLOATING ACTION BAR ── -->
+    <!-- Undo + Redo only. Long-press any pet card for graph/qty/dupe/remove. -->
     <div class="mobile-fab-bar" id="mobileFabBar">
-        <button class="mobile-fab" id="fabUndo" onclick="undo()" title="Undo">↩</button>
+        <button class="mobile-fab" id="fabUndo" onclick="undo()" title="Undo last change">↩</button>
         <button class="mobile-fab" id="fabRedo" onclick="redo()" title="Redo">↪</button>
-        <button class="mobile-fab" id="fabGraph" onclick="mobileFabGraph()" title="View Graph">📈</button>
-        <button class="mobile-fab" id="fabQty"   onclick="mobileFabQty()"   title="Add with Quantity">＋</button>
     </div>
 
     <!-- ── MOBILE LONG-PRESS CONTEXT MENU ── -->
