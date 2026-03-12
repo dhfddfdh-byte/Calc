@@ -2314,7 +2314,7 @@
                 B: state.B.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
                 inv: state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
                 keybinds:      state.keybinds || [],
-                uiScale:       state.uiScale  || 1.0,
+                uiScale:       Math.round((state.uiScale || 1.0) * 100), // store as integer percent
                 aiMode:        state.aiMode   || 'normal',
                 strategyLimit: state.strategyLimit || 10
             };
@@ -2335,7 +2335,7 @@
                 state.B = (parsed.B || []).map(hydrate).filter(x => x);
                 state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
                 if (parsed.keybinds)      state.keybinds      = parsed.keybinds;
-                if (parsed.uiScale)       { state.uiScale = parsed.uiScale; applyUIScale(parsed.uiScale); }
+                if (parsed.uiScale != null) { const sv = parsed.uiScale; applyUIScale(sv < 10 ? Math.round(sv * 100) : sv); } // <10 = old decimal format, >=10 = new int percent
                 if (parsed.aiMode)        state.aiMode        = parsed.aiMode;
                 if (parsed.strategyLimit) state.strategyLimit = parsed.strategyLimit;
                 render();
