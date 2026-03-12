@@ -249,11 +249,11 @@
         .card-name {
             font-size: 0.7em; font-weight: 800; text-align: center; min-height: 2.4em;
             line-height: 1.2; color: #cbd5e1 !important; overflow: visible; word-wrap: break-word;
-            max-width: 100%;
+            max-width: 100%; -webkit-text-fill-color: #cbd5e1;
         }
-        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost) !important; margin: 6px 0 2px 0; }
+        .card-val { font-size: 0.95em; font-weight: 950; color: var(--frost) !important; margin: 6px 0 2px 0; -webkit-text-fill-color: var(--frost); }
         .card-demand {
-            font-size: 0.8em; font-weight: 800; color: var(--demand-color); margin-bottom: 4px;
+            font-size: 0.8em; font-weight: 800; color: var(--demand-color); margin-bottom: 4px; -webkit-text-fill-color: var(--demand-color);
         }
         .del {
             position: absolute; top: -6px; right: -6px; width: 22px; height: 22px;
@@ -663,7 +663,7 @@
         @media screen and (max-width: 768px) {
         .mobile-fab-bar {
             display: flex;
-            position: fixed; bottom: 74px; right: 12px;
+            position: fixed; bottom: 260px; right: 10px;
             flex-direction: column; gap: 7px; z-index: 5100;
         }
         .mobile-fab {
@@ -744,11 +744,17 @@
                 left: 0; right: 0; bottom: 0;
                 width: 100%; max-width: 100%;
                 border-radius: 20px 20px 0 0;
-                padding: 12px 14px 18px;
+                padding: 10px 14px 16px;
                 box-sizing: border-box; transform: none;
             }
-            .verdict-extras { display: none !important; }
-            .v-text { font-size: 1.7em; }
+            /* Show speed/flip on mobile — keep it compact */
+            .verdict-extras { display: block !important; }
+            .speed-row { font-size: 0.68em; gap: 5px; }
+            .flip-row { font-size: 0.7em; margin-top: 2px; }
+            /* BIG LOSE / BIG WIN readable size */
+            .v-text { font-size: 2em; letter-spacing: -1px; }
+            .v-diff { font-size: 0.82em; margin-bottom: 3px; }
+            .v-sub { font-size: 0.72em; margin-bottom: 8px; padding: 0 4px; }
             .switches { flex-wrap: wrap; gap: 4px; justify-content: center; }
             .sw-btn { padding: 5px 10px; font-size: 0.72em; }
             .save-trade-btn { padding: 5px 10px; font-size: 0.72em; }
@@ -2433,8 +2439,9 @@
                 const card = e.target.closest('.card');
                 if (!card) return;
 
-                // Prevent native image popup AND prevent scroll from racing the long-press
-                e.preventDefault();
+                // Only block native image callout — NOT the whole touch.
+                // Blocking the whole touchstart breaks Safari text rendering (WebKit bug).
+                if (e.target.tagName === 'IMG') e.preventDefault();
 
                 const petName = card.dataset.petname;
                 const side    = card.dataset.side;
@@ -2450,26 +2457,24 @@
                     if (!pet) return;
                     _longPressFired = true;
                     _mobileCtxTarget = { petData: pet, side, uid };
-                    // Use the stored start position so menu appears where finger landed
+                    // Vibrate to signal menu opened (if supported)
+                    if (navigator.vibrate) navigator.vibrate(40);
                     openMobileCtx(_touchStartX, _touchStartY);
-                }, 500);
+                }, 550);
             }, { passive: false });
 
             document.addEventListener('touchmove', function(e) {
                 if (!_longPressTimer) return;
                 const dx = Math.abs(e.touches[0].clientX - _touchStartX);
                 const dy = Math.abs(e.touches[0].clientY - _touchStartY);
-                // Only cancel if finger moved a significant amount (20px)
-                // Small movements are normal when pressing on a scrollable list
-                if (dx > 20 || dy > 20) { clearTimeout(_longPressTimer); _longPressTimer = null; }
+                if (dx > 18 || dy > 18) { clearTimeout(_longPressTimer); _longPressTimer = null; }
             }, { passive: true });
 
-            document.addEventListener('touchend', function(e) {
+            document.addEventListener('touchend', function() {
                 clearTimeout(_longPressTimer);
-                // If long press fired, prevent the tap from also triggering onclick
-                if (_longPressFired) { e.preventDefault(); _longPressFired = false; }
+                _longPressFired = false;
                 _longPressTimer = null;
-            }, { passive: false });
+            }, { passive: true });
         }
 
         function openMobileCtx(x, y) {
