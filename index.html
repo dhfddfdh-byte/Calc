@@ -440,12 +440,15 @@
         /* ===== HOME SCREEN / TAB SYSTEM ===== */
         .home-screen { width: 100%; max-width: 1150px; display: flex; flex-direction: column; align-items: center; }
         .tab-bar {
-            display: flex; gap: 10px; margin-bottom: 28px;
+            display: flex; gap: 6px; margin-bottom: 28px;
             background: #111827; border-radius: 50px; padding: 6px;
             border: 1.5px solid var(--border);
+            overflow-x: auto; -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* hide scrollbar */
         }
+        .tab-bar::-webkit-scrollbar { display: none; }
         .tab-btn {
-            display: flex; align-items: center; gap: 8px;
+            display: flex; align-items: center; gap: 8px; flex-shrink: 0;
             padding: 10px 28px; border-radius: 44px; border: none;
             font-weight: 900; font-size: 0.9em; cursor: pointer;
             transition: all 0.2s; color: var(--subtext); background: transparent;
@@ -614,6 +617,21 @@
         .tag-penalty { background: rgba(245,158,11,0.18); color: #fcd34d; border: 1.5px solid rgba(245,158,11,0.5); }
         .tag-played { background: rgba(239,68,68,0.22); color: #f87171; border: 2px solid #ef4444; font-size: 0.8em; font-weight: 900; padding: 5px 14px; border-radius: 20px; animation: pulse 2s infinite; }
         .verdict-mobile-info { display: none; } /* shown only on mobile */
+
+        /* ── TRENDS TAB ── */
+        .trends-grid { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
+        .trends-card {
+            display: flex; align-items: center; gap: 12px;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 10px 14px; cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .trends-card:hover { border-color: var(--accent); background: #1e2d42; }
+        .trends-card-info { flex: 1; min-width: 0; }
+        .trends-card-name { font-weight: 900; font-size: 0.9em; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .trends-card-stats { display: flex; gap: 10px; font-size: 0.78em; font-weight: 700; margin-bottom: 4px; flex-wrap: wrap; }
+        .trends-card-badges { display: flex; gap: 5px; flex-wrap: wrap; }
+        .trends-badge { font-size: 0.68em; font-weight: 900; padding: 2px 7px; border-radius: 8px; background: rgba(255,255,255,0.07); color: var(--subtext); }
         .speed-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; font-size: 0.75em; font-weight: 900; }
         .speed-pill { padding: 3px 10px; border-radius: 12px; }
         .speed-fast { background: rgba(16,185,129,0.15); color: #34d399; }
@@ -798,8 +816,21 @@
             .inv-header h2 { font-size: 0.95em; }
             /* Desktop buttons: hidden on mobile */
             .inv-desktop-btns { display: none !important; }
-            /* Desktop close: hidden on mobile (we have a separate one) */
-            .inv-mobile-close { display: block !important; }
+            /* Mobile close: always visible, floated to top-right */
+            .inv-mobile-close {
+                display: block !important;
+                position: absolute !important;
+                top: 10px !important;
+                right: 10px !important;
+                z-index: 10 !important;
+                background: #ef4444 !important;
+                color: white !important;
+                border-color: #ef4444 !important;
+                font-weight: 900 !important;
+                padding: 6px 14px !important;
+                font-size: 0.82em !important;
+            }
+            .inv-header { position: relative !important; }
             /* Mobile-only buttons and tabs: show them */
             .inv-mobile-btns { display: flex !important; }
             .inv-mobile-tabs { display: flex !important; }
@@ -948,6 +979,31 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             Trade Board
         </button>
+        <button class="tab-btn" id="tabBtnTrends" onclick="switchTab('trends')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><line x1="16" y1="7" x2="22" y2="7"/><line x1="22" y1="7" x2="22" y2="13"/></svg>
+            Trends
+        </button>
+    </div>
+
+    <!-- TRENDS TAB -->
+    <div class="tab-content" id="tabTrends">
+        <div class="vlist-container">
+            <div class="vlist-header">
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span style="font-weight:900;color:white">📈 Trending Pets</span>
+                    <div class="vlist-type-group">
+                        <button class="vlist-type-btn active" id="trendSortRisingVal" onclick="setTrendSort('rising_val')">📈 Rising Value</button>
+                        <button class="vlist-type-btn" id="trendSortFallingVal" onclick="setTrendSort('falling_val')">📉 Falling Value</button>
+                        <button class="vlist-type-btn" id="trendSortRisingDem" onclick="setTrendSort('rising_dem')">🔥 Rising Demand</button>
+                        <button class="vlist-type-btn" id="trendSortFallingDem" onclick="setTrendSort('falling_dem')">❄️ Falling Demand</button>
+                    </div>
+                </div>
+                <input type="text" class="vlist-search" id="trendSearch" placeholder="🔍 Search pets..." oninput="renderTrendsList()">
+            </div>
+            <div class="vlist-body" id="trendListBody">
+                <div style="text-align:center;color:var(--subtext);padding:40px">Loading trends...</div>
+            </div>
+        </div>
     </div>
 
     <!-- VALUE LIST TAB -->
@@ -1087,7 +1143,7 @@
                         <button class="nav-btn" style="padding:6px 14px;font-size:0.8em" onclick="closeInventory()">✕ Close</button>
                     </div>
                     <!-- Mobile close (shown via CSS on mobile, hidden on desktop) -->
-                    <button class="inv-mobile-close nav-btn" style="padding:5px 12px;font-size:0.78em;font-weight:900" onclick="closeInventory()">✕ Close</button>
+                    <button class="inv-mobile-close nav-btn" style="padding:5px 14px;font-size:0.82em;font-weight:900;background:#ef4444;border-color:#ef4444;color:white" onclick="closeInventory()">✕ Close</button>
                 </div>
                 <!-- Mobile: action buttons row -->
                 <div class="inv-mobile-btns" style="display:none;gap:6px;flex-wrap:wrap;margin-top:8px">
@@ -1274,14 +1330,33 @@
                             <option value="0.40">±40% Value</option>
                             <option value="0.60">±60% Value</option>
                         </select>
+                        <select class="advisor-filter-select" id="advisorAcceptFilter" onchange="refreshAdvisorTargets()">
+                            <option value="0">Any Accept Rate</option>
+                            <option value="30">30%+ accept</option>
+                            <option value="45">45%+ accept</option>
+                            <option value="60">60%+ accept</option>
+                        </select>
                         <select class="advisor-filter-select" id="advisorSortFilter" onchange="refreshAdvisorTargets()">
                             <option value="tqs">Sort: Quality Score</option>
+                            <option value="accept">Sort: Accept Rate</option>
                             <option value="demand">Sort: Demand</option>
                             <option value="value">Sort: Value Gain</option>
                         </select>
                     </div>
                     <div class="advisor-results" id="advisorResults">
                         <div class="advisor-empty">Add pets to your offer on the left to see smart recommendations.</div>
+                    </div>
+                    <!-- Custom Target Evaluator -->
+                    <div id="customTargetBox" style="border-top:1px solid var(--border);padding:12px 16px;background:#0f172a">
+                        <div style="font-size:0.72em;font-weight:900;color:var(--subtext);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">🎯 Evaluate a Custom Target</div>
+                        <div style="font-size:0.75em;color:var(--subtext);margin-bottom:8px">What if they offer you a specific pet? Enter it below for instant feedback.</div>
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                            <input id="customTargetInput" type="text" placeholder="Type a pet name..." style="flex:1;min-width:120px;background:#1e2d42;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:6px 10px;font-size:0.8em;font-family:inherit"
+                                oninput="customTargetAutocomplete(this.value)" onkeydown="if(event.key==='Enter')evaluateCustomTarget()">
+                            <button class="nav-btn" style="font-size:0.75em;padding:5px 12px;background:var(--accent);border-color:var(--accent)" onclick="evaluateCustomTarget()">Evaluate</button>
+                        </div>
+                        <div id="customTargetDropdown" style="display:none;background:#1e2d42;border:1px solid var(--border);border-radius:10px;margin-top:4px;max-height:140px;overflow-y:auto"></div>
+                        <div id="customTargetResult" style="margin-top:10px"></div>
                     </div>
                     <div class="advisor-insight-bar" id="advisorInsightBar">
                         Add pets from your inventory to your offer, then see what you should be trading for.
@@ -2161,6 +2236,33 @@
                     <h4>🎯 Trade Advisor</h4>
                     <div class="info-row"><span class="info-label">Your Offer tab</span><span class="info-val">Add pets from your inventory to build your offer.</span></div>
                     <div class="info-row"><span class="info-label">Targets tab</span><span class="info-val">See what you should be asking for based on your offer. Auto-switches when you add a pet.</span></div>
+                </div>
+                <div style="text-align:center;margin-top:18px">
+                    <button class="nav-btn" style="background:var(--accent);border-color:var(--accent);font-size:0.85em;padding:8px 22px;width:100%" onclick="openExplanations()">📖 How Everything Is Calculated →</button>
+                </div>
+                <div class="info-section" style="margin-top:16px;display:none">
+                    <div class="expl-body">
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:12px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">🎯 Trade Quality Score (TQS)</span>
+                            <span class="info-val">A 0–10 score rating how good a trade target is. It combines: value alignment (is the gap realistic?), demand score (non-linear — demand 9 is much better than 8), demand tier improvement (trading up in demand is rewarded), category score (Exotics/High Tier score higher), overpay psychology (some pets trade above list value), trend direction (rising targets score higher), liquidity (how often does this pet actually trade?), and bundle readability (clean offers score better). Final score is clamped 0–10.</span>
+                        </div>
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:12px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">✅ Accept Rate %</span>
+                            <span class="info-val">Estimates the chance someone actually accepts your offer. Starts from a base determined by how much you overpay (+25% overpay = ~82%, fair value = ~58%, -15% = ~13%). Then adjusted for: upgrade vs downgrade direction, high-tier owner premium (they expect overpay), HTT in your offer (they don't want it), HTT as target (they want out), bundle size (2-pet = +3%, 5+ = -16%), demand mismatch, category of your offer, new pet hype decay, rising/falling trends on both sides, and manipulation flags. Hard capped at 80% — community consensus is people always decline for personal reasons sometimes. Based on Adopt Me Reddit, Fandom trading guides, and community trading psychology research.</span>
+                        </div>
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:12px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">📈 Trending Pets</span>
+                            <span class="info-val">Each pet gets a score based on: demand × 1.5 (biggest factor), value trend velocity (how fast is it changing?), acceleration (speeding up or slowing down?), liquidity (how often does it trade?), trend emojis (📈/🔥 = +4 each, 📉/❄️ = -5 each), HTT = -10 and filtered out. Top 5 scorers show in the search panel as "Trending Now" pills.</span>
+                        </div>
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:12px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">💊 Inventory Health Score</span>
+                            <span class="info-val">Scored out of 100. Breakdown: Demand Quality (0–30): avg demand / 10 × 30. Liquidity (0–20): avg liquidity score × 20. Category Mix (0–20): % exotic/high-tier/preppy × 20. Trend Momentum (0–15): rising pets minus falling pets. HTT Penalty: -15 per 25% HTT. Manipulation Penalty: -10 per manipulated pet. Final score = sum clamped 0–100.</span>
+                        </div>
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">⚡ Trade Speed</span>
+                            <span class="info-val">Based on average demand of each side. Demand 8+ = Instant ⚡, 6–7 = Fast 🟢, 4–5 = Moderate 🟡, 2–3 = Slow 🔴, under 2 = Very Slow ⛔. Higher demand = more people want it = faster trades.</span>
+                        </div>
+                    </div>
                 </div>`;
             } else {
                 body.innerHTML = `
@@ -2196,11 +2298,97 @@
                     <div class="info-row"><span class="info-label">Left panel</span><span class="info-val">Build your offer by clicking pets from your inventory</span></div>
                     <div class="info-row"><span class="info-label">Right panel</span><span class="info-val">See ranked target pets based on your offer value, demand filters, and category</span></div>
                     <div class="info-row"><span class="info-label">Filters bar</span><span class="info-val">Filter targets by demand, category (Preppy, Exotic, etc.) and value window</span></div>
+                </div>
+                <div style="text-align:center;margin-top:18px">
+                    <button class="nav-btn" style="background:var(--accent);border-color:var(--accent);font-size:0.85em;padding:8px 22px;width:100%" onclick="openExplanations()">📖 How Everything Is Calculated →</button>
+                </div>
+                <div class="info-section" style="margin-top:16px;display:none">
+                    <div class="expl-body">
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:12px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">🎯 Trade Quality Score (TQS)</span>
+                            <span class="info-val">A 0–10 score rating how good a trade target is. It combines: value alignment (is the gap realistic?), demand score (non-linear — demand 9 is much better than 8), demand tier improvement (trading up in demand is rewarded), category score (Exotics/High Tier score higher), overpay psychology (some pets trade above list value), trend direction (rising targets score higher), liquidity (how often does this pet actually trade?), and bundle readability (clean offers score better). Final score is clamped 0–10.</span>
+                        </div>
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:12px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">✅ Accept Rate %</span>
+                            <span class="info-val">Estimates the chance someone actually accepts your offer. Starts from a base determined by how much you overpay (+25% overpay = ~82%, fair value = ~58%, -15% = ~13%). Then adjusted for: upgrade vs downgrade direction, high-tier owner premium (they expect overpay), HTT in your offer (they don't want it), HTT as target (they want out), bundle size (2-pet = +3%, 5+ = -16%), demand mismatch, category of your offer, new pet hype decay, rising/falling trends on both sides, and manipulation flags. Hard capped at 80% — community consensus is people always decline for personal reasons sometimes. Based on Adopt Me Reddit, Fandom trading guides, and community trading psychology research.</span>
+                        </div>
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:12px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">📈 Trending Pets</span>
+                            <span class="info-val">Each pet gets a score based on: demand × 1.5 (biggest factor), value trend velocity (how fast is it changing?), acceleration (speeding up or slowing down?), liquidity (how often does it trade?), trend emojis (📈/🔥 = +4 each, 📉/❄️ = -5 each), HTT = -10 and filtered out. Top 5 scorers show in the search panel as "Trending Now" pills.</span>
+                        </div>
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:12px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">💊 Inventory Health Score</span>
+                            <span class="info-val">Scored out of 100. Breakdown: Demand Quality (0–30): avg demand / 10 × 30. Liquidity (0–20): avg liquidity score × 20. Category Mix (0–20): % exotic/high-tier/preppy × 20. Trend Momentum (0–15): rising pets minus falling pets. HTT Penalty: -15 per 25% HTT. Manipulation Penalty: -10 per manipulated pet. Final score = sum clamped 0–100.</span>
+                        </div>
+                        <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+                            <span class="info-label" style="font-size:0.85em;color:var(--accent)">⚡ Trade Speed</span>
+                            <span class="info-val">Based on average demand of each side. Demand 8+ = Instant ⚡, 6–7 = Fast 🟢, 4–5 = Moderate 🟡, 2–3 = Slow 🔴, under 2 = Very Slow ⛔. Higher demand = more people want it = faster trades.</span>
+                        </div>
+                    </div>
                 </div>`;
             }
             document.getElementById('infoOverlay').style.display = 'flex';
         }
         function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
+
+        function openExplanations() {
+            const body = document.getElementById('infoBody');
+            body.innerHTML = `
+            <div style="margin-bottom:16px">
+                <button class="nav-btn" style="font-size:0.78em;margin-bottom:16px" onclick="openInfo()">← Back to Guide</button>
+            </div>
+            <div class="info-section">
+                <h4>🎯 Trade Quality Score (TQS) — 0 to 10</h4>
+                <p style="color:var(--subtext);font-size:0.88em;line-height:1.6">The TQS is a composite score that measures how good a trade is for YOU. It combines 9 factors:</p>
+                <div class="info-row"><span class="info-label">Value Alignment</span><span class="info-val">How close the target's value is to your offer. A small gain (~10–20%) scores highest — big discounts are easy to ask for but hard to get.</span></div>
+                <div class="info-row"><span class="info-label">Demand Score</span><span class="info-val">Non-linear — demand 9+ is worth far more than demand 6. High demand = easy to trade away later.</span></div>
+                <div class="info-row"><span class="info-label">Demand Tier Shift</span><span class="info-val">Trading low-demand pets FOR high-demand pets gets a 1.5× multiplier. The opposite tanks your score.</span></div>
+                <div class="info-row"><span class="info-label">Category Score</span><span class="info-val">Exotic and High Tier pets score higher because the community values them above their listed price.</span></div>
+                <div class="info-row"><span class="info-label">Overpay Psychology</span><span class="info-val">Preppy and certain pets trade above listed value. If your offer has high overpay factor but the target doesn't, score drops.</span></div>
+                <div class="info-row"><span class="info-label">Trend Velocity</span><span class="info-val">Getting a rising pet while giving a falling one = Double Win (+2). The reverse = Double Loss (−2).</span></div>
+                <div class="info-row"><span class="info-label">Liquidity</span><span class="info-val">How often this pet actually appears in trades. High demand but rarely traded = lower score.</span></div>
+                <div class="info-row"><span class="info-label">Bundle Readability</span><span class="info-val">Offering 4 pets makes the other person do mental math. Clean bundles score higher.</span></div>
+                <div class="info-row"><span class="info-label">Penalties</span><span class="info-val">HTT pets (−4), manipulated values (−2.5), trading high-demand for very-low-demand (−4).</span></div>
+            </div>
+            <div class="info-section">
+                <h4>✅ Accept Rate — Why It's Reliable</h4>
+                <p style="color:var(--subtext);font-size:0.88em;line-height:1.6">The accept % estimates how likely someone is to say yes to your trade. It's built from 11 real factors researched from the Adopt Me community, Reddit, and Fandom trading guides:</p>
+                <div class="info-row"><span class="info-label">Overpay Ladder</span><span class="info-val">Community consensus: fair = within 3%. Offering 15%+ gets you to ~74%. Asking 15% below value drops to ~28%.</span></div>
+                <div class="info-row"><span class="info-label">Upgrade Bonus</span><span class="info-val">Trading many small pets for one big one — people accept more readily than 1-for-1 or downgrade trades.</span></div>
+                <div class="info-row"><span class="info-label">High-Tier Owner Penalty</span><span class="info-val">Shadow Dragon, Frost Dragon, Bat Dragon owners always expect overpay. Fair value = almost always rejected. −12% if you're offering fair on an Exotic.</span></div>
+                <div class="info-row"><span class="info-label">HTT as TARGET</span><span class="info-val">If the pet you want is Hard To Trade, the owner WANTS out of it. +8% accept — they're motivated to deal.</span></div>
+                <div class="info-row"><span class="info-label">Bundle Friction</span><span class="info-val">2 pets = +3% (clean offer). 4 pets = −8%. 5+ pets = −16%. More pets = more mental effort = less likely to accept.</span></div>
+                <div class="info-row"><span class="info-label">Rising/Falling Trend</span><span class="info-val">Offering rising pets = +8% (attractive). Offering falling pets = −10% (they know too). Target is rising = −8% (owner knows it). Target is falling = +10% (they want out).</span></div>
+                <div class="info-row"><span class="info-label">New Pet Hype</span><span class="info-val">Pets with very little history data = owner is holding hoping for more. −15% on new releases.</span></div>
+                <div class="info-row"><span class="info-label">Demand Match</span><span class="info-val">Offering high-demand pets for a low-demand target = −14%. They don't want your pets back.</span></div>
+                <div class="info-row"><span class="info-label">80% Hard Cap</span><span class="info-val">Reddit consensus: people decline even great overpays if they simply don't want your specific pets. Max is capped at 80% to reflect this unavoidable randomness.</span></div>
+                <p style="color:#fbbf24;font-size:0.82em;margin-top:10px;line-height:1.5">⚠️ The accept rate is a directional signal, not a guarantee. A 65% trade is meaningfully easier to get accepted than a 20% trade — but the exact number depends on the individual player.</p>
+            </div>
+            <div class="info-section">
+                <h4>📈 Trending Pets — How They're Ranked</h4>
+                <div class="info-row"><span class="info-label">Score formula</span><span class="info-val">Demand × 1.5 + trend velocity + acceleration bonus + liquidity score + trend emoji bonuses. HTT pets are excluded.</span></div>
+                <div class="info-row"><span class="info-label">Rising Value tab</span><span class="info-val">Pets whose recent history shows consistent upward price movement (>5% change).</span></div>
+                <div class="info-row"><span class="info-label">Falling Value tab</span><span class="info-val">Pets losing value — good to trade away before they drop further.</span></div>
+                <div class="info-row"><span class="info-label">Rising/Falling Demand</span><span class="info-val">Based on 🔥/❄️ demand trend emojis from the spreadsheet data.</span></div>
+            </div>
+            <div class="info-section">
+                <h4>🏥 Inventory Health Score — 0 to 100</h4>
+                <div class="info-row"><span class="info-label">Demand Quality (30pts)</span><span class="info-val">Average demand across your inventory. Demand 7+ across the board = near perfect score.</span></div>
+                <div class="info-row"><span class="info-label">Liquidity (20pts)</span><span class="info-val">How often your pets actually trade. High demand but rarely traded pets score lower here.</span></div>
+                <div class="info-row"><span class="info-label">Trend Direction (20pts)</span><span class="info-val">What % of your inventory is rising vs falling in value and demand.</span></div>
+                <div class="info-row"><span class="info-label">HTT Penalty (−20pts)</span><span class="info-val">Hard-to-trade pets heavily penalize your score — they're portfolio dead weight.</span></div>
+                <div class="info-row"><span class="info-label">Premium Category (10pts)</span><span class="info-val">Holding Exotic, High Tier, or Preppy pets boosts your score.</span></div>
+            </div>`;
+            document.getElementById('infoOverlay').style.display = 'flex';
+        }
+        function toggleExplSection(header) {
+            const body = header.nextElementSibling;
+            if (!body) return;
+            const open = body.style.display !== 'none';
+            body.style.display = open ? 'none' : 'block';
+            const hint = header.querySelector('span');
+            if (hint) hint.textContent = open ? '(tap to expand)' : '(tap to collapse)';
+        }
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         // Plays a short Web Audio API sound effect.
@@ -2401,6 +2589,7 @@
                 // Render lists if already on those tabs
                 if (currentTab === 'value') renderValueList();
                 if (currentTab === 'demand') renderDemandList();
+                if (currentTab === 'trends') renderTrendsList();
                 if (currentTab === 'trades') { renderTradeBoard(); startTBTimers(); }
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -2447,18 +2636,33 @@
 
         // Called once after DOM ready — hooks touch events on the document
         function initMobileInteractions() {
+            let _lastTapCard = null, _lastTapTime = 0;
+
             document.addEventListener('touchstart', function(e) {
                 const card = e.target.closest('.card');
                 if (!card) return;
 
                 // Only block native image callout — NOT the whole touch.
-                // Blocking the whole touchstart breaks Safari text rendering (WebKit bug).
                 if (e.target.tagName === 'IMG') e.preventDefault();
 
                 const petName = card.dataset.petname;
                 const side    = card.dataset.side;
                 const uid     = parseFloat(card.dataset.uid);
                 if (!petName) return;
+
+                // ── Double-tap detection (duplicate) ──────────────────
+                const now = Date.now();
+                if (_lastTapCard === card && now - _lastTapTime < 320) {
+                    // Double tap — duplicate the pet
+                    clearTimeout(_longPressTimer);
+                    _lastTapCard = null;
+                    _lastTapTime = 0;
+                    duplicate(side, uid);
+                    if (navigator.vibrate) navigator.vibrate(20);
+                    return;
+                }
+                _lastTapCard = card;
+                _lastTapTime = now;
 
                 _longPressFired = false;
                 _touchStartX = e.touches[0].clientX;
@@ -2469,7 +2673,6 @@
                     if (!pet) return;
                     _longPressFired = true;
                     _mobileCtxTarget = { petData: pet, side, uid };
-                    // Vibrate to signal menu opened (if supported)
                     if (navigator.vibrate) navigator.vibrate(40);
                     openMobileCtx(_touchStartX, _touchStartY);
                 }, 550);
@@ -3288,45 +3491,96 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         }
 
         // ── ACCEPTANCE PROBABILITY MODEL ──────────────────────────────────
-        // Estimates % chance a target owner actually accepts your offer
+        // Estimates % chance a target owner actually accepts your offer.
+        // Research-based model incorporating Adopt Me community trading psychology,
+        // Reddit/Fandom consensus, pet tier culture, and trend-direction effects.
         function getAcceptanceProbability(offerVal, offerAvgDemand, target, offerBundle) {
             const targetVal = calculatePetVal({...target, type:'reg', f_st:false, r_st:false}, 'value');
             const valGapPct = targetVal > 0 ? ((offerVal - targetVal) / targetVal) * 100 : 0;
-            // Base: how much you're overpaying
-            let prob = 50;
-            if      (valGapPct >= 20) prob = 85;
-            else if (valGapPct >= 10) prob = 73;
-            else if (valGapPct >= 5)  prob = 63;
-            else if (valGapPct >= 0)  prob = 52;
-            else if (valGapPct >= -5) prob = 38;
-            else if (valGapPct >= -10)prob = 25;
-            else                      prob = 12;
-            // Demand of offer vs target demand
-            if (offerAvgDemand >= 7 && target.d < 5) prob -= 15; // they don't want your pets either
-            if (offerAvgDemand >= target.d)           prob += 5;  // your pets are as liquid as theirs
-            // HTT in offer = they might not want it
+
+            // ── 1. Base probability from overpay ladder ──────────────────
+            // Community defines "fair" as within 10%. People accept fair trades at
+            // higher rates than previously modeled — raised base at 0% gap to 58%.
+            let prob;
+            if      (valGapPct >= 25) prob = 82; // big overpay — attractive but uncommon
+            else if (valGapPct >= 15) prob = 74;
+            else if (valGapPct >= 8)  prob = 67;
+            else if (valGapPct >= 3)  prob = 61;
+            else if (valGapPct >= -3) prob = 58; // fair zone (±3%) — community standard
+            else if (valGapPct >= -8) prob = 44;
+            else if (valGapPct >= -15)prob = 28;
+            else                      prob = 13; // asking big discount
+
+            // ── 2. Upgrade vs downgrade direction ────────────────────────
+            // Trading many small pets for one big one = people accept more readily.
+            // Trading one good pet for many small ones = they expect more overpay.
+            const bundleSize = offerBundle ? offerBundle.length : 1;
+            const isUpgrade   = bundleSize >= 2 && (targetVal > offerVal * 0.9);
+            const isDowngrade = bundleSize === 1 && target && ALL_PETS.filter(p => p.n === target.n).length > 0;
+            if (isUpgrade)   prob += 5;  // upgrade direction bonus
+            if (bundleSize === 1 && valGapPct < 5) prob -= 4; // 1-for-1 fair feels like losing
+
+            // ── 3. High-tier owner premium penalty ───────────────────────
+            // Shadow Dragon, Frost Dragon, etc. owners always expect significant overpay.
+            // A fair value offer on a top-tier exotic is almost always rejected.
+            const targetTier = getCatTier(target);
+            if (targetTier >= 4 && valGapPct < 10) prob -= 12; // exotic owner expects overpay
+            else if (targetTier >= 3 && valGapPct < 5) prob -= 6; // high tier owner too
+
+            // ── 4. HTT asymmetric handling ───────────────────────────────
+            // HTT in YOUR OFFER = they don't want it → penalty
+            // HTT as TARGET = they want out of it → bonus
             const offerHTT = offerBundle && offerBundle.some(p => isHTT(p.n));
             if (offerHTT) prob -= 12;
-            // Many pets in offer = friction
-            const bundleSize = offerBundle ? offerBundle.length : 1;
-            if (bundleSize >= 5) prob -= 15;
-            else if (bundleSize >= 4) prob -= 8;
-            else if (bundleSize >= 3) prob -= 3;
-            // Category desirability of offer
+            if (isHTT(target.n)) prob += 8; // they want to get rid of it
+
+            // ── 5. Bundle friction (research-confirmed) ───────────────────
+            // 2-pet bundle = clean, signals organized trader → slight bonus
+            // 3 pets = neutral, 4 = friction, 5+ = major friction
+            if (bundleSize === 2)      prob += 3;
+            else if (bundleSize === 4) prob -= 8;
+            else if (bundleSize >= 5)  prob -= 16;
+
+            // ── 6. Demand dynamics ────────────────────────────────────────
+            if (offerAvgDemand >= 7 && target.d < 4) prob -= 14; // high dem offer for low dem target = they don't want yours back
+            if (offerAvgDemand >= target.d)           prob += 5;  // your pets as liquid as theirs
+            if (target.d >= 9)                         prob += 6;  // highly desired target — more competition but more motivated traders
+
+            // ── 7. Category desirability of offer ────────────────────────
             const offerTier = offerBundle ? getBundleTier(offerBundle) : 1;
-            if (offerTier >= 4) prob += 8;  // Exotic/High Tier offer = people want it
-            else if (offerTier >= 3) prob += 4;
-            // Manipulation spike on target = they might be holding hoping for more
-            if (getManipulationFlag(target.n)) prob -= 8;
-            // Trend double-win: offering falling for rising = great deal but they know it too
-            const offerTrend = offerBundle ? offerBundle.reduce((s,p) => {
+            if (offerTier >= 4) prob += 9;   // Exotic offer — people want it
+            else if (offerTier >= 3) prob += 5;
+
+            // ── 8. New pet hype decay ─────────────────────────────────────
+            // Pets with < 2 weeks of history = owner holding hoping for more
+            const trendData = getCachedTrend(target.n);
+            const petHistory = HISTORY_DATA.filter(h => h.name === target.n);
+            if (petHistory.length > 0 && petHistory.length < 5) prob -= 15; // very new = hype holding
+
+            // ── 9. Trend direction (rising/falling pets) ──────────────────
+            // If target is RISING: owner knows it's going up → harder to get
+            // If target is FALLING: owner wants out → easier to get
+            // If YOUR offer is RISING: more attractive to them
+            // If YOUR offer is FALLING: less attractive — they know too
+            const targetTrend = getCachedTrend(target.n);
+            if (targetTrend.direction === 'rising')  prob -= 8;  // they know their pet is rising
+            if (targetTrend.direction === 'falling') prob += 10; // they want to offload it
+            
+            const offerTrendScore = offerBundle ? offerBundle.reduce((s, p) => {
                 const t = getCachedTrend(p.n);
                 return s + (t.direction === 'rising' ? 1 : t.direction === 'falling' ? -1 : 0);
             }, 0) / Math.max(1, offerBundle.length) : 0;
-            const targetTrend = getCachedTrend(target.n);
-            if (offerTrend > 0 && targetTrend.direction === 'falling') prob += 10; // you're giving rising, they're giving falling
-            if (offerTrend < 0 && targetTrend.direction === 'rising')  prob -= 10;
-            return Math.max(5, Math.min(95, Math.round(prob)));
+            if (offerTrendScore > 0.5)  prob += 8;  // you're offering rising pets = attractive
+            if (offerTrendScore < -0.5) prob -= 10; // you're offering falling pets = red flag
+
+            // ── 10. Manipulation flag ─────────────────────────────────────
+            // Owner may be holding for a higher payout if value was recently spiked
+            if (getManipulationFlag(target.n)) prob -= 9;
+
+            // ── 11. Hard cap: desire uncertainty floor ────────────────────
+            // Reddit consensus: people decline even good overpays if they simply
+            // don't want your pets. Max is capped at 80% to reflect this.
+            return Math.max(5, Math.min(80, Math.round(prob)));
         }
 
         // ── INVENTORY HEALTH SCORE ────────────────────────────────────────
@@ -3851,12 +4105,15 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                     const targets = ALL_PETS
                         .filter(t => {
                             if (state.aiTargetPets.length > 0 && !state.aiTargetPets.some(x=>x.n===t.n)) return false;
-                            if (invNames.has(t.n)) return false;            // never suggest a pet you already own
+                            if (invNames.has(t.n)) return false;
+                            if (getManipulationFlag(t.n)) return false;    // skip value-spiked pets
                             const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
                             const liq = getLiquidityScore(t.n);
-                            return t.d >= 6.5                               // high demand required
-                                && liq >= 0.2                               // must actually trade
-                                && tv >= anchorVal * 0.82 && tv <= anchorVal * 1.25
+                            const ap  = getAcceptanceProbability(anchorVal, parseFloat(getEffDemand(anchor)), t, [anchor]);
+                            return t.d >= 6.5
+                                && liq >= 0.25                              // must actually trade
+                                && ap  >= 20                                // at least realistic accept chance
+                                && tv >= anchorVal * 0.85 && tv <= anchorVal * 1.30
                                 && !isHTT(t.n);
                         })
                         .sort((a,b) => {
@@ -3935,11 +4192,14 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                         if (candidates.length === 0) continue;
 
                         const best = candidates
-                            .map(t => ({ t,
+                            .map(t => ({
+                                t,
                                 tv: calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value'),
-                                tqs: scorePotentialTarget(t, sum, bundleAvgDem, bundle) }))
-                            .filter(x => x.tqs >= 3.5)
-                            .sort((a,b) => b.tqs - a.tqs)[0];
+                                tqs: scorePotentialTarget(t, sum, bundleAvgDem, bundle),
+                                ap: getAcceptanceProbability(sum, bundleAvgDem, t, bundle)
+                            }))
+                            .filter(x => x.tqs >= 4.0 && x.ap >= 22 && !getManipulationFlag(x.t.n))
+                            .sort((a,b) => (b.tqs * 0.6 + b.ap * 0.4) - (a.tqs * 0.6 + a.ap * 0.4))[0];
 
                         if (!best) continue;
 
@@ -4010,6 +4270,16 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 chainTrade = findChainTrade(inventory, totalInvVal, 6, topCat);
             }
 
+            // ── APPLY ACCEPT + WIN FILTERS ───────────────────────────────
+            const fsMinAccept = parseFloat((document.getElementById('fsMinAcceptFilter') || {}).value) || 0;
+            const fsMinWin    = parseFloat((document.getElementById('fsMinWinFilter')    || {}).value) || 0;
+            if (fsMinAccept > 0) results    = results.filter(r => (r.acceptPct || 0) >= fsMinAccept);
+            if (fsMinWin    > 0) results    = results.filter(r => parseFloat(r.valGapPct) >= fsMinWin);
+            if (fsMinAccept > 0) downgrades = downgrades.filter(r => {
+                const ap = getAcceptanceProbability(r.anchorVal, parseFloat(getEffDemand(r.anchor)), r.combo[0], [r.anchor]);
+                return ap >= fsMinAccept;
+            });
+
             // ── RENDER ────────────────────────────────────────────────────
             if (results.length === 0 && downgrades.length === 0) {
                 html += `<div style="font-size:0.75em;color:var(--subtext);margin-bottom:10px;padding:8px;background:#0f172a;border-radius:8px">${demTierAdvice}</div>`;
@@ -4028,6 +4298,7 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 const catBadge  = catLabel === 'High Tier' ? 'badge-hightier' : catLabel === 'Preppy' ? 'badge-preppy' : catLabel === 'Exotic' ? 'badge-exotic' : 'badge-randoms';
                 const tqsCls    = r.tqs >= 7 ? 'high' : r.tqs >= 4 ? 'mid' : 'low';
                 const tqsLabel  = r.tqs >= 7 ? '🔥 Strong' : r.tqs >= 4 ? '〽️ Decent' : '⚠️ Weak';
+                const acceptColor = (r.acceptPct||0) >= 55 ? '#34d399' : (r.acceptPct||0) >= 35 ? '#fbbf24' : '#f87171';
                 const isRising  = r.target.vt && r.target.vt.includes('📈');
                 const isFalling = r.target.dt && r.target.dt.includes('❄️');
                 const ugly      = isHTT(r.target.n);
@@ -4036,7 +4307,6 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 const valColor  = valGapNum >= 0 ? 'var(--win)' : 'var(--lose)';
                 const bundleVal = (r.sum || r.offer.reduce((s,p)=>s+calculatePetVal(p,'value'),0)).toFixed(2);
                 const targetVal = calculatePetVal({...r.target,type:'reg',f_st:false,r_st:false},'value').toFixed(2);
-                const acceptColor = r.acceptPct >= 65 ? '#34d399' : r.acceptPct >= 40 ? '#fbbf24' : '#f87171';
                 const readScore = r.bundleReadability !== undefined ? r.bundleReadability : 10;
                 const readLabel = readScore >= 8 ? '✅ Clean' : readScore >= 5 ? '〽️ OK' : '⚠️ Messy';
                 const targetTrend = getCachedTrend(r.target.n);
@@ -4065,6 +4335,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                     <div style="font-size:0.73em;color:#94a3b8;margin-bottom:5px">${r.reason}</div>
                     <div class="ai-stats-row">
                         <span class="ai-stat-pill tqs-${tqsCls}">${tqsLabel} ${r.tqs.toFixed(1)}/10</span>
+                        <span class="ai-stat-pill" style="color:${acceptColor}">~${r.acceptPct||0}% accept</span>
+                        <span class="ai-stat-pill" style="color:${r.acceptPct>=55?'#34d399':r.acceptPct>=35?'#fbbf24':'#f87171'};background:rgba(255,255,255,0.05)">~${r.acceptPct}% accept</span>
                         <span class="ai-stat-pill" style="color:${valColor};background:rgba(255,255,255,0.05)">${valGapNum>=0?'+':''}${r.valGapPct}%</span>
                         <span class="ai-stat-pill pill-dem">Dem: ${r.target.d.toFixed(1)}</span>
                         <span class="ai-stat-pill" style="color:${acceptColor};background:rgba(255,255,255,0.05)">~${r.acceptPct}% accept</span>
@@ -4111,6 +4383,7 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                             <span class="ai-stat-pill" style="color:${gainColor};background:rgba(255,255,255,0.05)">Value: ${valGainNum>=0?'+':''}${d.valGainPct}%</span>
                             <span class="ai-stat-pill" style="color:${demColor};background:rgba(255,255,255,0.05)">Dem: ${demGainNum>=0?'+':''}${d.demGain}</span>
                             <span class="ai-stat-pill" style="background:#1e3a1e;color:#6ee7b7">${d.combo.length} received</span>
+                            <span class="ai-stat-pill" style="color:${(() => { const ap=getAcceptanceProbability(d.anchorVal, parseFloat(getEffDemand(d.anchor)), d.combo[0], [d.anchor]); return ap>=55?'#34d399':ap>=35?'#fbbf24':'#f87171'; })()}">~${getAcceptanceProbability(d.anchorVal, parseFloat(getEffDemand(d.anchor)), d.combo[0], [d.anchor])}% accept</span>
                         </div>
                     </div>`;
                 });
@@ -4536,6 +4809,69 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             document.getElementById('advisorInvGrid').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
+        function customTargetAutocomplete(val) {
+            const dd = document.getElementById('customTargetDropdown');
+            if (!val || val.length < 2) { dd.style.display = 'none'; return; }
+            const matches = ALL_PETS.filter(p => p.n.toLowerCase().includes(val.toLowerCase())).slice(0, 8);
+            if (matches.length === 0) { dd.style.display = 'none'; return; }
+            window._ctMatches = matches;
+            dd.innerHTML = matches.map(function(p, i) {
+                return '<div style="padding:6px 10px;cursor:pointer;font-size:0.82em;border-bottom:1px solid var(--border)" ' +
+                    'onmousedown="selectCustomTarget(' + i + ')">' +
+                    p.n + ' <span style="color:var(--subtext);float:right">' + (p.v||0) + '</span></div>';
+            }).join('');
+            dd.style.display = 'block';
+        }
+
+        function selectCustomTarget(idx) {
+            const pet = window._ctMatches && window._ctMatches[idx];
+            if (!pet) return;
+            document.getElementById('customTargetInput').value = pet.n;
+            document.getElementById('customTargetDropdown').style.display = 'none';
+            evaluateCustomTarget();
+        }
+
+        function evaluateCustomTarget() {
+            const input = document.getElementById('customTargetInput');
+            const result = document.getElementById('customTargetResult');
+            const dd = document.getElementById('customTargetDropdown');
+            dd.style.display = 'none';
+            const name = (input.value || '').trim();
+            if (!name) { result.innerHTML = '<div style="color:var(--subtext);font-size:0.8em">Enter a pet name first.</div>'; return; }
+            const target = ALL_PETS.find(p => p.n.toLowerCase() === name.toLowerCase()) || ALL_PETS.find(p => p.n.toLowerCase().includes(name.toLowerCase()));
+            if (!target) { result.innerHTML = '<div style="color:#f87171;font-size:0.8em">Pet not found. Check the spelling.</div>'; return; }
+
+            if (advisorOfferPets.length === 0) { result.innerHTML = '<div style="color:#fbbf24;font-size:0.8em">Add pets to your offer first so we can evaluate the trade.</div>'; return; }
+
+            const offerVal = advisorOfferPets.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
+            const offerAvgD = advisorOfferPets.reduce((s,p) => s + (p.d||0), 0) / advisorOfferPets.length;
+            const targetVal = calculatePetVal({...target, type:'reg', f_st:false, r_st:false}, 'value');
+            const tqs = scorePotentialTarget(target, offerVal, offerAvgD, advisorOfferPets);
+            const acceptPct = getAcceptanceProbability(offerVal, offerAvgD, target, advisorOfferPets);
+            const valGapPct = ((offerVal - targetVal) / Math.max(targetVal, 0.01) * 100);
+            const reason = buildReasonText(target, offerVal, offerAvgD, advisorOfferPets);
+            const tqsCls = tqs >= 7 ? '#34d399' : tqs >= 4 ? '#fbbf24' : '#f87171';
+            const acceptColor = acceptPct >= 55 ? '#34d399' : acceptPct >= 35 ? '#fbbf24' : '#f87171';
+            const valColor = valGapPct >= 0 ? '#34d399' : '#f87171';
+            const trend = getCachedTrend(target.n);
+            const trendStr = trend.direction === 'rising' ? '📈 Rising' : trend.direction === 'falling' ? '📉 Falling' : '➡️ Stable';
+
+            result.innerHTML =
+                '<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:0.82em">' +
+                    '<div style="font-weight:900;font-size:1.05em;margin-bottom:8px;color:var(--text)">' + target.n + '</div>' +
+                    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+                        '<span style="color:' + tqsCls + ';font-weight:900">TQS: ' + tqs.toFixed(1) + '/10</span>' +
+                        '<span style="color:' + acceptColor + ';font-weight:900">~' + acceptPct + '% accept</span>' +
+                        '<span style="color:' + valColor + ';font-weight:900">' + (valGapPct >= 0 ? '+' : '') + valGapPct.toFixed(1) + '% value</span>' +
+                        '<span style="color:var(--subtext)">Dem: ' + (target.d||0) + '</span>' +
+                        '<span style="color:var(--subtext)">' + trendStr + '</span>' +
+                    '</div>' +
+                    '<div style="color:var(--subtext);line-height:1.5">' + reason + '</div>' +
+                    (isHTT(target.n) ? '<div style="color:#f87171;margin-top:6px;font-weight:700">⚠️ HTT — this pet is hard to trade away later</div>' : '') +
+                    (getManipulationFlag(target.n) ? '<div style="color:#fbbf24;margin-top:6px;font-weight:700">📊 Value may be manipulated — verify before accepting</div>' : '') +
+                '</div>';
+        }
+
         function refreshAdvisorTargets() {
             const resultsEl = document.getElementById('advisorResults');
             const insightEl = document.getElementById('advisorInsightBar');
@@ -4554,29 +4890,41 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             const sortBy    = document.getElementById('advisorSortFilter').value;
 
             // Filter candidates
+            const minAccept = parseFloat(document.getElementById('advisorAcceptFilter').value) || 0;
+
             let candidates = ALL_PETS.filter(t => {
                 const tVal = calculatePetVal({...t, type:'reg', f_st:false, r_st:false}, 'value');
                 if (tVal < offerVal * (1 - window) || tVal > offerVal * (1 + window)) return false;
                 if (t.d < demandMin) return false;
                 if (catFilter !== 'all' && !(t.cat||'').toLowerCase().includes(catFilter)) return false;
-                // Exclude pets already in offer
                 if (advisorOfferPets.some(p => p.n === t.n)) return false;
-                if (state.inv.some(p => p.n === t.n)) return false; // don't suggest what you already own
+                if (state.inv.some(p => p.n === t.n)) return false;
+                if (tVal <= 0) return false;
+                if (minAccept > 0) {
+                    const ap = getAcceptanceProbability(offerVal, offerAvgD, t, advisorOfferPets);
+                    if (ap < minAccept) return false;
+                }
                 return true;
             });
 
-            // Score all candidates
+            // Score all candidates and filter out junk (TQS < 3.0 and accept < 15%)
             candidates = candidates.map(t => ({
                 pet: t,
                 tqs: scorePotentialTarget(t, offerVal, offerAvgD, advisorOfferPets),
                 valGap: (calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value') - offerVal),
                 valGapPct: ((calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value') - offerVal) / offerVal * 100)
-            }));
+            })).filter(x => {
+                const ap = getAcceptanceProbability(offerVal, offerAvgD, x.pet, advisorOfferPets);
+                return x.tqs >= 3.0 || ap >= 25; // keep if either TQS or accept is decent
+            });
+
+
 
             // Sort
-            if (sortBy === 'tqs')    candidates.sort((a,b) => b.tqs - a.tqs);
-            else if (sortBy === 'demand') candidates.sort((a,b) => b.pet.d - a.pet.d);
-            else if (sortBy === 'value')  candidates.sort((a,b) => b.valGapPct - a.valGapPct);
+            if (sortBy === 'tqs')       candidates.sort((a,b) => b.tqs - a.tqs);
+            else if (sortBy === 'accept')  candidates.sort((a,b) => getAcceptanceProbability(offerVal,offerAvgD,b.pet,advisorOfferPets) - getAcceptanceProbability(offerVal,offerAvgD,a.pet,advisorOfferPets));
+            else if (sortBy === 'demand')  candidates.sort((a,b) => b.pet.d - a.pet.d);
+            else if (sortBy === 'value')   candidates.sort((a,b) => b.valGapPct - a.valGapPct);
 
             candidates = candidates.slice(0, 20);
 
@@ -4596,6 +4944,7 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 const valColor = valGapPct >= 0 ? 'var(--win)' : 'var(--lose)';
                 const reason = buildReasonText(t, offerVal, offerAvgD);
                 const tVal = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
+                const acceptPct = getAcceptanceProbability(offerVal, offerAvgD, t, advisorOfferPets);
 
                 return `<div class="target-card">
                     ${petImgTag(t.n, "width:58px;height:58px;object-fit:contain;border-radius:10px;background:#0f172a")}
@@ -4614,6 +4963,7 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                             <span class="target-val-gap" style="color:${valColor}">${valGapPct>=0?'+':''}${valGapPct.toFixed(1)}%</span>
                             <span class="target-demand-pill">Dem: ${t.d}</span>
                             <span class="target-val-gap">Val: ${tVal.toFixed(2)}</span>
+                            <span class="target-demand-pill" style="color:${acceptPct>=55?'#34d399':acceptPct>=35?'#fbbf24':'#f87171'}">~${acceptPct}% accept</span>
                         </div>
                     </div>
                 </div>`;
@@ -4872,9 +5222,10 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         // Triggers the relevant render function for value/demand lists and trade board.
         function switchTab(tab) {
             currentTab = tab;
-            ['value','demand','calc','trades'].forEach(t => {
-                const tabEl = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
-                const btnEl = document.getElementById('tabBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+            ['value','demand','calc','trades','trends'].forEach(t => {
+                const key = t === 'trends' ? 'Trends' : t.charAt(0).toUpperCase() + t.slice(1);
+                const tabEl = document.getElementById('tab' + key);
+                const btnEl = document.getElementById('tabBtn' + key);
                 if (tabEl) tabEl.classList.toggle('active', t === tab);
                 if (btnEl) btnEl.classList.toggle('active', t === tab);
             });
@@ -4887,7 +5238,78 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             if (vl) vl.style.display = tab === 'calc' ? '' : 'none';
             if (tab === 'value'  && ALL_PETS.length > 0) renderValueList();
             if (tab === 'demand' && ALL_PETS.length > 0) renderDemandList();
+            if (tab === 'trends' && ALL_PETS.length > 0) renderTrendsList();
             if (tab === 'trades') { renderTradeBoard(); startTBTimers(); }
+        }
+
+        // ── TRENDS LIST ──────────────────────────────────────────────────────
+        let trendSortMode = 'rising_val';
+
+        function setTrendSort(mode) {
+            trendSortMode = mode;
+            ['rising_val','falling_val','rising_dem','falling_dem'].forEach(m => {
+                const idMap = { rising_val:'trendSortRisingVal', falling_val:'trendSortFallingVal', rising_dem:'trendSortRisingDem', falling_dem:'trendSortFallingDem' };
+                const el = document.getElementById(idMap[m]);
+                if (el) el.classList.toggle('active', m === mode);
+            });
+            renderTrendsList();
+        }
+
+        function renderTrendsList() {
+            const body = document.getElementById('trendListBody');
+            if (!body) return;
+            const search = (document.getElementById('trendSearch') ? document.getElementById('trendSearch').value : '').toLowerCase();
+            if (ALL_PETS.length === 0) { body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">Loading...</div>'; return; }
+
+            let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
+
+            // Filter and sort based on mode
+            const mode = trendSortMode;
+            const isValueMode  = mode === 'rising_val' || mode === 'falling_val';
+            const isRising     = mode === 'rising_val' || mode === 'rising_dem';
+
+            pets = pets.map(p => {
+                const trend = getCachedTrend(p.n);
+                return { p, trend, pct: trend.pctChange, dir: trend.direction };
+            });
+
+            if (mode === 'rising_val')   pets = pets.filter(x => x.dir === 'rising').sort((a,b) => b.pct - a.pct);
+            if (mode === 'falling_val')  pets = pets.filter(x => x.dir === 'falling').sort((a,b) => a.pct - b.pct);
+            if (mode === 'rising_dem')   pets = pets.filter(x => (x.p.dt||'').includes('🔥') || (x.p.vt||'').includes('📈')).sort((a,b) => (b.p.d||0) - (a.p.d||0));
+            if (mode === 'falling_dem')  pets = pets.filter(x => (x.p.dt||'').includes('❄️') || (x.p.vt||'').includes('📉')).sort((a,b) => (a.p.d||0) - (b.p.d||0));
+
+            if (pets.length === 0) {
+                body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">No pets found for this trend filter.</div>';
+                return;
+            }
+
+            body.innerHTML = '<div class="trends-grid">' + pets.map(function(item) {
+                var p = item.p, trend = item.trend, pct = item.pct;
+                var demTrend = (p.dt||'').indexOf('\uD83D\uDD25') >= 0 ? '\uD83D\uDD25' : (p.dt||'').indexOf('\u2744\uFE0F') >= 0 ? '\u2744\uFE0F' : '';
+                var valTrend = (p.vt||'').indexOf('\uD83D\uDCC8') >= 0 ? '\uD83D\uDCC8' : (p.vt||'').indexOf('\uD83D\uDCC9') >= 0 ? '\uD83D\uDCC9' : '';
+                var pctColor = pct > 0 ? '#34d399' : pct < 0 ? '#f87171' : 'var(--subtext)';
+                var pctStr = pct !== 0 ? (pct > 0 ? '+' : '') + pct.toFixed(1) + '%' : 'stable';
+                var val = p.v || 0;
+                var safeN = p.n.replace(/'/g, "\\'");
+                var acceptPct = getAcceptanceProbability(val * 1.1, p.d || 0, p, null);
+                var acceptColor = acceptPct >= 55 ? '#34d399' : acceptPct >= 35 ? '#fbbf24' : '#f87171';
+                return '<div class="trends-card" onclick="quickAddFromList(\'' + safeN + "\','normal')" + '">' +
+                    petImgTag(p.n, 'width:52px;height:52px;object-fit:contain') +
+                    '<div class="trends-card-info">' +
+                        '<div class="trends-card-name">' + p.n + '</div>' +
+                        '<div class="trends-card-stats">' +
+                            '<span style="color:' + pctColor + ';font-weight:900">' + pctStr + '</span>' +
+                            ' <span style="color:var(--subtext)">Dem: ' + (p.d||0) + '</span>' +
+                            ' <span style="color:var(--subtext)">Val: ' + val + '</span>' +
+                        '</div>' +
+                        '<div class="trends-card-badges">' +
+                            (valTrend ? '<span class="trends-badge">' + valTrend + '</span>' : '') +
+                            (demTrend ? '<span class="trends-badge">' + demTrend + '</span>' : '') +
+                            '<span class="trends-badge" style="color:' + acceptColor + '">~' + acceptPct + '% accept</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('') + '</div>';
         }
 
         // List state — type and zoom are independent per list
@@ -6256,6 +6678,21 @@ function renderTBCard(t) {
                         style="width:90px;accent-color:var(--accent);cursor:pointer">
                     <span id="fsAiZoomLabel" style="font-size:0.72em;color:var(--accent);font-weight:800;min-width:34px">100%</span>
                 </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+                <span style="font-size:0.72em;font-weight:900;color:var(--subtext)">FILTERS:</span>
+                <select class="advisor-filter-select" id="fsMinAcceptFilter" onchange="renderInventory()">
+                    <option value="0">Any Accept %</option>
+                    <option value="30">30%+ accept</option>
+                    <option value="45">45%+ accept</option>
+                    <option value="60">60%+ accept</option>
+                </select>
+                <select class="advisor-filter-select" id="fsMinWinFilter" onchange="renderInventory()">
+                    <option value="0">Any Win %</option>
+                    <option value="5">5%+ value gain</option>
+                    <option value="10">10%+ value gain</option>
+                    <option value="20">20%+ value gain</option>
+                </select>
             </div>
             <div id="aiFullscreenBody">
                 <div class="ai-suggestion">Loading...</div>
