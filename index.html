@@ -2335,7 +2335,17 @@
                 state.B = (parsed.B || []).map(hydrate).filter(x => x);
                 state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
                 if (parsed.keybinds)      state.keybinds      = parsed.keybinds;
-                if (parsed.uiScale != null) { const sv = parsed.uiScale; applyUIScale(sv < 10 ? Math.round(sv * 100) : sv); } // <10 = old decimal format, >=10 = new int percent
+                // Restore zoom: old saves stored decimal (1.0), new stores int (100).
+                // If value is clearly bad (< 10 means decimal), convert it.
+                // Clamp to 80–130 so a corrupt value never makes text invisible.
+                if (parsed.uiScale != null) {
+                    let sv = parsed.uiScale;
+                    if (sv < 10) sv = Math.round(sv * 100); // convert old decimal format
+                    sv = Math.max(80, Math.min(130, sv));    // clamp to safe range
+                    applyUIScale(sv);
+                } else {
+                    applyUIScale(100); // default 100% if never saved
+                }
                 if (parsed.aiMode)        state.aiMode        = parsed.aiMode;
                 if (parsed.strategyLimit) state.strategyLimit = parsed.strategyLimit;
                 render();
