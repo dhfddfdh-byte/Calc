@@ -2331,6 +2331,45 @@
         }
         function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
 
+        function openFillerPopup() {
+            const inv = state.inv;
+            const filler = inv.filter(p => (parseFloat(getEffDemand(p))||0) < 3 || calculatePetVal(p,'value') < 0.5);
+            const list = document.getElementById('fillerPopupList');
+            if (filler.length === 0) {
+                list.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:20px">No filler pets found.</div>';
+            } else {
+                // Group by name
+                const groups = {};
+                filler.forEach(p => { groups[p.n] = (groups[p.n]||0)+1; });
+                list.innerHTML = Object.entries(groups)
+                    .sort((a,b) => {
+                        const pa = ALL_PETS.find(x=>x.n===a[0]), pb = ALL_PETS.find(x=>x.n===b[0]);
+                        return (parseFloat(getEffDemand(pb||{}))||0) - (parseFloat(getEffDemand(pa||{}))||0);
+                    })
+                    .map(([name, count]) => {
+                        const pet = ALL_PETS.find(x=>x.n===name) || {};
+                        const d = parseFloat(getEffDemand(pet))||0;
+                        const v = pet.v||0;
+                        const demColor = d >= 2 ? '#fbbf24' : '#f87171';
+                        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b">' +
+                            petImgTag(name, 'width:36px;height:36px;object-fit:contain;flex-shrink:0') +
+                            '<div style="flex:1">' +
+                                '<div style="font-weight:800;font-size:0.88em;color:#cbd5e1">' + name + (count>1?' <span style="color:#475569">×'+count+'</span>':'') + '</div>' +
+                                '<div style="font-size:0.72em;color:var(--subtext)">Dem: <span style="color:'+demColor+';font-weight:700">'+d+'</span> · Val: '+v+'</div>' +
+                            '</div>' +
+                            '<div style="font-size:0.7em;color:#475569;text-align:right">' +
+                                (d < 1 ? '<span style="color:#f87171">Very low demand</span>' : d < 2 ? '<span style="color:#f87171">Low demand</span>' : '<span style="color:#fbbf24">Below threshold</span>') +
+                            '</div>' +
+                        '</div>';
+                    }).join('');
+            }
+            document.getElementById('fillerPopup').style.display = 'flex';
+        }
+
+        function closeFillerPopup() {
+            document.getElementById('fillerPopup').style.display = 'none';
+        }
+
         function openExplanations() {
             const body = document.getElementById('infoBody');
             body.innerHTML = `
@@ -2983,6 +3022,53 @@
 }
 
 function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
+
+        function openFillerPopup() {
+            const pets = window._lastFillerPets || [];
+            // Group by name and count duplicates
+            const grouped = {};
+            pets.forEach(p => { grouped[p.n] = (grouped[p.n] || 0) + 1; });
+            const entries = Object.entries(grouped).sort((a,b) => b[1] - a[1]);
+
+            // Build or reuse popup
+            let popup = document.getElementById('fillerPopup');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.id = 'fillerPopup';
+                popup.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.92);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:7000';
+                popup.onclick = function(e) { if (e.target === popup) popup.remove(); };
+                document.body.appendChild(popup);
+            }
+
+            popup.innerHTML =
+                '<div style="background:#1a2333;border:1px solid #334155;border-radius:20px;padding:24px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+                        '<div>' +
+                            '<div style="font-weight:900;font-size:1.05em;color:#f87171">🗑️ Filler Pets (' + pets.length + ')</div>' +
+                            '<div style="font-size:0.72em;color:#475569;margin-top:2px">These have demand &lt;3 or value &lt;0.5 — excluded from your grade</div>' +
+                        '</div>' +
+                        '<button onclick="document.getElementById(\'fillerPopup\').remove()" style="background:transparent;border:none;color:#64748b;font-size:1.3em;cursor:pointer;padding:4px 8px">✕</button>' +
+                    '</div>' +
+                    (entries.length === 0 ? '<div style="color:#64748b;text-align:center;padding:20px">No filler pets found</div>' :
+                        '<div style="display:flex;flex-direction:column;gap:6px">' +
+                        entries.map(([name, count]) => {
+                            const pet = ALL_PETS.find(p => p.n === name);
+                            const d = pet ? (pet.d || 0) : 0;
+                            const v = pet ? (pet.v || 0) : 0;
+                            return '<div style="display:flex;align-items:center;gap:10px;background:#0f172a;border-radius:10px;padding:8px 12px">' +
+                                petImgTag(name, 'width:36px;height:36px;object-fit:contain;flex-shrink:0') +
+                                '<div style="flex:1;min-width:0">' +
+                                    '<div style="font-weight:800;font-size:0.85em;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + name + (count > 1 ? ' <span style="color:#64748b">×' + count + '</span>' : '') + '</div>' +
+                                    '<div style="font-size:0.72em;color:#475569">Demand: ' + d + ' · Value: ' + v + '</div>' +
+                                '</div>' +
+                                '<div style="font-size:0.7em;color:#f87171;font-weight:700;white-space:nowrap">Trade away</div>' +
+                            '</div>';
+                        }).join('') +
+                        '</div>') +
+                    '<div style="margin-top:16px;padding-top:12px;border-top:1px solid #1e293b;font-size:0.72em;color:#475569">💡 Trading these into pets with demand 3+ will improve your overall inventory health</div>' +
+                '</div>';
+            popup.style.display = 'flex';
+        }
 
         // Exports the user's inventory as a JSON file download.
         // The exported file can be re-imported on any device via importInv().
@@ -3682,9 +3768,7 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             const catDist = {};
             gradeBase.forEach(p => { const c = getCatLabel(p); catDist[c] = (catDist[c]||0)+1; });
             const premiumPct = ((catDist['Exotic']||0) + (catDist['High Tier']||0) + (catDist['Preppy']||0)) / gradeBase.length;
-            const avgLiq = gradeBase.reduce((s,p) => s + getLiquidityScore(p.n), 0) / gradeBase.length;
-
-            // Demand component (0-30) — based on core pets only
+            // Demand component (0-30) — avg demand of core pets
             const demScore = Math.min(30, Math.round((avgDemand / 10) * 30));
             score += demScore;
             breakdown.push({ label: 'Demand Quality', score: demScore, max: 30,
@@ -3693,13 +3777,16 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                      avgDemand >= 3 ? 'Moderate demand — target pets with 6+ demand' :
                      'Low demand — prioritize demand upgrades.' });
 
-            // Liquidity (0-20)
-            const liqScore = Math.min(20, Math.round(avgLiq * 20));
-            score += liqScore;
-            breakdown.push({ label: 'Market Liquidity', score: liqScore, max: 20,
-                tip: avgLiq >= 0.7 ? 'Your pets trade frequently — high liquidity' :
-                     avgLiq >= 0.4 ? 'Decent liquidity' :
-                     'Low liquidity — your pets don\'t trade often.' });
+            // Demand spread (0-20) — how many of your core pets are high demand (7+)
+            // This rewards having MULTIPLE high-demand pets, not just one.
+            const highDemCount = gradeBase.filter(p => (parseFloat(getEffDemand(p))||0) >= 7).length;
+            const highDemPct   = highDemCount / gradeBase.length;
+            const spreadScore  = Math.min(20, Math.round(highDemPct * 20));
+            score += spreadScore;
+            breakdown.push({ label: 'Demand Spread', score: spreadScore, max: 20,
+                tip: highDemPct >= 0.7 ? highDemCount + ' of your core pets have demand 7+ — excellent spread' :
+                     highDemPct >= 0.4 ? highDemCount + ' high-demand pets — decent spread, room to improve' :
+                     'Only ' + highDemCount + ' of ' + gradeBase.length + ' core pets have demand 7+. Trade into higher-demand pets.' });
 
             // Category quality (0-20)
             const catScore = Math.min(20, Math.round(premiumPct * 20));
@@ -3749,6 +3836,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             if (fillerWarning) advice.push('🗑️ ' + filler.length + ' filler pet' + (filler.length>1?'s':'') + ' (demand <3) not counted in grade — trade them away for a cleaner inventory');
             if (advice.length === 0) advice.push('✅ Inventory looks healthy — focus on tier progression');
 
+            // Store filler list globally so the popup can access it
+            window._lastFillerPets = filler;
             return { score: finalScore, grade, gradeColor, breakdown, advice, avgDemand, premiumPct, httCount, risingCount, fallingCount, fillerWarning, coreCount: core.length, fillerCount: filler.length };
         }
 
@@ -4126,7 +4215,7 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                     <div style="font-size:0.7em;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">📊 Inventory Health Score: <span style="color:${health.gradeColor}">${health.score}/100 (${health.grade})</span></div>
                     <div style="font-size:0.65em;color:#475569;margin-bottom:8px">
                         Graded on your <span style="color:#cbd5e1;font-weight:700">${health.coreCount} tradeable pet${health.coreCount!==1?'s':''}</span> (demand 3+)
-                        ${health.fillerWarning ? '· <span style="color:#f87171;font-weight:700">' + health.fillerCount + ' filler pet' + (health.fillerCount!==1?'s':'') + ' excluded from grade</span> — avg demand drops from <b style="color:#cbd5e1">' + health.fillerWarning.coreAvgDem + '</b> to <b style="color:#f87171">' + health.fillerWarning.demImpact + '</b> when included' : ''}
+                        ${health.fillerWarning ? '· <span style="color:#f87171;font-weight:700;cursor:pointer;text-decoration:underline dotted" onclick="openFillerPopup()">'+health.fillerCount+' filler pet'+(health.fillerCount!==1?'s':'')+' excluded ↗</span> — avg demand drops from <b style="color:#cbd5e1">'+health.fillerWarning.coreAvgDem+'</b> to <b style="color:#f87171">'+health.fillerWarning.demImpact+'</b> when included' : ''}
                     </div>
                     ${health.breakdown.map(b => `
                         <div style="margin-bottom:5px">
@@ -6949,6 +7038,23 @@ function renderTBCard(t) {
         </div>
     </div>
 
+
+    <!-- Filler Pets Popup -->
+    <div id="fillerPopup" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.92);backdrop-filter:blur(10px);z-index:7000;align-items:center;justify-content:center" onclick="closeFillerPopup()">
+        <div onclick="event.stopPropagation()" style="background:#1a2333;border:1px solid var(--border);border-radius:20px;padding:24px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <div>
+                    <div style="font-weight:900;font-size:1.05em;color:white">🗑️ Filler Pets</div>
+                    <div style="font-size:0.75em;color:var(--subtext);margin-top:2px">These pets have demand &lt;3 or value &lt;0.5 — excluded from your health grade</div>
+                </div>
+                <button onclick="closeFillerPopup()" style="background:transparent;border:none;color:var(--subtext);font-size:1.3em;cursor:pointer;padding:4px 8px">✕</button>
+            </div>
+            <div id="fillerPopupList"></div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:0.75em;color:var(--subtext)">
+                💡 Trade these into demand 6+ pets to improve your inventory grade and trading power.
+            </div>
+        </div>
+    </div>
 
     <div class="search-overlay" id="searchOverlay" onclick="closeSearch()">
         <div class="search-container" onclick="event.stopPropagation()">
