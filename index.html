@@ -1197,7 +1197,7 @@
                         
                         <div class="ai-toggle-group">
                             <div class="ai-tog active" id="aiTogNormal" onclick="setAiStrategy('normal')">Normal Mode</div>
-                            <div class="ai-tog" id="aiTogVelocity" onclick="setAiStrategy('velocity')">Velocity Mode</div>
+                            <div class="ai-tog" id="aiTogVelocity" onclick="setAiStrategy('velocity')" title="Suggests trades where you overpay slightly (up to 15%) to get a higher-demand, faster-moving pet. Speed over value.">⚡ Velocity Mode</div>
                         </div>
 
                         <div id="dreamPetContainer" style="margin-bottom: 15px;">
@@ -3698,6 +3698,38 @@ function startLastUpdatedTicker() {
             return trendVelocityCache.get(key);
         }
 
+        // Detects a SUSTAINED downward value trend — not a blip, but a consistent slope.
+        // Requires at least 5 data points. Splits history into thirds and checks that
+        // each third is lower than the previous. Also checks overall decline is >10%.
+        // Returns { falling: bool, pctDrop: number, periods: number }
+        function getSustainedFallTrend(petName) {
+            const records = HISTORY_DATA.filter(r =>
+                (r.name || r['pet name'] || '').toLowerCase().trim() === (petName || '').toLowerCase().trim()
+            );
+            const vals = records.map(r => parseFloat(r.v) || 0).filter(v => v > 0);
+            if (vals.length < 3) return { falling: false, pctDrop: 0 };
+
+            // Split into thirds (min 1 per section)
+            const third = Math.max(1, Math.floor(vals.length / 3));
+            const early  = vals.slice(0, third);
+            const mid    = vals.slice(third, third * 2);
+            const recent = vals.slice(third * 2);
+
+            const avgEarly  = early.reduce((a,b)=>a+b,0) / early.length;
+            const avgMid    = mid.reduce((a,b)=>a+b,0) / mid.length;
+            const avgRecent = recent.reduce((a,b)=>a+b,0) / recent.length;
+
+            // Sustained = each period is lower than the previous
+            const isDownward = avgMid < avgEarly && avgRecent < avgMid;
+            const pctDrop = avgEarly > 0 ? ((avgEarly - avgRecent) / avgEarly) * 100 : 0;
+
+            // Only flag if the overall drop is meaningful (>10%) and it's consistently down
+            return {
+                falling: isDownward && pctDrop > 10,
+                pctDrop: parseFloat(pctDrop.toFixed(1))
+            };
+        }
+
         // ── ACCEPTANCE PROBABILITY MODEL ──────────────────────────────────
         // Estimates % chance a target owner actually accepts your offer.
         // Research-based model incorporating Adopt Me community trading psychology,
@@ -4209,7 +4241,8 @@ function startLastUpdatedTicker() {
         // 1. Calculates the inventory health score (demand, liquidity, category, trends, HTT).
         // 2. Generates trade strategy suggestions based on aiMode (normal vs velocity).
         //    Normal mode = best value/demand upgrades and chain trades.
-        //    Velocity mode = fastest-moving pets, prioritizes tradability over value.
+        //    Velocity mode = you overpay slightly (up to 15%) to get into a higher-demand, faster-trading pet.
+        //    Goal is speed, not value gains. You give more to get something that moves quicker.
         // 3. Renders the health score card + suggestion list into #aiSuggestions.
         function updateAISuggestions(inventory) {
             const box = document.getElementById('aiSuggestions');
@@ -4364,24 +4397,33 @@ function startLastUpdatedTicker() {
                     if (usedUids.has(anchor.uid)) continue;
                     const anchorVal = calculatePetVal(anchor, 'value');
                     if (anchorVal <= 0) continue;
+                    // Velocity mode: you overpay slightly (give 3-15% more than you get)
+                    // to land a faster, higher-demand pet. Goal is speed, not value gains.
+                    const anchorDem = parseFloat(getEffDemand(anchor));
                     const targets = ALL_PETS
                         .filter(t => {
                             if (state.aiTargetPets.length > 0 && !state.aiTargetPets.some(x=>x.n===t.n)) return false;
                             if (invNames.has(t.n)) return false;
-                            if (getManipulationFlag(t.n)) return false;    // skip value-spiked pets
+                            if (getManipulationFlag(t.n)) return false;
                             const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
                             const liq = getLiquidityScore(t.n);
-                            const ap  = getAcceptanceProbability(anchorVal, parseFloat(getEffDemand(anchor)), t, [anchor]);
-                            return t.d >= 6.5
-                                && liq >= 0.25                              // must actually trade
-                                && ap  >= 20                                // at least realistic accept chance
-                                && tv >= anchorVal * 0.85 && tv <= anchorVal * 1.30
-                                && !isHTT(t.n);
+                            const ap  = getAcceptanceProbability(anchorVal, anchorDem, t, [anchor]);
+                            // You overpay: target value is 85-100% of what you give (you pay 0-15% premium)
+                            // Target must have HIGHER demand than your offer (that's the whole point)
+                            // and must actually trade frequently
+                            return t.d >= Math.max(6.5, anchorDem)        // target demand >= your demand
+                                && t.d > anchorDem - 1                    // meaningful demand improvement
+                                && liq >= 0.2
+                                && ap  >= 25
+                                && tv >= anchorVal * 0.82 && tv <= anchorVal * 1.02  // you overpay, not the other way
+                                && !isHTT(t.n)
+                                && !ARTIFACT_DEMAND_PETS.has(t.n.toLowerCase().trim()); // skip artifact pets
                         })
                         .sort((a,b) => {
-                            // Sort by composite: demand + liquidity
+                            // Pure demand sort — highest demand first, that's the velocity target
+                            if (b.d !== a.d) return b.d - a.d;
                             const lA = getLiquidityScore(a.n), lB = getLiquidityScore(b.n);
-                            return (b.d * 0.6 + lB * 4) - (a.d * 0.6 + lA * 4);
+                            return lB - lA;
                         })
                         .slice(0, 2);
 
@@ -4730,6 +4772,25 @@ function startLastUpdatedTicker() {
             }
             vDiff.innerText = `Difference: ${diff > 0 ? "+" : ""}${diff.toFixed(2)} (${(pDiff * 100).toFixed(1)}%)`;
             if (isTrap) gaugeBar.classList.add('trap-active'); else gaugeBar.classList.remove('trap-active');
+
+            // ── Sustained falling value warning ──────────────────────────
+            // Check every pet on side B (what you're receiving) for a consistent
+            // downward slope across the full history — not a blip, a real trend.
+            if (state.B.length > 0) {
+                const fallingPets = state.B
+                    .map(p => ({ p, trend: getSustainedFallTrend(p.n) }))
+                    .filter(x => x.trend.falling);
+
+                if (fallingPets.length > 0) {
+                    const names = fallingPets.map(x => `${x.p.n} (−${x.trend.pctDrop}%)`).join(', ');
+                    const current = vSub.innerText;
+                    vSub.innerHTML = current +
+                        `<div style="margin-top:8px;padding:6px 10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);border-radius:8px;font-size:0.85em;color:#fca5a5;font-style:normal">
+                            ⚠️ <b>Sustained value drop:</b> ${names} — consistent downward slope across full history, not a temporary dip. Verify current value before accepting.
+                        </div>`;
+                }
+            }
+
             updateVerdictExtras();
         }
 
@@ -7079,7 +7140,7 @@ function renderTBCard(t) {
             <!-- Mirror all controls -->
             <div class="ai-toggle-group" style="margin-top:12px">
                 <div class="ai-tog" id="fsAiTogNormal" onclick="setAiStrategyFS('normal')">Normal Mode</div>
-                <div class="ai-tog" id="fsAiTogVelocity" onclick="setAiStrategyFS('velocity')">Velocity Mode</div>
+                <div class="ai-tog" id="fsAiTogVelocity" onclick="setAiStrategyFS('velocity')" title="Overpay slightly for higher-demand pets. Speed over value.">⚡ Velocity Mode</div>
             </div>
             <div id="fsDreamPetContainer" style="margin-bottom:12px"></div>
             <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
