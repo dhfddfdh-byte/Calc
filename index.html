@@ -1318,9 +1318,14 @@
                         <select class="advisor-filter-select" id="advisorDemandFilter" onchange="refreshAdvisorTargets()">
                             <option value="0">Any Demand</option>
                             <option value="4">Demand 4+</option>
+                            <option value="5">Demand 5+</option>
                             <option value="6">Demand 6+</option>
-                            <option value="7">Demand 7+ only</option>
+                            <option value="7">Demand 7+</option>
+                            <option value="8">Demand 8+</option>
+                            <option value="9">Demand 9+</option>
                         </select>
+                        <button id="advisorNeonToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e3a1e;color:#34d399;border-color:#34d39933" onclick="toggleAdvisorVariant('neon')">✅ Neons</button>
+                        <button id="advisorMegaToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e293b;color:#64748b;border-color:#1e293b" onclick="toggleAdvisorVariant('mega')">☐ Megas</button>
                         <select class="advisor-filter-select" id="advisorCatFilter" onchange="refreshAdvisorTargets()">
                             <option value="all">All Categories</option>
                             <option value="high tier">High Tier</option>
@@ -5006,6 +5011,27 @@ function startLastUpdatedTicker() {
         // TRADE ADVISOR — Full smart popup
         // ================================================================
         let advisorOfferPets = [];
+        let advisorShowNeon = true;
+        let advisorShowMega = false;
+
+        function toggleAdvisorVariant(type) {
+            if (type === 'neon') {
+                advisorShowNeon = !advisorShowNeon;
+                const btn = document.getElementById('advisorNeonToggle');
+                btn.textContent = (advisorShowNeon ? '✅' : '☐') + ' Neons';
+                btn.style.background = advisorShowNeon ? '#1e3a1e' : '#1e293b';
+                btn.style.color = advisorShowNeon ? '#34d399' : '#64748b';
+                btn.style.borderColor = advisorShowNeon ? '#34d39933' : '#1e293b';
+            } else {
+                advisorShowMega = !advisorShowMega;
+                const btn = document.getElementById('advisorMegaToggle');
+                btn.textContent = (advisorShowMega ? '✅' : '☐') + ' Megas';
+                btn.style.background = advisorShowMega ? '#2d1a4a' : '#1e293b';
+                btn.style.color = advisorShowMega ? '#a855f7' : '#64748b';
+                btn.style.borderColor = advisorShowMega ? '#a855f733' : '#1e293b';
+            }
+            refreshAdvisorTargets();
+        }
         let advisorCharts = {};
 
         // Switches between "Your Offer" and "Targets" panels on mobile.
@@ -5210,33 +5236,52 @@ function startLastUpdatedTicker() {
             const window    = parseFloat(document.getElementById('advisorWindowFilter').value) || 0.20;
             const sortBy    = document.getElementById('advisorSortFilter').value;
 
-            // Filter candidates
+            // Filter candidates — include reg, neon, mega variants based on toggles
             const minAccept = parseFloat(document.getElementById('advisorAcceptFilter').value) || 0;
 
-            let candidates = ALL_PETS.filter(t => {
-                const tVal = calculatePetVal({...t, type:'reg', f_st:false, r_st:false}, 'value');
-                if (tVal < offerVal * (1 - window) || tVal > offerVal * (1 + window)) return false;
-                if (t.d < demandMin) return false;
-                if (catFilter !== 'all' && !(t.cat||'').toLowerCase().includes(catFilter)) return false;
-                if (advisorOfferPets.some(p => p.n === t.n)) return false;
-                if (state.inv.some(p => p.n === t.n)) return false;
-                if (tVal <= 0) return false;
-                if (minAccept > 0) {
-                    const ap = getAcceptanceProbability(offerVal, offerAvgD, t, advisorOfferPets);
-                    if (ap < minAccept) return false;
-                }
-                return true;
+            // Build expanded candidate list with variants
+            const variantCandidates = [];
+            ALL_PETS.forEach(t => {
+                const baseExclude = advisorOfferPets.some(p => p.n === t.n) ||
+                                    state.inv.some(p => p.n === t.n);
+
+                const variants = [{ type:'reg', f_st:false, r_st:false }];
+                if (advisorShowNeon) variants.push({ type:'neon', f_st:false, r_st:false });
+                if (advisorShowMega) variants.push({ type:'mega', f_st:false, r_st:false });
+
+                variants.forEach(v => {
+                    const candidate = { ...t, ...v };
+                    const tVal = calculatePetVal(candidate, 'value');
+                    if (tVal <= 0) return;
+                    if (tVal < offerVal * (1 - window) || tVal > offerVal * (1 + window)) return;
+                    // Use neon demand for neon, mega demand for mega
+                    const effD = v.type === 'neon' ? (t.nd || t.d) : v.type === 'mega' ? (t.md || t.d) : t.d;
+                    if (effD < demandMin) return;
+                    if (catFilter !== 'all' && !(t.cat||'').toLowerCase().includes(catFilter)) return;
+                    // Skip reg if already in inventory as reg; skip neon if already own a neon of same pet
+                    if (baseExclude && v.type === 'reg') return;
+                    if (minAccept > 0) {
+                        const ap = getAcceptanceProbability(offerVal, offerAvgD, candidate, advisorOfferPets);
+                        if (ap < minAccept) return;
+                    }
+                    variantCandidates.push({ ...candidate, _effD: effD });
+                });
             });
 
-            // Score all candidates and filter out junk (TQS < 3.0 and accept < 15%)
-            candidates = candidates.map(t => ({
-                pet: t,
-                tqs: scorePotentialTarget(t, offerVal, offerAvgD, advisorOfferPets),
-                valGap: (calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value') - offerVal),
-                valGapPct: ((calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value') - offerVal) / offerVal * 100)
-            })).filter(x => {
+            let candidates = variantCandidates;
+
+            // Score all candidates and filter out junk
+            candidates = candidates.map(t => {
+                const tVal = calculatePetVal(t, 'value');
+                return {
+                    pet: t,
+                    tqs: scorePotentialTarget(t, offerVal, offerAvgD, advisorOfferPets),
+                    valGap: tVal - offerVal,
+                    valGapPct: ((tVal - offerVal) / offerVal * 100)
+                };
+            }).filter(x => {
                 const ap = getAcceptanceProbability(offerVal, offerAvgD, x.pet, advisorOfferPets);
-                return x.tqs >= 3.0 || ap >= 25; // keep if either TQS or accept is decent
+                return x.tqs >= 3.0 || ap >= 25;
             });
 
 
@@ -5264,13 +5309,14 @@ function startLastUpdatedTicker() {
                 const isRising = t.vt && t.vt.includes('📈'), isFalling = t.dt && t.dt.includes('❄️');
                 const valColor = valGapPct >= 0 ? 'var(--win)' : 'var(--lose)';
                 const reason = buildReasonText(t, offerVal, offerAvgD);
-                const tVal = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
+                const tVal = calculatePetVal(t, 'value');
                 const acceptPct = getAcceptanceProbability(offerVal, offerAvgD, t, advisorOfferPets);
+                const variantLabel = t.type === 'neon' ? '<span style="color:#34d399;font-size:0.7em;font-weight:900;background:#1e3a1e;border-radius:5px;padding:1px 6px">NEON</span>' : t.type === 'mega' ? '<span style="color:#a855f7;font-size:0.7em;font-weight:900;background:#2d1a4a;border-radius:5px;padding:1px 6px">MEGA</span>' : '';
 
                 return `<div class="target-card">
                     ${petImgTag(t.n, "width:58px;height:58px;object-fit:contain;border-radius:10px;background:#0f172a")}
                     <div class="target-card-body">
-                        <div class="target-name">${t.n}</div>
+                        <div class="target-name">${t.n} ${variantLabel}</div>
                         <div class="target-badges">
                             <span class="target-badge ${catBadge}">${catLabel}</span>
                             ${isRising ? '<span class="target-badge badge-rising">📈 Rising</span>' : ''}
