@@ -2451,6 +2451,14 @@
                 <div class="info-row"><span class="info-label">Rising/Falling Demand</span><span class="info-val">Based on 🔥/❄️ demand trend emojis from the spreadsheet data.</span></div>
             </div>
             <div class="info-section">
+                <h4>📦 Bundle Score — What Clean / OK / Messy Means</h4>
+                <p style="color:var(--subtext);font-size:0.88em;line-height:1.6">When you offer multiple pets, the other person has to mentally value all of them before deciding. A cleaner bundle = easier to accept. The score rates how readable your offer is:</p>
+                <div class="info-row"><span class="info-label">✅ Clean (8–10)</span><span class="info-val">1–2 pets, or all pets are from similar categories and values. Easy to evaluate at a glance — highest accept rate.</span></div>
+                <div class="info-row"><span class="info-label">〽️ OK (5–7)</span><span class="info-val">2–3 pets with some variety. Still reasonable but the other person needs a moment to check values.</span></div>
+                <div class="info-row"><span class="info-label">⚠️ Messy (below 5)</span><span class="info-val">4+ pets, or a mix of very different categories/values. Harder to evaluate — people often decline or ignore complex bundles.</span></div>
+                <p style="color:var(--subtext);font-size:0.82em;margin-top:8px">The bundle score lowers your accept % the messier it gets: 4 pets = −7%, 5 pets = −12%, 6+ pets = −18%.</p>
+            </div>
+            <div class="info-section">
                 <h4>🏥 Inventory Health Score — 0 to 100</h4>
                 <div class="info-row"><span class="info-label">Demand Quality (30pts)</span><span class="info-val">Average demand across your inventory. Demand 7+ across the board = near perfect score.</span></div>
                 <div class="info-row"><span class="info-label">Liquidity (20pts)</span><span class="info-val">How often your pets actually trade. High demand but rarely traded pets score lower here.</span></div>
@@ -3057,7 +3065,13 @@
     }
 }
 
-function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
+function toggleHealthSimple(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
 
 
@@ -3766,7 +3780,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 tip: avgDemand >= 7 ? 'Excellent demand across your tradeable pets' :
                      avgDemand >= 5 ? 'Good demand, room to improve' :
                      avgDemand >= 3 ? 'Moderate demand — target pets with 6+ demand' :
-                     'Low demand — prioritize demand upgrades.' });
+                     'Low demand — prioritize demand upgrades.',
+                simple: 'How badly other people want your pets. High demand = people are actively looking for it and will trade fast. Low demand = no one wants it and you\'ll wait forever.\n\nExample: Turtle (demand 9.8) vs Hippogriff (demand 0.5) — Turtle scores near-perfect here, Hippogriff scores zero.' });
 
             // Demand spread (0-20) — how many of your core pets are high demand (7+)
             // This rewards having MULTIPLE high-demand pets, not just one.
@@ -3777,7 +3792,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             breakdown.push({ label: 'Demand Spread', score: spreadScore, max: 20,
                 tip: highDemPct >= 0.7 ? highDemCount + ' of your core pets have demand 7+ — excellent spread' :
                      highDemPct >= 0.4 ? highDemCount + ' high-demand pets — decent spread, room to improve' :
-                     'Only ' + highDemCount + ' of ' + gradeBase.length + ' core pets have demand 7+. Trade into higher-demand pets.' });
+                     'Only ' + highDemCount + ' of ' + gradeBase.length + ' core pets have demand 7+. Trade into higher-demand pets.',
+                simple: 'How many of your pets have demand 7 or higher. One great pet is good, but having MULTIPLE high-demand pets means you can always make a strong offer.\n\nExample: If you have 1 Kangaroo and 10 Pigs, your spread is weak. If you have 5 Kangaroos, your spread is strong.' });
 
             // Category quality (0-20)
             const catScore = Math.min(20, Math.round(premiumPct * 20));
@@ -3785,7 +3801,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             breakdown.push({ label: 'Category Quality', score: catScore, max: 20,
                 tip: premiumPct >= 0.5 ? 'Strong Exotic/High Tier/Preppy presence' :
                      premiumPct >= 0.25 ? 'Some premium category pets' :
-                     'Mostly Mid Tier. Adding Preppy or High Tier pets will help.' });
+                     'Mostly Mid Tier. Adding Preppy or High Tier pets will help.',
+                simple: 'What tier your pets are. Exotic, High Tier, and Preppy pets are the most desirable — people will overpay for them. Common/random pets score nothing here.\n\nExample: Bat Dragon = Exotic = full points. Kangaroo = Classy = some points. Silly Duck = nothing.' });
 
             // Trend health (0-15)
             const trendScore = Math.max(0, Math.min(15, Math.round(((risingCount - fallingCount * 1.5) / gradeBase.length) * 15 + 7)));
@@ -3793,7 +3810,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             breakdown.push({ label: 'Trend Health', score: trendScore, max: 15,
                 tip: risingCount > fallingCount ? risingCount + ' pets trending up — good momentum' :
                      fallingCount > risingCount  ? fallingCount + ' pets trending down — consider offloading' :
-                     'Mixed trends — monitor closely' });
+                     'Mixed trends — monitor closely',
+                simple: 'Are your pets going up or down in value? Rising pets = your inventory is getting more valuable over time. Falling pets = you\'re losing value just by holding them.\n\nExample: Lava Dragon with 📈 is rising so it scores well. A pet with 📉 drags your score down.' });
 
             // Tradability / HTT (0-15)
             const httScore = Math.max(0, Math.round((1 - httPct * 2) * 15));
@@ -3801,7 +3819,8 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             const uniqueHTT = [...new Set(gradeBase.filter(p => isHTT(p.n)).map(p => p.n))];
             breakdown.push({ label: 'Tradability', score: httScore, max: 15,
                 tip: httCount === 0 ? 'No HTT pets — clean inventory' :
-                     'HTT pets (offload ASAP): ' + uniqueHTT.join(', ') });
+                     'HTT pets (offload ASAP): ' + uniqueHTT.join(', '),
+                simple: 'HTT = Hard To Trade. These are pets that everyone owns or nobody wants, so even if their listed value is decent, you can\'t actually get fair trades for them.\n\nExample: Shadow Dragon sounds good but it\'s HTT — most traders won\'t accept it at listed value because it moves so slowly.' });
 
             // Manipulation penalty
             if (manipCount > 0) score = Math.max(0, score - manipCount * 5);
@@ -4208,16 +4227,22 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                         Graded on your <span style="color:#cbd5e1;font-weight:700">${health.coreCount} tradeable pet${health.coreCount!==1?'s':''}</span> (demand 3+)
                         ${health.fillerWarning ? '· <span style="color:#f87171;font-weight:700;cursor:pointer;text-decoration:underline dotted" onclick="openFillerPopup()">'+health.fillerCount+' filler pet'+(health.fillerCount!==1?'s':'')+' excluded ↗</span> — avg demand drops from <b style="color:#cbd5e1">'+health.fillerWarning.coreAvgDem+'</b> to <b style="color:#f87171">'+health.fillerWarning.demImpact+'</b> when included' : ''}
                     </div>
-                    ${health.breakdown.map(b => `
-                        <div style="margin-bottom:5px">
-                            <div style="display:flex;justify-content:space-between;font-size:0.72em;margin-bottom:2px">
-                                <span style="color:#94a3b8">${b.label}</span>
+                    ${health.breakdown.map((b,bi) => `
+                        <div style="margin-bottom:6px">
+                            <div style="display:flex;justify-content:space-between;font-size:0.72em;margin-bottom:2px;align-items:center">
+                                <span style="color:#94a3b8;cursor:pointer;display:flex;align-items:center;gap:4px"
+                                    onclick="toggleHealthSimple('hs_${bi}')"
+                                    title="Tap for simple explanation">
+                                    ${b.label}
+                                    <span style="font-size:0.85em;color:#475569;border:1px solid #334155;border-radius:4px;padding:0 4px;line-height:1.5">?</span>
+                                </span>
                                 <span style="color:white;font-weight:700">${b.score}/${b.max}</span>
                             </div>
                             <div style="background:#1e293b;border-radius:4px;height:5px">
                                 <div style="background:${b.score/b.max >= 0.7 ? '#34d399' : b.score/b.max >= 0.4 ? '#fbbf24' : '#f87171'};width:${(b.score/b.max*100).toFixed(0)}%;height:100%;border-radius:4px;transition:width 0.4s"></div>
                             </div>
                             <div style="font-size:0.68em;color:#64748b;margin-top:2px">${b.tip}</div>
+                            <div id="hs_${bi}" style="display:none;margin-top:5px;background:#0f172a;border-left:3px solid var(--accent);border-radius:0 8px 8px 0;padding:7px 10px;font-size:0.69em;color:#94a3b8;line-height:1.55;white-space:pre-line">${b.simple||''}</div>
                         </div>
                     `).join('')}
                     <div style="margin-top:8px;border-top:1px solid #1e293b;padding-top:8px">
@@ -4509,11 +4534,9 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                     <div class="ai-stats-row">
                         <span class="ai-stat-pill tqs-${tqsCls}">${tqsLabel} ${r.tqs.toFixed(1)}/10</span>
                         <span class="ai-stat-pill" style="color:${acceptColor}">~${r.acceptPct||0}% accept</span>
-                        <span class="ai-stat-pill" style="color:${r.acceptPct>=55?'#34d399':r.acceptPct>=35?'#fbbf24':'#f87171'};background:rgba(255,255,255,0.05)">~${r.acceptPct}% accept</span>
-                        <span class="ai-stat-pill" style="color:${valColor};background:rgba(255,255,255,0.05)">${valGapNum>=0?'+':''}${r.valGapPct}%</span>
-                        <span class="ai-stat-pill pill-dem">Dem: ${r.target.d.toFixed(1)}</span>
-                        <span class="ai-stat-pill" style="color:${acceptColor};background:rgba(255,255,255,0.05)">~${r.acceptPct}% accept</span>
-                        <span class="ai-stat-pill" style="color:${readScore>=8?'#34d399':readScore>=5?'#fbbf24':'#f87171'};background:rgba(255,255,255,0.05)">Bundle: ${readLabel}</span>
+                        <span class="ai-stat-pill" style="color:${valColor};">${valGapNum>=0?'+':''}${r.valGapPct}% value</span>
+                        <span class="ai-stat-pill" style="color:#fbbf24;">Demand: ${r.target.d.toFixed(1)}</span>
+                        <span class="ai-stat-pill" style="color:${readScore>=8?'#34d399':readScore>=5?'#fbbf24':'#f87171'}">Bundle: ${readLabel}</span>
                     </div>
                 </div>`;
             });
