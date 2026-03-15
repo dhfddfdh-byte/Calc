@@ -1653,6 +1653,17 @@
         buildDynamicHTT();    // build dynamic HTT from live demand/trend data
         buildTradeFreqMap();  // build trade frequency index from history
         trendVelocityCache.clear(); // clear any stale trend velocity cache
+
+        // Find most recent date in history data — this is when values were last updated
+        let latestMs = 0;
+        HISTORY_DATA.forEach(row => {
+            const d = new Date(row.date || row.timestamp || row.time || '');
+            if (!isNaN(d.getTime()) && d.getTime() > latestMs) latestMs = d.getTime();
+        });
+        if (latestMs > 0) {
+            window._dataLastUpdated = latestMs;
+            startLastUpdatedTicker();
+        }
         
     } catch (e) { 
         console.error("❌ History fetch failed:", e);
@@ -2683,8 +2694,7 @@
                 })).filter(p => p.n && p.n.length > 0);
                 
                 document.getElementById('loadingScreen').style.display = 'none';
-                window._dataLoadedAt = Date.now();
-                startLastUpdatedTicker();
+
                 buildDynamicHTT();  // initial HTT from pet data (before history)
                 fetchHistory();
                 restoreTrade();
@@ -3087,28 +3097,38 @@ function startLastUpdatedTicker() {
             const text  = document.getElementById('lastUpdatedText');
             if (!badge || !text) return;
             badge.style.display = 'flex';
+
             function update() {
-                if (!window._dataLoadedAt) return;
-                const ageMs  = Date.now() - window._dataLoadedAt;
-                const ageSec = Math.floor(ageMs / 1000);
-                const ageMin = Math.floor(ageMs / 60000);
-                const ageHr  = Math.floor(ageMin / 60);
-                // Show exact time loaded
-                const loadedTime = new Date(window._dataLoadedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                const ts = window._dataLastUpdated;
+                if (!ts) return;
+                const ageHr = (Date.now() - ts) / 3600000;
+                const d = new Date(ts);
+                const today = new Date();
+                const isToday = d.toDateString() === today.toDateString();
+                const timeStr = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                const dateStr = isToday
+                    ? 'today at ' + timeStr
+                    : d.toLocaleDateString([], {month:'short', day:'numeric'}) + ' at ' + timeStr;
+
                 let label, color, border;
-                if (ageSec < 10)       { label = '✅ Just loaded at ' + loadedTime;                          color = '#34d399'; border = '#34d39933'; }
-                else if (ageMin < 1)   { label = '✅ Loaded ' + ageSec + 's ago at ' + loadedTime;          color = '#34d399'; border = '#34d39933'; }
-                else if (ageMin < 60)  { label = '🕒 Loaded ' + ageMin + 'm ago at ' + loadedTime;          color = '#94a3b8'; border = '#1e293b';   }
-                else if (ageHr < 24)   { label = '🕒 Loaded ' + ageHr + 'h ago at ' + loadedTime;           color = '#fbbf24'; border = '#fbbf2433'; }
-                else                   { label = '⚠️ Loaded ' + ageHr + 'h ago — values may be outdated';   color = '#f87171'; border = '#f8717133'; }
+                if (ageHr < 12) {
+                    label = '✅ Values updated ' + dateStr;
+                    color = '#34d399'; border = '#34d39933';
+                } else if (ageHr < 24) {
+                    label = '⚠️ Values updated ' + dateStr;
+                    color = '#fbbf24'; border = '#fbbf2433';
+                } else {
+                    label = '⚠️ Values may be outdated — last updated ' + dateStr;
+                    color = '#f87171'; border = '#f8717133';
+                }
                 text.textContent = label;
-                badge.style.color  = color;
+                badge.style.color = color;
                 badge.style.borderColor = border;
             }
-            update();
-            setInterval(update, 1000);  // update every second for first minute, then minute-level is fine
-        }
 
+            update();
+            setInterval(update, 60000);
+        }
         function toggleHealthSimple(id) {
             const el = document.getElementById(id);
             if (!el) return;
