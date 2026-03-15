@@ -5877,6 +5877,106 @@ function tbFailTrade(id) {
     renderTradeBoard();
 }
 
+// Completes a pending trade WITHOUT touching the inventory.
+// Useful when the user has already manually updated their inventory,
+// or just wants to log the trade history without inventory changes.
+function tbCompleteNoInv(id) {
+    const pending = tbPendingLoad();
+    const trade = pending.find(t => t.id === id);
+    if (!trade) return;
+
+    // Save to completed history only — no inventory changes
+    const completedArr = tbCompletedLoad();
+    completedArr.unshift({
+        id: trade.id,
+        completedAt: Date.now(),
+        site: trade.site || 'unknown',
+        notes: trade.notes || '',
+        offerPets:   trade.offerPets,
+        requestPets: trade.requestPets,
+        offerVal:    trade.offerPets.reduce((s,p) => s + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0),
+        requestVal:  trade.requestPets.reduce((s,p) => s + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0),
+        noInvChange: true,
+    });
+    tbCompletedSave(completedArr);
+
+    // Remove from pending
+    const newPending = pending.filter(t => t.id !== id);
+    tbPendingSave(newPending);
+
+    renderTradeBoard();
+    showTBToast('✅ Trade logged to history (inventory unchanged)', '#34d399');
+}
+
+// Completes ALL pending trades through the normal flow (opens modal for each one sequentially is impractical,
+// so this batch-completes them all as-is with inventory changes applied).
+function tbCompleteAll() {
+    const pending = tbPendingLoad();
+    if (!pending.length) return;
+    if (!confirm('Complete all ' + pending.length + ' pending trades? This will update your inventory for each one.')) return;
+
+    const completedArr = tbCompletedLoad();
+    pending.forEach(trade => {
+        // Remove offered pets from inventory
+        trade.offerPets.forEach(offeredPet => {
+            const idx = state.inv.findIndex(ip =>
+                ip.n === offeredPet.n &&
+                (ip.type||'reg') === (offeredPet.type||'reg') &&
+                !!ip.f_st === !!offeredPet.f_st &&
+                !!ip.r_st === !!offeredPet.r_st
+            );
+            if (idx >= 0) state.inv.splice(idx, 1);
+            else {
+                const fallback = state.inv.findIndex(ip => ip.n === offeredPet.n);
+                if (fallback >= 0) state.inv.splice(fallback, 1);
+            }
+        });
+        // Add received pets
+        trade.requestPets.forEach(receivedPet => {
+            const base = ALL_PETS.find(x => x.n === receivedPet.n);
+            if (!base) return;
+            state.inv.push({ ...base, ...receivedPet, uid: Math.random() });
+        });
+        // Log to history
+        completedArr.unshift({
+            id: trade.id, completedAt: Date.now(),
+            site: trade.site || 'unknown', notes: trade.notes || '',
+            offerPets: trade.offerPets, requestPets: trade.requestPets,
+            offerVal:   trade.offerPets.reduce((s,p) => s + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0),
+            requestVal: trade.requestPets.reduce((s,p) => s + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0),
+        });
+    });
+    tbCompletedSave(completedArr);
+    tbPendingSave([]);
+    saveTrade();
+    renderInventory();
+    renderTradeBoard();
+    showTBToast('🎉 All ' + pending.length + ' trades completed!', '#34d399');
+}
+
+// Completes ALL pending trades without touching inventory.
+function tbCompleteAllNoInv() {
+    const pending = tbPendingLoad();
+    if (!pending.length) return;
+    if (!confirm('Log all ' + pending.length + ' pending trades to history without changing inventory?')) return;
+
+    const completedArr = tbCompletedLoad();
+    pending.forEach(trade => {
+        completedArr.unshift({
+            id: trade.id, completedAt: Date.now(),
+            site: trade.site || 'unknown', notes: trade.notes || '',
+            offerPets: trade.offerPets, requestPets: trade.requestPets,
+            offerVal:   trade.offerPets.reduce((s,p) => s + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0),
+            requestVal: trade.requestPets.reduce((s,p) => s + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0),
+            noInvChange: true,
+        });
+    });
+    tbCompletedSave(completedArr);
+    tbPendingSave([]);
+    renderTradeBoard();
+    showTBToast('✅ All ' + pending.length + ' trades logged (inventory unchanged)', '#34d399');
+}
+
 // Opens the Complete Trade modal for a pending trade.
 // The user can review/edit what was actually traded (add or remove pets
 // from either side) before confirming. This lets them handle partial deals.
@@ -6371,7 +6471,13 @@ function renderTradeBoard() {
                 <div style="font-size:1em;font-weight:700;color:#64748b;margin-bottom:6px">No pending trades</div>
                 <div style="font-size:0.82em">When a trade is accepted, it moves here for confirmation</div>
             </div>`;
-        return pending.map(t => {
+        const completeAllBtn = pending.length > 1
+            ? '<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">' +
+                '<button onclick="tbCompleteAll()" style="background:#059669;border:none;color:white;border-radius:8px;padding:7px 18px;font-size:0.8em;font-weight:900;cursor:pointer">✅ Complete All (' + pending.length + ')</button>' +
+                '<button onclick="tbCompleteAllNoInv()" style="background:#1e293b;border:1.5px solid #34d399;color:#34d399;border-radius:8px;padding:7px 18px;font-size:0.8em;font-weight:900;cursor:pointer">✅ Complete All — No Inv (' + pending.length + ')</button>' +
+              '</div>'
+            : '';
+        return completeAllBtn + pending.map(t => {
             const offerChips   = renderTBPetChips(t.offerPets,   'offer',   false);
             const requestChips = renderTBPetChips(t.requestPets, 'request', false);
             const ago     = Math.floor((Date.now() - t.acceptedAt) / 60000);
@@ -6392,6 +6498,7 @@ function renderTradeBoard() {
                 (t.notes ? '<div style="font-size:0.75em;color:#64748b;font-style:italic;margin-bottom:10px">&ldquo;' + t.notes + '&rdquo;</div>' : '') +
                 '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
                     '<button onclick="tbCompleteTrade(\'' + t.id + '\')" style="background:#059669;border:none;color:white;border-radius:7px;padding:5px 14px;font-size:0.78em;font-weight:800;cursor:pointer">✅ Completed</button>' +
+                    '<button onclick="tbCompleteNoInv(\'' + t.id + '\')" style="background:#1e293b;border:1.5px solid #34d399;color:#34d399;border-radius:7px;padding:5px 14px;font-size:0.78em;font-weight:800;cursor:pointer" title="Mark complete without changing inventory">✅ Complete (no inv)</button>' +
                     '<button onclick="tbFailTrade(\'' + t.id + '\')" style="background:#7f1d1d;border:1.5px solid #ef4444;color:#ef4444;border-radius:7px;padding:5px 14px;font-size:0.78em;cursor:pointer">❌ Failed</button>' +
                 '</div>' +
             '</div>';
