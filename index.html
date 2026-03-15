@@ -2363,6 +2363,10 @@
                 <div class="info-row"><span class="info-label">Demand Match</span><span class="info-val">Offering high-demand pets for a low-demand target = −14%. They don't want your pets back.</span></div>
                 <div class="info-row"><span class="info-label">80% Hard Cap</span><span class="info-val">Reddit consensus: people decline even great overpays if they simply don't want your specific pets. Max is capped at 80% to reflect this unavoidable randomness.</span></div>
                 <p style="color:#fbbf24;font-size:0.82em;margin-top:10px;line-height:1.5">⚠️ The accept rate is a directional signal, not a guarantee. A 65% trade is meaningfully easier to get accepted than a 20% trade — but the exact number depends on the individual player.</p>
+                <div style="background:#1e2d42;border:1px solid #fbbf2444;border-radius:10px;padding:10px 14px;margin-top:10px">
+                    <div style="font-weight:900;font-size:0.85em;color:#fbbf24;margin-bottom:4px">📊 How accurate is it?</div>
+                    <div style="font-size:0.8em;color:#94a3b8;line-height:1.6">That depends on <b style="color:#cbd5e1">you</b>. The model is built on community research but it can't know the specific player you're trading with, their mood, or whether they already own the pet. The more trades you log in your history, the clearer your personal patterns become — over time you'll see which accept rate ranges actually work for your trading style. Use it as a gut-check, not a certainty.</div>
+                </div>
             </div>
             <div class="info-section">
                 <h4>📈 Trending Pets — How They're Ranked</h4>
@@ -3116,6 +3120,55 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             }).join('');
         }
 
+        // Returns the best-known value for a pet on a specific date.
+        // Searches HISTORY_DATA for rows matching petName, sorted by date proximity.
+        // Falls back to current ALL_PETS value if no history found.
+        function getHistoricalValue(petName, dateMs) {
+            if (!HISTORY_DATA || HISTORY_DATA.length === 0) {
+                const p = ALL_PETS.find(x => x.n === petName);
+                return p ? (p.v || 0) : 0;
+            }
+            const rows = HISTORY_DATA.filter(h => h.name === petName && h.date);
+            if (rows.length === 0) {
+                const p = ALL_PETS.find(x => x.n === petName);
+                return p ? (p.v || 0) : 0;
+            }
+            // Parse dates and find closest to target
+            const target = dateMs || Date.now();
+            let closest = null, closestDiff = Infinity;
+            rows.forEach(h => {
+                const d = new Date(h.date).getTime();
+                if (isNaN(d)) return;
+                const diff = Math.abs(d - target);
+                if (diff < closestDiff) { closestDiff = diff; closest = h; }
+            });
+            if (closest && parseFloat(closest.value) > 0) return parseFloat(closest.value);
+            const p = ALL_PETS.find(x => x.n === petName);
+            return p ? (p.v || 0) : 0;
+        }
+
+        // Gets the effective W/L values for a completed trade.
+        // If tradeDate is set, uses historical values from that date.
+        // If a value snapshot exists, uses that.
+        // Otherwise falls back to stored offerVal/requestVal.
+        function getTradeEffectiveVals(t) {
+            // Prefer: historical lookup by date > snapshot > stored vals
+            if (t.tradeDate && HISTORY_DATA && HISTORY_DATA.length > 0) {
+                const dateMs = new Date(t.tradeDate).getTime();
+                if (!isNaN(dateMs)) {
+                    const offerVal   = (t.offerPets   || []).reduce((s, p) => s + getHistoricalValue(p.n, dateMs), 0);
+                    const requestVal = (t.requestPets || []).reduce((s, p) => s + getHistoricalValue(p.n, dateMs), 0);
+                    if (offerVal > 0 || requestVal > 0) return { offerVal, requestVal, source: 'historical' };
+                }
+            }
+            if (t.offerValSnapshot && t.requestValSnapshot) {
+                const offerVal   = t.offerValSnapshot.reduce((s, x) => s + (x.val || 0), 0);
+                const requestVal = t.requestValSnapshot.reduce((s, x) => s + (x.val || 0), 0);
+                return { offerVal, requestVal, source: 'snapshot' };
+            }
+            return { offerVal: t.offerVal || 0, requestVal: t.requestVal || 0, source: 'current' };
+        }
+
         // Returns the numeric value for a pet given its type (reg/neon/mega)
         // and fly/ride status. Reads from the variant value fields on the pet object
         // (f_v, r_v, fr_v, n_v, nfr_v, m_v, mfr_v).
@@ -3534,17 +3587,36 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             if (offerHTT) prob -= 12;
             if (isHTT(target.n)) prob += 8; // they want to get rid of it
 
-            // ── 5. Bundle friction (research-confirmed) ───────────────────
-            // 2-pet bundle = clean, signals organized trader → slight bonus
-            // 3 pets = neutral, 4 = friction, 5+ = major friction
-            if (bundleSize === 2)      prob += 3;
-            else if (bundleSize === 4) prob -= 8;
-            else if (bundleSize >= 5)  prob -= 16;
+            // ── 5. Bundle friction ───────────────────────────────────────
+            // Adopt Me trades commonly involve 2-3 pets per side — that's normal.
+            // Friction only kicks in at 4+ because it forces the other person to
+            // mentally value multiple pets before deciding. 5+ is genuinely unusual.
+            // 1 pet  = neutral (standard)
+            // 2 pets = neutral (very common)
+            // 3 pets = slight friction (-3) but still normal in community
+            // 4 pets = noticeable friction (-7)
+            // 5 pets = high friction (-12), most players avoid this
+            // 6 pets = very hard to get accepted (-18)
+            if      (bundleSize === 3) prob -= 3;
+            else if (bundleSize === 4) prob -= 7;
+            else if (bundleSize === 5) prob -= 12;
+            else if (bundleSize >= 6)  prob -= 18;
 
             // ── 6. Demand dynamics ────────────────────────────────────────
-            if (offerAvgDemand >= 7 && target.d < 4) prob -= 14; // high dem offer for low dem target = they don't want yours back
-            if (offerAvgDemand >= target.d)           prob += 5;  // your pets as liquid as theirs
-            if (target.d >= 9)                         prob += 6;  // highly desired target — more competition but more motivated traders
+            // KEY INSIGHT: demand mismatch affects THEIR motivation, not yours.
+            // If YOU offer high-demand for THEIR low-demand → THEY benefit massively
+            //   → they should be more likely to accept (you're doing them a favour)
+            // If YOU offer low-demand for THEIR high-demand → THEY get stuck with slow pets
+            //   → they'll hesitate or decline
+            const offerDemHigh = offerAvgDemand >= 7;
+            const offerDemLow  = offerAvgDemand < 4;
+            const targetDemHigh = target.d >= 7;
+            const targetDemLow  = target.d < 4;
+
+            if (offerDemHigh && targetDemLow)  prob += 10; // you're giving liquid pets for their slow pet — great deal for them
+            if (offerDemLow  && targetDemHigh) prob -= 14; // you're offloading slow pets onto someone with good pets — they'll pass
+            if (offerDemLow  && targetDemLow)  prob -= 5;  // both sides slow — low motivation overall
+            if (target.d >= 9)                  prob += 6;  // highly desired target — owner motivated to trade
 
             // ── 7. Category desirability of offer ────────────────────────
             const offerTier = offerBundle ? getBundleTier(offerBundle) : 1;
@@ -5291,8 +5363,7 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                 var pctStr = pct !== 0 ? (pct > 0 ? '+' : '') + pct.toFixed(1) + '%' : 'stable';
                 var val = p.v || 0;
                 var safeN = p.n.replace(/'/g, "\\'");
-                var acceptPct = getAcceptanceProbability(val * 1.1, p.d || 0, p, null);
-                var acceptColor = acceptPct >= 55 ? '#34d399' : acceptPct >= 35 ? '#fbbf24' : '#f87171';
+
                 return '<div class="trends-card" onclick="quickAddFromList(\'' + safeN + "\','normal')" + '">' +
                     petImgTag(p.n, 'width:52px;height:52px;object-fit:contain') +
                     '<div class="trends-card-info">' +
@@ -5305,7 +5376,6 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
                         '<div class="trends-card-badges">' +
                             (valTrend ? '<span class="trends-badge">' + valTrend + '</span>' : '') +
                             (demTrend ? '<span class="trends-badge">' + demTrend + '</span>' : '') +
-                            '<span class="trends-badge" style="color:' + acceptColor + '">~' + acceptPct + '% accept</span>' +
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -6109,18 +6179,24 @@ function tbFinalizeComplete() {
     const pending = tbPendingLoad().filter(t => t.id !== id);
     tbPendingSave(pending);
 
-    // Save to completed history
+    // Save to completed history — includes value snapshot at trade time
     const completedArr = tbCompletedLoad();
     const pendingTrade = tbPendingLoad().find(t => t.id === id) || s;
+    const offerValNow    = s.finalOffer.reduce((sum, p) => sum + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0);
+    const requestValNow  = s.finalRequest.reduce((sum, p) => sum + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0);
     completedArr.unshift({
         id: id,
         completedAt: Date.now(),
+        tradeDate: null,  // can be set later by user to override W/L calculation
         site: pendingTrade.site || 'unknown',
         notes: pendingTrade.notes || '',
-        offerPets:   s.finalOffer,
-        requestPets: s.finalRequest,
-        offerVal:    s.finalOffer.reduce((sum, p) => sum + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0),
-        requestVal:  s.finalRequest.reduce((sum, p) => sum + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0),
+        offerPets:    s.finalOffer,
+        requestPets:  s.finalRequest,
+        offerVal:     offerValNow,
+        requestVal:   requestValNow,
+        // Snapshot: record each pet's current value at time of logging
+        offerValSnapshot:   s.finalOffer.map(p => ({ n: p.n, val: calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value') })),
+        requestValSnapshot: s.finalRequest.map(p => ({ n: p.n, val: calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value') })),
     });
     tbCompletedSave(completedArr);
 
@@ -6513,19 +6589,18 @@ function renderTradeBoard() {
                 <div style="font-size:0.82em;color:#334155">Trades you confirm as completed will appear here with full analysis</div>
             </div>`;
 
-        // ── Stats ──
+        // ── Stats — use historical/snapshot values where available ──
         const totalTrades = completed.length;
-        const wins   = completed.filter(t => t.requestVal > t.offerVal * 1.03).length;
-        const losses = completed.filter(t => t.offerVal  > t.requestVal * 1.03).length;
+        const tradeVals = completed.map(t => getTradeEffectiveVals(t));
+        const wins   = tradeVals.filter(v => v.requestVal > v.offerVal * 1.03).length;
+        const losses = tradeVals.filter(v => v.offerVal  > v.requestVal * 1.03).length;
         const fairs  = totalTrades - wins - losses;
         const winRate  = totalTrades > 0 ? Math.round((wins / totalTrades) * 100) : 0;
-        const avgGain  = totalTrades > 0 ? completed.reduce((s,t) => s + (t.requestVal - t.offerVal), 0) / totalTrades : 0;
-        const totalVol = completed.reduce((s,t) => s + (t.offerVal || 0), 0);
-        const bestTrade = completed.reduce((best, t) => {
-            const g = (t.requestVal||0) - (t.offerVal||0);
-            return g > ((best.requestVal||0)-(best.offerVal||0)) ? t : best;
-        }, completed[0]);
-        const bestGain = (bestTrade.requestVal||0) - (bestTrade.offerVal||0);
+        const avgGain  = totalTrades > 0 ? tradeVals.reduce((s,v) => s + (v.requestVal - v.offerVal), 0) / totalTrades : 0;
+        const totalVol = tradeVals.reduce((s,v) => s + (v.offerVal || 0), 0);
+        const bestIdx  = tradeVals.reduce((bi, v, i) => (v.requestVal - v.offerVal) > (tradeVals[bi].requestVal - tradeVals[bi].offerVal) ? i : bi, 0);
+        const bestGain = tradeVals[bestIdx].requestVal - tradeVals[bestIdx].offerVal;
+        const bestTrade = completed[bestIdx];
 
         // ── Trader type logic ──
         let traderType = '', traderSub = '', traderAnalysis = '', traderColor = '';
@@ -6538,7 +6613,14 @@ function renderTradeBoard() {
             traderType = 'The Shark';
             traderSub  = winRate + '% win rate · High value extractor';
             traderColor = '#a855f7';
-            traderAnalysis = 'Your record is exceptional. You consistently extract more value than you give up, which means you either have a very strong grasp of pet valuations or you are very patient waiting for the right offers. At ' + winRate + '% wins across ' + totalTrades + ' trades, you are operating at the top tier. Average gain per trade: +' + avgGain.toFixed(2) + '. Your risk is complacency — over-confidence in values changes fast in this game.';
+            const winTrades   = completed.filter((t,i) => tradeVals[i].requestVal > tradeVals[i].offerVal * 1.03);
+            const risingWins  = winTrades.filter(t => (t.requestPets||[]).some(p => { const pet=ALL_PETS.find(x=>x.n===p.n); return pet&&(pet.vt||'').includes('📈'); })).length;
+            const highDemWins = winTrades.filter(t => (t.requestPets||[]).some(p => { const pet=ALL_PETS.find(x=>x.n===p.n); return pet&&(pet.d||0)>=7; })).length;
+            const winPatterns = [];
+            if (risingWins >= 2)  winPatterns.push('you targeted rising-value pets in ' + risingWins + ' wins');
+            if (highDemWins >= 2) winPatterns.push('you picked up high-demand (7+) pets in ' + highDemWins + ' wins');
+            const wpStr = winPatterns.length > 0 ? ' What\'s working: ' + winPatterns.join(' and ') + '.' : '';
+            traderAnalysis = 'Exceptional record. ' + winRate + '% wins across ' + totalTrades + ' trades, averaging +' + avgGain.toFixed(2) + ' per trade.' + wpStr + ' Risk: values shift fast — stay on top of trend emojis.';
         } else if (winRate >= 55 && avgGain > 1) {
             traderType = 'The Grinder';
             traderSub  = winRate + '% win rate · Consistent accumulator';
@@ -6553,7 +6635,19 @@ function renderTradeBoard() {
             traderType = 'The Learner';
             traderSub  = Math.round((losses/totalTrades)*100) + '% loss rate · Building experience';
             traderColor = '#fbbf24';
-            traderAnalysis = 'Your loss rate is high right now at ' + Math.round((losses/totalTrades)*100) + '% across ' + totalTrades + ' trades. That usually points to one of three things: accepting offers without checking values first, trading HTT pets that are hard to move at face value, or going up against traders who know the game better. The path forward is simple — check every trade in the calculator before accepting, avoid pets with demand under 4, and never accept a trade that looks even if your pet is harder to trade than theirs.';
+            // Smart pattern detection for losses
+            const lossTrades = completed.filter((t,i) => tradeVals[i].offerVal > tradeVals[i].requestVal * 1.03);
+            const lowDemLosses = lossTrades.filter(t => (t.offerPets||[]).some(p => { const pet = ALL_PETS.find(x=>x.n===p.n); return pet && (pet.d||0) < 4; })).length;
+            const httLosses    = lossTrades.filter(t => (t.offerPets||[]).some(p => isHTT(p.n))).length;
+            const fallingLosses= lossTrades.filter(t => (t.offerPets||[]).some(p => { const pet = ALL_PETS.find(x=>x.n===p.n); return pet && ((pet.vt||'').includes('📉') || (pet.dt||'').includes('❄️')); })).length;
+            const bigBundleLosses = lossTrades.filter(t => (t.offerPets||[]).length >= 3).length;
+            let patterns = [];
+            if (httLosses >= 2)       patterns.push('you gave HTT pets in ' + httLosses + ' losses — those pets trade below their listed value');
+            if (lowDemLosses >= 2)    patterns.push('you gave low-demand pets (under 4) in ' + lowDemLosses + ' losses — they accept because they\'re getting easy-to-trade pets, you\'re getting stuck ones');
+            if (fallingLosses >= 2)   patterns.push('you gave falling-value pets in ' + fallingLosses + ' losses — trading declining assets at listed value is a consistent pattern here');
+            if (bigBundleLosses >= 2) patterns.push('you offered 3+ pet bundles in ' + bigBundleLosses + ' losses — bundles are harder to value accurately and easier to get tricked on');
+            const patternStr = patterns.length > 0 ? ' Pattern spotted: ' + patterns.join('; ') + '.' : ' No single pattern stands out — could be value drift (use the 📅 date button on trades to check with historical prices).';
+            traderAnalysis = 'Loss rate is ' + Math.round((losses/totalTrades)*100) + '% across ' + totalTrades + ' trades.' + patternStr + ' Use the 📅 button on each trade to set when it happened — the calculator will recalculate W/L using prices from that date instead of today\'s.';
         } else {
             traderType = 'The Opportunist';
             traderSub  = 'Mixed record · Reading the market';
@@ -6608,11 +6702,13 @@ function renderTradeBoard() {
         const tradeCards = completed.map(t => {
             const offerChips   = renderTBPetChips(t.offerPets,   'offer',   false);
             const requestChips = renderTBPetChips(t.requestPets, 'request', false);
-            const diff = (t.requestVal||0) - (t.offerVal||0);
-            const isW = diff > (t.offerVal||0) * 0.03;
-            const isL = diff < -(t.offerVal||0) * 0.03;
+            const effVals = getTradeEffectiveVals(t);
+            const diff = effVals.requestVal - effVals.offerVal;
+            const isW = diff > effVals.offerVal * 0.03;
+            const isL = diff < -(effVals.offerVal * 0.03);
             const resultLabel = isW ? 'W' : isL ? 'L' : 'FAIR';
             const resultColor = isW ? '#34d399' : isL ? '#f87171' : '#94a3b8';
+            const valSource = effVals.source === 'historical' ? 'at trade date' : effVals.source === 'snapshot' ? 'at log time' : 'current';
             const dateStr = new Date(t.completedAt).toLocaleDateString();
             const siteColor = t.site === 'elvebredd' ? '#a855f7' : '#38bdf8';
             const siteName  = t.site === 'elvebredd' ? 'Elvebredd' : t.site === 'amvgg' ? 'AMVGG' : 'Manual';
@@ -6621,10 +6717,14 @@ function renderTradeBoard() {
                     '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
                         '<span style="font-size:0.68em;font-weight:900;color:' + siteColor + ';background:' + siteColor + '22;border-radius:5px;padding:2px 7px">' + siteName + '</span>' +
                         '<span style="font-size:0.68em;color:#475569">' + dateStr + '</span>' +
+                        (t.tradeDate ? '<span style="font-size:0.62em;color:#a855f7;background:#a855f722;border-radius:4px;padding:1px 5px">📅 ' + t.tradeDate + '</span>' : '') +
                         '<span style="font-size:0.82em;font-weight:900;color:' + resultColor + ';background:' + resultColor + '18;border-radius:5px;padding:2px 8px">' + resultLabel + '</span>' +
-                        (diff !== 0 ? '<span style="font-size:0.72em;color:' + resultColor + ';font-weight:800">' + (diff > 0 ? '+' : '') + diff.toFixed(2) + '</span>' : '') +
+                        (diff !== 0 ? '<span style="font-size:0.72em;color:' + resultColor + ';font-weight:800">' + (diff > 0 ? '+' : '') + diff.toFixed(2) + ' <span style="color:#475569;font-weight:500">(' + valSource + ')</span></span>' : '') +
                     '</div>' +
-                    '<button onclick="tbDeleteCompleted(\'' + t.id + '\')" style="background:transparent;border:none;color:#334155;font-size:13px;cursor:pointer;padding:2px 6px;transition:0.15s" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'#334155\'">🗑</button>' +
+                    '<div style="display:flex;gap:4px">' +
+                        '<button onclick="tbEditTradeDate(\'' + t.id + '\')" title="Set when this trade happened" style="background:transparent;border:none;color:#475569;font-size:11px;cursor:pointer;padding:2px 5px;transition:0.15s" onmouseover="this.style.color=\'#a855f7\'" onmouseout="this.style.color=\'#475569\'">📅</button>' +
+                        '<button onclick="tbDeleteCompleted(\'' + t.id + '\')" style="background:transparent;border:none;color:#334155;font-size:13px;cursor:pointer;padding:2px 6px;transition:0.15s" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'#334155\'">🗑</button>' +
+                    '</div>' +
                 '</div>' +
                 '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
                     '<div style="flex:1;min-width:120px"><div style="font-size:0.62em;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-weight:900">You Gave</div><div style="display:flex;flex-wrap:wrap;gap:4px">' + offerChips + '</div></div>' +
@@ -6685,6 +6785,27 @@ function tbAddManualComplete() {
     const id = 'manual_' + Date.now();
     openSearch('tbOffer'); // open search to build offer, then save manually
     showTBToast('Use "+ New Trade" then mark it Accepted → Completed', '#f59e0b');
+}
+
+function tbEditTradeDate(id) {
+    const completed = tbCompletedLoad();
+    const t = completed.find(x => x.id === id);
+    if (!t) return;
+    const current = t.tradeDate || '';
+    const dateVal = prompt(
+        'Enter the date this trade happened (YYYY-MM-DD):\n\nThis lets the calculator use prices from that date instead of today\'s prices, giving you an accurate W/L result.\n\nLeave blank to use logged values.',
+        current
+    );
+    if (dateVal === null) return; // cancelled
+    const trimmed = dateVal.trim();
+    if (trimmed && !/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        alert('Please use YYYY-MM-DD format, e.g. 2024-11-15');
+        return;
+    }
+    t.tradeDate = trimmed || null;
+    tbCompletedSave(completed);
+    renderTradeBoard();
+    showTBToast(trimmed ? '📅 Trade date set — W/L recalculated using historical values' : '📅 Trade date cleared', '#a855f7');
 }
 
 function tbDeleteCompleted(id) {
