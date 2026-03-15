@@ -1080,13 +1080,13 @@
 
     <!-- original nav buttons inside calc tab -->
     <div class="nav-bar">
+        <div id="lastUpdatedBadge" style="display:none;align-items:center;gap:5px;font-size:0.72em;font-weight:700;padding:5px 10px;border-radius:10px;border:1px solid #1e293b;color:#64748b;white-space:nowrap;margin-right:auto">
+            <span id="lastUpdatedText">Updated just now</span>
+        </div>
         <button class="nav-btn" onclick="openInfo()">ℹ️ Information</button>
         <button class="nav-btn" onclick="openHistory()">📜 History</button>
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
         <button class="nav-btn" onclick="openSettings()">⚙️ Settings</button>
-        <div id="lastUpdatedBadge" style="display:none;align-items:center;gap:5px;font-size:0.72em;font-weight:700;padding:5px 10px;border-radius:10px;border:1px solid #1e293b;color:#64748b;white-space:nowrap">
-            <span id="lastUpdatedText">Updated just now</span>
-        </div>
     </div>
 
     <div class="analytics-overlay" id="analyticsOverlay">
@@ -3088,20 +3088,25 @@ function startLastUpdatedTicker() {
             if (!badge || !text) return;
             badge.style.display = 'flex';
             function update() {
-                const ageMs  = Date.now() - (window._dataLoadedAt || Date.now());
+                if (!window._dataLoadedAt) return;
+                const ageMs  = Date.now() - window._dataLoadedAt;
+                const ageSec = Math.floor(ageMs / 1000);
                 const ageMin = Math.floor(ageMs / 60000);
                 const ageHr  = Math.floor(ageMin / 60);
+                // Show exact time loaded
+                const loadedTime = new Date(window._dataLoadedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                 let label, color, border;
-                if (ageMin < 5)        { label = '✅ Values up to date';                      color = '#34d399'; border = '#34d39933'; }
-                else if (ageMin < 60)  { label = '🕒 Updated ' + ageMin + 'm ago';            color = '#94a3b8'; border = '#1e293b';   }
-                else if (ageHr < 24)   { label = '🕒 Updated ' + ageHr + 'h ago';             color = '#fbbf24'; border = '#fbbf2433'; }
-                else                   { label = '⚠️ Values may be outdated (' + ageHr + 'h)'; color = '#f87171'; border = '#f8717133'; }
+                if (ageSec < 10)       { label = '✅ Just loaded at ' + loadedTime;                          color = '#34d399'; border = '#34d39933'; }
+                else if (ageMin < 1)   { label = '✅ Loaded ' + ageSec + 's ago at ' + loadedTime;          color = '#34d399'; border = '#34d39933'; }
+                else if (ageMin < 60)  { label = '🕒 Loaded ' + ageMin + 'm ago at ' + loadedTime;          color = '#94a3b8'; border = '#1e293b';   }
+                else if (ageHr < 24)   { label = '🕒 Loaded ' + ageHr + 'h ago at ' + loadedTime;           color = '#fbbf24'; border = '#fbbf2433'; }
+                else                   { label = '⚠️ Loaded ' + ageHr + 'h ago — values may be outdated';   color = '#f87171'; border = '#f8717133'; }
                 text.textContent = label;
                 badge.style.color  = color;
                 badge.style.borderColor = border;
             }
             update();
-            setInterval(update, 60000);
+            setInterval(update, 1000);  // update every second for first minute, then minute-level is fine
         }
 
         function toggleHealthSimple(id) {
