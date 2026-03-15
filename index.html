@@ -1084,6 +1084,9 @@
         <button class="nav-btn" onclick="openHistory()">📜 History</button>
         <button class="nav-btn" onclick="openInventory()">📦 My Inventory</button>
         <button class="nav-btn" onclick="openSettings()">⚙️ Settings</button>
+        <div id="lastUpdatedBadge" style="display:none;align-items:center;gap:5px;font-size:0.72em;font-weight:700;padding:5px 10px;border-radius:10px;border:1px solid #1e293b;color:#64748b;white-space:nowrap">
+            <span id="lastUpdatedText">Updated just now</span>
+        </div>
     </div>
 
     <div class="analytics-overlay" id="analyticsOverlay">
@@ -2460,11 +2463,23 @@
             </div>
             <div class="info-section">
                 <h4>🏥 Inventory Health Score — 0 to 100</h4>
-                <div class="info-row"><span class="info-label">Demand Quality (30pts)</span><span class="info-val">Average demand across your inventory. Demand 7+ across the board = near perfect score.</span></div>
-                <div class="info-row"><span class="info-label">Liquidity (20pts)</span><span class="info-val">How often your pets actually trade. High demand but rarely traded pets score lower here.</span></div>
-                <div class="info-row"><span class="info-label">Trend Direction (20pts)</span><span class="info-val">What % of your inventory is rising vs falling in value and demand.</span></div>
-                <div class="info-row"><span class="info-label">HTT Penalty (−20pts)</span><span class="info-val">Hard-to-trade pets heavily penalize your score — they're portfolio dead weight.</span></div>
-                <div class="info-row"><span class="info-label">Premium Category (10pts)</span><span class="info-val">Holding Exotic, High Tier, or Preppy pets boosts your score.</span></div>
+                <p style="color:var(--subtext);font-size:0.85em;margin-bottom:10px">Graded only on your tradeable pets (demand 3+). Click any label for a simple explanation.</p>
+                <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+                    <details style="width:100%"><summary style="cursor:pointer;font-weight:800;color:#94a3b8;font-size:0.88em;list-style:none;display:flex;align-items:center;gap:6px">Demand Quality <span style="font-size:0.75em;color:#475569;border:1px solid #334155;border-radius:4px;padding:0 5px">30pts ↓</span></summary><div style="margin-top:6px;background:#0f172a;border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 8px 8px 0;font-size:0.8em;color:#94a3b8;line-height:1.6">Average demand of your core pets. Demand 7+ = near perfect.<br><br><b style="color:#cbd5e1">Simple:</b> How badly people want your pets. High demand = trades fast. Low demand = sits forever.<br><b style="color:#cbd5e1">Example:</b> Turtle (9.8) scores max. Hippogriff (0.5) scores zero.</div></details>
+                </div>
+                <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+                    <details style="width:100%"><summary style="cursor:pointer;font-weight:800;color:#94a3b8;font-size:0.88em;list-style:none;display:flex;align-items:center;gap:6px">Demand Spread <span style="font-size:0.75em;color:#475569;border:1px solid #334155;border-radius:4px;padding:0 5px">20pts ↓</span></summary><div style="margin-top:6px;background:#0f172a;border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 8px 8px 0;font-size:0.8em;color:#94a3b8;line-height:1.6">How many of your core pets have demand 7 or higher.<br><br><b style="color:#cbd5e1">Simple:</b> One great pet is good. Multiple high-demand pets means you can always build a strong offer.<br><b style="color:#cbd5e1">Example:</b> 1 Kangaroo + 10 Pigs = weak spread. 5 Kangaroos = strong spread.</div></details>
+                </div>
+                <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+                    <details style="width:100%"><summary style="cursor:pointer;font-weight:800;color:#94a3b8;font-size:0.88em;list-style:none;display:flex;align-items:center;gap:6px">Category Quality <span style="font-size:0.75em;color:#475569;border:1px solid #334155;border-radius:4px;padding:0 5px">20pts ↓</span></summary><div style="margin-top:6px;background:#0f172a;border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 8px 8px 0;font-size:0.8em;color:#94a3b8;line-height:1.6">% of core pets that are Exotic, High Tier, or Preppy.<br><br><b style="color:#cbd5e1">Simple:</b> Premium category pets are the most desirable — people overpay for them.<br><b style="color:#cbd5e1">Example:</b> Bat Dragon (Exotic) = full points. Silly Duck = nothing.</div></details>
+                </div>
+                <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+                    <details style="width:100%"><summary style="cursor:pointer;font-weight:800;color:#94a3b8;font-size:0.88em;list-style:none;display:flex;align-items:center;gap:6px">Trend Health <span style="font-size:0.75em;color:#475569;border:1px solid #334155;border-radius:4px;padding:0 5px">15pts ↓</span></summary><div style="margin-top:6px;background:#0f172a;border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 8px 8px 0;font-size:0.8em;color:#94a3b8;line-height:1.6">Rising pets score up, falling pets score down.<br><br><b style="color:#cbd5e1">Simple:</b> Are your pets gaining or losing value? Falling pets = you're losing value just by holding them.<br><b style="color:#cbd5e1">Example:</b> Lava Dragon 📈 = good. Any pet with 📉 = drags score down.</div></details>
+                </div>
+                <div class="info-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+                    <details style="width:100%"><summary style="cursor:pointer;font-weight:800;color:#94a3b8;font-size:0.88em;list-style:none;display:flex;align-items:center;gap:6px">Tradability <span style="font-size:0.75em;color:#475569;border:1px solid #334155;border-radius:4px;padding:0 5px">15pts ↓</span></summary><div style="margin-top:6px;background:#0f172a;border-left:3px solid var(--accent);padding:8px 12px;border-radius:0 8px 8px 0;font-size:0.8em;color:#94a3b8;line-height:1.6">HTT (Hard To Trade) pets heavily penalize your score.<br><br><b style="color:#cbd5e1">Simple:</b> HTT = everyone owns it or nobody wants it. You can't get fair trades for it even at listed value.<br><b style="color:#cbd5e1">Example:</b> Shadow Dragon has high value but moves very slowly = HTT penalty.</div></details>
+                </div>
+                <p style="color:#475569;font-size:0.78em;margin-top:10px">Grade: S=85+, A=70+, B=55+, C=40+, D=25+, F=below 25. Filler pets (demand &lt;3) are excluded from the grade but shown as a warning.</p>
             </div>`;
             document.getElementById('infoOverlay').style.display = 'flex';
         }
@@ -2668,6 +2683,8 @@
                 })).filter(p => p.n && p.n.length > 0);
                 
                 document.getElementById('loadingScreen').style.display = 'none';
+                window._dataLoadedAt = Date.now();
+                startLastUpdatedTicker();
                 buildDynamicHTT();  // initial HTT from pet data (before history)
                 fetchHistory();
                 restoreTrade();
@@ -3065,7 +3082,29 @@
     }
 }
 
-function toggleHealthSimple(id) {
+function startLastUpdatedTicker() {
+            const badge = document.getElementById('lastUpdatedBadge');
+            const text  = document.getElementById('lastUpdatedText');
+            if (!badge || !text) return;
+            badge.style.display = 'flex';
+            function update() {
+                const ageMs  = Date.now() - (window._dataLoadedAt || Date.now());
+                const ageMin = Math.floor(ageMs / 60000);
+                const ageHr  = Math.floor(ageMin / 60);
+                let label, color, border;
+                if (ageMin < 5)        { label = '✅ Values up to date';                      color = '#34d399'; border = '#34d39933'; }
+                else if (ageMin < 60)  { label = '🕒 Updated ' + ageMin + 'm ago';            color = '#94a3b8'; border = '#1e293b';   }
+                else if (ageHr < 24)   { label = '🕒 Updated ' + ageHr + 'h ago';             color = '#fbbf24'; border = '#fbbf2433'; }
+                else                   { label = '⚠️ Values may be outdated (' + ageHr + 'h)'; color = '#f87171'; border = '#f8717133'; }
+                text.textContent = label;
+                badge.style.color  = color;
+                badge.style.borderColor = border;
+            }
+            update();
+            setInterval(update, 60000);
+        }
+
+        function toggleHealthSimple(id) {
             const el = document.getElementById(id);
             if (!el) return;
             el.style.display = el.style.display === 'none' ? 'block' : 'none';
