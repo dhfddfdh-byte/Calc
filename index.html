@@ -3658,81 +3658,98 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
         // ── INVENTORY HEALTH SCORE ────────────────────────────────────────
         function getInventoryHealthReport(inventory) {
             if (!inventory || inventory.length === 0) return null;
+
+            // ── Split into tradeable core vs filler ──────────────────────
+            // Core = pets you'd actually put in a trade: demand >= 3 AND value >= 0.5
+            // Filler = randoms/commons you're holding but not really trading with
+            // The GRADE is based on core only — filler shown as a separate warning.
+            // This is the most accurate approach: your grade reflects your actual
+            // trading power, not whether you have 10 Cats sitting around.
+            const core   = inventory.filter(p => (parseFloat(getEffDemand(p))||0) >= 3 && calculatePetVal(p,'value') >= 0.5);
+            const filler = inventory.filter(p => (parseFloat(getEffDemand(p))||0) < 3 || calculatePetVal(p,'value') < 0.5);
+            const gradeBase = core.length > 0 ? core : inventory; // fall back to full inv if no core
+
             let score = 0;
             const breakdown = [];
 
-            const avgDemand = inventory.reduce((s,p) => s + (parseFloat(getEffDemand(p)) || 0), 0) / inventory.length;
-            const avgVal    = inventory.reduce((s,p) => s + calculatePetVal(p,'value'), 0) / inventory.length;
-            const httCount  = inventory.filter(p => isHTT(p.n)).length;
-            const httPct    = httCount / inventory.length;
-            const manipCount = inventory.filter(p => getManipulationFlag(p.n)).length;
-            const fallingCount = inventory.filter(p => (p.dt||'').includes('❄️') || (p.vt||'').includes('📉')).length;
-            const risingCount  = inventory.filter(p => (p.vt||'').includes('📈') || (p.dt||'').includes('🔥')).length;
+            const avgDemand  = gradeBase.reduce((s,p) => s + (parseFloat(getEffDemand(p))||0), 0) / gradeBase.length;
+            const avgVal     = gradeBase.reduce((s,p) => s + calculatePetVal(p,'value'), 0) / gradeBase.length;
+            const httCount   = gradeBase.filter(p => isHTT(p.n)).length;
+            const httPct     = httCount / gradeBase.length;
+            const manipCount = gradeBase.filter(p => getManipulationFlag(p.n)).length;
+            const fallingCount = gradeBase.filter(p => (p.dt||'').includes('❄️') || (p.vt||'').includes('📉')).length;
+            const risingCount  = gradeBase.filter(p => (p.vt||'').includes('📈') || (p.dt||'').includes('🔥')).length;
             const catDist = {};
-            inventory.forEach(p => { const c = getCatLabel(p); catDist[c] = (catDist[c]||0)+1; });
-            const premiumPct = ((catDist['Exotic']||0) + (catDist['High Tier']||0) + (catDist['Preppy']||0)) / inventory.length;
-            const avgLiq = inventory.reduce((s,p) => s + getLiquidityScore(p.n), 0) / inventory.length;
+            gradeBase.forEach(p => { const c = getCatLabel(p); catDist[c] = (catDist[c]||0)+1; });
+            const premiumPct = ((catDist['Exotic']||0) + (catDist['High Tier']||0) + (catDist['Preppy']||0)) / gradeBase.length;
+            const avgLiq = gradeBase.reduce((s,p) => s + getLiquidityScore(p.n), 0) / gradeBase.length;
 
-            // Demand component (0-30)
+            // Demand component (0-30) — based on core pets only
             const demScore = Math.min(30, Math.round((avgDemand / 10) * 30));
             score += demScore;
             breakdown.push({ label: 'Demand Quality', score: demScore, max: 30,
-                tip: avgDemand >= 7 ? 'Excellent demand across inventory' :
+                tip: avgDemand >= 7 ? 'Excellent demand across your tradeable pets' :
                      avgDemand >= 5 ? 'Good demand, room to improve' :
                      avgDemand >= 3 ? 'Moderate demand — target pets with 6+ demand' :
-                     'Low demand — your pets are hard to trade. Prioritize demand upgrades.' });
+                     'Low demand — prioritize demand upgrades.' });
 
-            // Liquidity component (0-20)
+            // Liquidity (0-20)
             const liqScore = Math.min(20, Math.round(avgLiq * 20));
             score += liqScore;
             breakdown.push({ label: 'Market Liquidity', score: liqScore, max: 20,
                 tip: avgLiq >= 0.7 ? 'Your pets trade frequently — high liquidity' :
                      avgLiq >= 0.4 ? 'Decent liquidity' :
-                     'Low liquidity — your pets don\'t trade often. Consider swapping to more popular pets.' });
+                     'Low liquidity — your pets don\'t trade often.' });
 
-            // Category component (0-20)
+            // Category quality (0-20)
             const catScore = Math.min(20, Math.round(premiumPct * 20));
             score += catScore;
             breakdown.push({ label: 'Category Quality', score: catScore, max: 20,
                 tip: premiumPct >= 0.5 ? 'Strong Exotic/High Tier/Preppy presence' :
                      premiumPct >= 0.25 ? 'Some premium category pets' :
-                     'Mostly Randoms/Mid Tier. Adding Preppy or High Tier pets will help significantly.' });
+                     'Mostly Mid Tier. Adding Preppy or High Tier pets will help.' });
 
-            // Trend health component (0-15)
-            const trendScore = Math.max(0, Math.min(15, Math.round(((risingCount - fallingCount * 1.5) / inventory.length) * 15 + 7)));
+            // Trend health (0-15)
+            const trendScore = Math.max(0, Math.min(15, Math.round(((risingCount - fallingCount * 1.5) / gradeBase.length) * 15 + 7)));
             score += trendScore;
             breakdown.push({ label: 'Trend Health', score: trendScore, max: 15,
-                tip: risingCount > fallingCount ? `${risingCount} pets trending up — good momentum` :
-                     fallingCount > risingCount  ? `${fallingCount} pets trending down — consider offloading` :
+                tip: risingCount > fallingCount ? risingCount + ' pets trending up — good momentum' :
+                     fallingCount > risingCount  ? fallingCount + ' pets trending down — consider offloading' :
                      'Mixed trends — monitor closely' });
 
-            // HTT penalty (0-15)
+            // Tradability / HTT (0-15)
             const httScore = Math.max(0, Math.round((1 - httPct * 2) * 15));
             score += httScore;
-            const httNames = inventory.filter(p => isHTT(p.n)).map(p => p.n);
-            const uniqueHTT = [...new Set(httNames)];
+            const uniqueHTT = [...new Set(gradeBase.filter(p => isHTT(p.n)).map(p => p.n))];
             breakdown.push({ label: 'Tradability', score: httScore, max: 15,
                 tip: httCount === 0 ? 'No HTT pets — clean inventory' :
-                     `HTT pets (offload ASAP): ${uniqueHTT.join(', ')}` });
+                     'HTT pets (offload ASAP): ' + uniqueHTT.join(', ') });
 
-            // Manipulation risk (bonus/penalty out of 10, included in total but not shown separately)
+            // Manipulation penalty
             if (manipCount > 0) score = Math.max(0, score - manipCount * 5);
 
-            const grade = score >= 85 ? 'S' : score >= 70 ? 'A' : score >= 55 ? 'B' : score >= 40 ? 'C' : score >= 25 ? 'D' : 'F';
-            const gradeColor = score >= 85 ? '#a855f7' : score >= 70 ? '#34d399' : score >= 55 ? '#fbbf24' : score >= 40 ? '#fb923c' : '#f87171';
+            const finalScore = Math.min(100, score);
+            const grade = finalScore >= 85 ? 'S' : finalScore >= 70 ? 'A' : finalScore >= 55 ? 'B' : finalScore >= 40 ? 'C' : finalScore >= 25 ? 'D' : 'F';
+            const gradeColor = finalScore >= 85 ? '#a855f7' : finalScore >= 70 ? '#34d399' : finalScore >= 55 ? '#fbbf24' : finalScore >= 40 ? '#fb923c' : '#f87171';
+
+            // Filler warning — separate from grade, just informational
+            const fillerWarning = filler.length > 0 ? {
+                count: filler.length,
+                names: [...new Set(filler.map(p => p.n))].slice(0, 5),
+                demImpact: (inventory.reduce((s,p) => s+(parseFloat(getEffDemand(p))||0),0)/inventory.length).toFixed(1),
+                coreAvgDem: avgDemand.toFixed(1)
+            } : null;
 
             const advice = [];
-            if (avgDemand < 5) advice.push('🎯 Priority: Trade into pets with demand 6+');
-            if (httCount > 0) {
-                const httNameList = [...new Set(inventory.filter(p => isHTT(p.n)).map(p => p.n))];
-                advice.push('⚠️ Offload HTT pets ASAP: ' + httNameList.join(', '));
-            }
-            if (manipCount > 0)advice.push(`📊 ${manipCount} pet${manipCount>1?'s are':' is'} flagged as potentially manipulated`);
-            if (fallingCount > risingCount) advice.push('📉 More falling than rising pets — consider rotating inventory');
+            if (avgDemand < 5) advice.push('🎯 Priority: Trade core pets into demand 6+ targets');
+            if (httCount > 0) advice.push('⚠️ Offload HTT pets ASAP: ' + uniqueHTT.join(', '));
+            if (manipCount > 0) advice.push('📊 ' + manipCount + ' pet' + (manipCount>1?'s are':' is') + ' flagged as potentially manipulated');
+            if (fallingCount > risingCount) advice.push('📉 More falling than rising pets — consider rotating');
             if (premiumPct < 0.2 && avgVal >= 10) advice.push('💡 Consider trading into Preppy or High Tier pets for better resale');
+            if (fillerWarning) advice.push('🗑️ ' + filler.length + ' filler pet' + (filler.length>1?'s':'') + ' (demand <3) not counted in grade — trade them away for a cleaner inventory');
             if (advice.length === 0) advice.push('✅ Inventory looks healthy — focus on tier progression');
 
-            return { score: Math.min(100, score), grade, gradeColor, breakdown, advice, avgDemand, premiumPct, httCount, risingCount, fallingCount };
+            return { score: finalScore, grade, gradeColor, breakdown, advice, avgDemand, premiumPct, httCount, risingCount, fallingCount, fillerWarning, coreCount: core.length, fillerCount: filler.length };
         }
 
         // ── CHAIN TRADE ENGINE ────────────────────────────────────────────
@@ -4106,7 +4123,11 @@ function closeInventory() { document.getElementById('invOverlay').style.display 
             // Health breakdown
             if (health) {
                 html += `<div style="background:#0f172a;border-radius:10px;padding:10px;margin-bottom:12px;border:1px solid #1e293b">
-                    <div style="font-size:0.7em;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">📊 Inventory Health Score: <span style="color:${health.gradeColor}">${health.score}/100 (${health.grade})</span></div>
+                    <div style="font-size:0.7em;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">📊 Inventory Health Score: <span style="color:${health.gradeColor}">${health.score}/100 (${health.grade})</span></div>
+                    <div style="font-size:0.65em;color:#475569;margin-bottom:8px">
+                        Graded on your <span style="color:#cbd5e1;font-weight:700">${health.coreCount} tradeable pet${health.coreCount!==1?'s':''}</span> (demand 3+)
+                        ${health.fillerWarning ? '· <span style="color:#f87171;font-weight:700">' + health.fillerCount + ' filler pet' + (health.fillerCount!==1?'s':'') + ' excluded from grade</span> — avg demand drops from <b style="color:#cbd5e1">' + health.fillerWarning.coreAvgDem + '</b> to <b style="color:#f87171">' + health.fillerWarning.demImpact + '</b> when included' : ''}
+                    </div>
                     ${health.breakdown.map(b => `
                         <div style="margin-bottom:5px">
                             <div style="display:flex;justify-content:space-between;font-size:0.72em;margin-bottom:2px">
