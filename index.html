@@ -2331,38 +2331,74 @@
         }
         function closeInfo() { document.getElementById('infoOverlay').style.display = 'none'; }
 
-        function openFillerPopup() {
+        let _fillerZoom = 40;
+
+        function applyFillerZoom(val) {
+            _fillerZoom = parseInt(val);
+            const label = document.getElementById('fillerZoomLabel');
+            if (label) label.textContent = val;
+            renderFillerList();
+        }
+
+        function renderFillerList() {
             const inv = state.inv;
             const filler = inv.filter(p => (parseFloat(getEffDemand(p))||0) < 3 || calculatePetVal(p,'value') < 0.5);
             const list = document.getElementById('fillerPopupList');
+            if (!list) return;
+            const sz = _fillerZoom;
             if (filler.length === 0) {
-                list.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:20px">No filler pets found.</div>';
-            } else {
-                // Group by name
-                const groups = {};
-                filler.forEach(p => { groups[p.n] = (groups[p.n]||0)+1; });
-                list.innerHTML = Object.entries(groups)
-                    .sort((a,b) => {
+                list.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:20px">No filler pets — your inventory is clean!</div>';
+                return;
+            }
+            const groups = {};
+            filler.forEach(p => { groups[p.n] = (groups[p.n]||0)+1; });
+            // Show as grid if zoom is small, list if large
+            const useGrid = sz <= 44;
+            if (useGrid) {
+                list.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0">' +
+                    Object.entries(groups).sort((a,b) => {
                         const pa = ALL_PETS.find(x=>x.n===a[0]), pb = ALL_PETS.find(x=>x.n===b[0]);
                         return (parseFloat(getEffDemand(pb||{}))||0) - (parseFloat(getEffDemand(pa||{}))||0);
-                    })
-                    .map(([name, count]) => {
+                    }).map(([name, count]) => {
                         const pet = ALL_PETS.find(x=>x.n===name) || {};
                         const d = parseFloat(getEffDemand(pet))||0;
-                        const v = pet.v||0;
                         const demColor = d >= 2 ? '#fbbf24' : '#f87171';
-                        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b">' +
-                            petImgTag(name, 'width:36px;height:36px;object-fit:contain;flex-shrink:0') +
-                            '<div style="flex:1">' +
-                                '<div style="font-weight:800;font-size:0.88em;color:#cbd5e1">' + name + (count>1?' <span style="color:#475569">×'+count+'</span>':'') + '</div>' +
-                                '<div style="font-size:0.72em;color:var(--subtext)">Dem: <span style="color:'+demColor+';font-weight:700">'+d+'</span> · Val: '+v+'</div>' +
-                            '</div>' +
-                            '<div style="font-size:0.7em;color:#475569;text-align:right">' +
-                                (d < 1 ? '<span style="color:#f87171">Very low demand</span>' : d < 2 ? '<span style="color:#f87171">Low demand</span>' : '<span style="color:#fbbf24">Below threshold</span>') +
-                            '</div>' +
+                        return '<div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:6px;text-align:center;width:'+(sz+18)+'px">' +
+                            petImgTag(name, 'width:'+sz+'px;height:'+sz+'px;object-fit:contain') +
+                            '<div style="font-size:0.62em;font-weight:800;color:#cbd5e1;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + name + (count>1?' ×'+count:'') + '</div>' +
+                            '<div style="font-size:0.58em;color:'+demColor+'">d:'+d+'</div>' +
                         '</div>';
-                    }).join('');
+                    }).join('') + '</div>';
+            } else {
+                list.innerHTML = Object.entries(groups).sort((a,b) => {
+                    const pa = ALL_PETS.find(x=>x.n===a[0]), pb = ALL_PETS.find(x=>x.n===b[0]);
+                    return (parseFloat(getEffDemand(pb||{}))||0) - (parseFloat(getEffDemand(pa||{}))||0);
+                }).map(([name, count]) => {
+                    const pet = ALL_PETS.find(x=>x.n===name) || {};
+                    const d = parseFloat(getEffDemand(pet))||0;
+                    const v = pet.v||0;
+                    const demColor = d >= 2 ? '#fbbf24' : '#f87171';
+                    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1e293b">' +
+                        petImgTag(name, 'width:'+sz+'px;height:'+sz+'px;object-fit:contain;flex-shrink:0') +
+                        '<div style="flex:1">' +
+                            '<div style="font-weight:800;font-size:0.88em;color:#cbd5e1">' + name + (count>1?' <span style="color:#475569">×'+count+'</span>':'') + '</div>' +
+                            '<div style="font-size:0.72em;color:var(--subtext)">Dem: <span style="color:'+demColor+';font-weight:700">'+d+'</span> · Val: '+v+'</div>' +
+                        '</div>' +
+                        '<div style="font-size:0.7em;color:#475569;text-align:right">' +
+                            (d < 1 ? '<span style="color:#f87171">Very low</span>' : d < 2 ? '<span style="color:#f87171">Low demand</span>' : '<span style="color:#fbbf24">Below threshold</span>') +
+                        '</div>' +
+                    '</div>';
+                }).join('');
             }
+        }
+
+        function openFillerPopup() {
+            _fillerZoom = 40;
+            const slider = document.getElementById('fillerZoomSlider');
+            const label  = document.getElementById('fillerZoomLabel');
+            if (slider) slider.value = 40;
+            if (label)  label.textContent = '40';
+            renderFillerList();
             document.getElementById('fillerPopup').style.display = 'flex';
         }
 
@@ -3023,52 +3059,7 @@
 
 function closeInventory() { document.getElementById('invOverlay').style.display = 'none'; }
 
-        function openFillerPopup() {
-            const pets = window._lastFillerPets || [];
-            // Group by name and count duplicates
-            const grouped = {};
-            pets.forEach(p => { grouped[p.n] = (grouped[p.n] || 0) + 1; });
-            const entries = Object.entries(grouped).sort((a,b) => b[1] - a[1]);
 
-            // Build or reuse popup
-            let popup = document.getElementById('fillerPopup');
-            if (!popup) {
-                popup = document.createElement('div');
-                popup.id = 'fillerPopup';
-                popup.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.92);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;z-index:7000';
-                popup.onclick = function(e) { if (e.target === popup) popup.remove(); };
-                document.body.appendChild(popup);
-            }
-
-            popup.innerHTML =
-                '<div style="background:#1a2333;border:1px solid #334155;border-radius:20px;padding:24px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto">' +
-                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
-                        '<div>' +
-                            '<div style="font-weight:900;font-size:1.05em;color:#f87171">🗑️ Filler Pets (' + pets.length + ')</div>' +
-                            '<div style="font-size:0.72em;color:#475569;margin-top:2px">These have demand &lt;3 or value &lt;0.5 — excluded from your grade</div>' +
-                        '</div>' +
-                        '<button onclick="document.getElementById(\'fillerPopup\').remove()" style="background:transparent;border:none;color:#64748b;font-size:1.3em;cursor:pointer;padding:4px 8px">✕</button>' +
-                    '</div>' +
-                    (entries.length === 0 ? '<div style="color:#64748b;text-align:center;padding:20px">No filler pets found</div>' :
-                        '<div style="display:flex;flex-direction:column;gap:6px">' +
-                        entries.map(([name, count]) => {
-                            const pet = ALL_PETS.find(p => p.n === name);
-                            const d = pet ? (pet.d || 0) : 0;
-                            const v = pet ? (pet.v || 0) : 0;
-                            return '<div style="display:flex;align-items:center;gap:10px;background:#0f172a;border-radius:10px;padding:8px 12px">' +
-                                petImgTag(name, 'width:36px;height:36px;object-fit:contain;flex-shrink:0') +
-                                '<div style="flex:1;min-width:0">' +
-                                    '<div style="font-weight:800;font-size:0.85em;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + name + (count > 1 ? ' <span style="color:#64748b">×' + count + '</span>' : '') + '</div>' +
-                                    '<div style="font-size:0.72em;color:#475569">Demand: ' + d + ' · Value: ' + v + '</div>' +
-                                '</div>' +
-                                '<div style="font-size:0.7em;color:#f87171;font-weight:700;white-space:nowrap">Trade away</div>' +
-                            '</div>';
-                        }).join('') +
-                        '</div>') +
-                    '<div style="margin-top:16px;padding-top:12px;border-top:1px solid #1e293b;font-size:0.72em;color:#475569">💡 Trading these into pets with demand 3+ will improve your overall inventory health</div>' +
-                '</div>';
-            popup.style.display = 'flex';
-        }
 
         // Exports the user's inventory as a JSON file download.
         // The exported file can be re-imported on any device via importInv().
@@ -7040,14 +7031,21 @@ function renderTBCard(t) {
 
 
     <!-- Filler Pets Popup -->
-    <div id="fillerPopup" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.92);backdrop-filter:blur(10px);z-index:7000;align-items:center;justify-content:center" onclick="closeFillerPopup()">
+    <div id="fillerPopup" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(2,6,23,0.92);backdrop-filter:blur(10px);z-index:10000;align-items:center;justify-content:center" onclick="closeFillerPopup()">
         <div onclick="event.stopPropagation()" style="background:#1a2333;border:1px solid var(--border);border-radius:20px;padding:24px;max-width:480px;width:92%;max-height:80vh;overflow-y:auto">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                 <div>
                     <div style="font-weight:900;font-size:1.05em;color:white">🗑️ Filler Pets</div>
-                    <div style="font-size:0.75em;color:var(--subtext);margin-top:2px">These pets have demand &lt;3 or value &lt;0.5 — excluded from your health grade</div>
+                    <div style="font-size:0.75em;color:var(--subtext);margin-top:2px">Demand &lt;3 or value &lt;0.5 — excluded from grade</div>
                 </div>
                 <button onclick="closeFillerPopup()" style="background:transparent;border:none;color:var(--subtext);font-size:1.3em;cursor:pointer;padding:4px 8px">✕</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;background:#0f172a;border-radius:10px;padding:7px 12px;border:1px solid var(--border)">
+                <span style="font-size:0.72em;color:var(--accent);font-weight:900">🔍 Zoom</span>
+                <input type="range" id="fillerZoomSlider" min="28" max="72" value="40"
+                    oninput="applyFillerZoom(this.value)"
+                    style="flex:1;accent-color:var(--accent);cursor:pointer">
+                <span id="fillerZoomLabel" style="font-size:0.72em;color:var(--accent);font-weight:800;min-width:30px">40</span>
             </div>
             <div id="fillerPopupList"></div>
             <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:0.75em;color:var(--subtext)">
