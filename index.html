@@ -5912,6 +5912,10 @@ function startLastUpdatedTicker() {
             }
 
             resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:30px">Searching...</div>';
+            if (!window._dgIsLoadMore) {
+                window._dgWasLoadMore = false;
+                window._dgSkipCount   = 0;
+            }
 
             const countFilter = parseInt(document.getElementById('dgCountFilter').value) || 0;
             const winMin      = parseFloat(document.getElementById('dgWinFilter').value) || 0;
@@ -5952,14 +5956,16 @@ function startLastUpdatedTicker() {
             // This gives diversity and makes 5+ pet searches actually work.
             const results = [];
             const bundleSizes = countFilter > 0 ? [countFilter] : [2, 3, 4];
-            const maxResults  = 999; // no hard cap — pagination handles display
+            const maxResults  = 20; // stop after 20 — Load More continues
             const giveDem     = parseFloat(getEffDemand(givePet));
 
             // Sort all candidates by demand desc for quality, but we'll use value-range
             // filtering to find the RIGHT pets for each bundle size
             candidatePets.sort((a,b) => b._dem - a._dem || b._val - a._val);
 
-            const sigSet = new Set(); // global dedup across all bundle sizes
+            // On fresh search reset sigSet; on load more keep it to avoid duplicates
+            if (!window._dgIsLoadMore) window._dgSigSet = new Set();
+            const sigSet = window._dgSigSet;
 
             // Downgrade-specific accept rate:
             // YOU give high-value pet, THEY give bundle. Their motivation to accept
@@ -5993,8 +5999,8 @@ function startLastUpdatedTicker() {
             }
 
             // Track how many results each EXACT variant has appeared in (for variety)
-            // Key: name|type|fly|ride — so NFR Kangaroo and regular Kangaroo are separate
-            const variantResultCount = {};
+            if (!window._dgIsLoadMore) window._dgVariantCount = {};
+            const variantResultCount = window._dgVariantCount;
 
             function checkAndPush(bundle) {
                 const bundleVal = bundle.reduce((s,p) => s + p._val, 0);
@@ -6068,6 +6074,15 @@ function startLastUpdatedTicker() {
                 return lo;
             }
 
+            // On load more, skip combos already shown (by counting skipped)
+            const skipCount = window._dgIsLoadMore ? (window._dgSkipCount || 0) : 0;
+            let skipped = 0;
+            const origCheckAndPush = checkAndPush;
+            const checkAndPushWithSkip = window._dgIsLoadMore ? function(bundle) {
+                if (skipped < skipCount) { skipped++; return false; }
+                return origCheckAndPush(bundle);
+            } : origCheckAndPush;
+
             for (const size of bundleSizes) {
                 if (results.length >= maxResults) break;
 
@@ -6076,7 +6091,7 @@ function startLastUpdatedTicker() {
                     const lo = lowerBound(allByVal, target);
                     for (let i = lo; i < allByVal.length && results.length < maxResults; i++) {
                         if (allByVal[i]._val > targetMax) break;
-                        checkAndPush([allByVal[i]]);
+                        checkAndPushWithSkip([allByVal[i]]);
                     }
 
                 } else if (size === 2) {
@@ -6087,7 +6102,7 @@ function startLastUpdatedTicker() {
                         for (let j = Math.max(i+1, jStart); j < allByVal.length && results.length < maxResults; j++) {
                             const sum = allByVal[i]._val + allByVal[j]._val;
                             if (sum > targetMax) break;
-                            checkAndPush([allByVal[i], allByVal[j]]);
+                            checkAndPushWithSkip([allByVal[i], allByVal[j]]);
                         }
                     }
 
@@ -6106,7 +6121,7 @@ function startLastUpdatedTicker() {
                         if (results.length >= maxResults) return;
                         if (depth === 0) {
                             if (currentVal >= target && currentVal <= targetMax) {
-                                checkAndPush([...current]);
+                                checkAndPushWithSkip([...current]);
                             }
                             return;
                         }
@@ -6142,12 +6157,25 @@ function startLastUpdatedTicker() {
             else if (sortBy === 'demand') results.sort((a,b) => b.avgDem - a.avgDem);
             else                          results.sort((a,b) => b.tqs - a.tqs);
 
-            // Store all results globally for pagination
-            window._dgAllResults = results;
-            window._dgGiveLabel  = getPetLabel(givePet);
-            window._dgGiveVal    = giveVal;
-            window._dgPage       = 0;
+            // Save skip count for next load more (total combos evaluated so far)
+            window._dgSkipCount = skipCount + skipped + results.length;
+            window._dgIsLoadMore = false; // reset flag
+
+            if (window._dgWasLoadMore) {
+                window._dgAllResults = (window._dgAllResults || []).concat(results);
+            } else {
+                window._dgAllResults = results;
+            }
+            window._dgGiveLabel = getPetLabel(givePet);
+            window._dgGiveVal   = giveVal;
+            window._dgPage      = 0;
             renderDgPage();
+        }
+
+        function dgLoadMore() {
+            window._dgIsLoadMore    = true;
+            window._dgWasLoadMore   = true;
+            runDowngradeFinder();
         }
 
         function renderDgPage() {
@@ -6155,10 +6183,7 @@ function startLastUpdatedTicker() {
             const results   = window._dgAllResults || [];
             const giveLabel = window._dgGiveLabel || '';
             const giveVal   = window._dgGiveVal   || 0;
-            const page      = window._dgPage || 0;
-            const pageSize  = 20;
-            const start     = page * pageSize;
-            const slice     = results.slice(start, start + pageSize);
+            const slice     = results; // all collected results shown at once
 
             const header = '<div style="font-size:0.7em;font-weight:900;color:var(--subtext);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">' +
                 results.length + ' combos found for ' + giveLabel + ' (' + giveVal.toFixed(2) + ')' +
@@ -6200,11 +6225,11 @@ function startLastUpdatedTicker() {
                     '</div>';
             }).join('');
 
-            const hasMore = start + pageSize < results.length;
+            const hasMore = true; // always show load more (more combos exist in game)
             const loadMoreBtn = hasMore
                 ? '<div style="text-align:center;margin-top:14px">' +
-                    '<button class="nav-btn" style="padding:8px 24px;font-weight:900" onclick="window._dgPage++;renderDgPage()">' +
-                        'Load More (' + (results.length - start - pageSize) + ' remaining)' +
+                    '<button class="nav-btn" style="padding:8px 24px;font-weight:900" onclick="dgLoadMore()">' +
+                        'Load More' +
                     '</button>' +
                   '</div>'
                 : (results.length > pageSize ? '<div style="text-align:center;color:var(--subtext);font-size:0.75em;margin-top:12px">All ' + results.length + ' combos shown</div>' : '');
