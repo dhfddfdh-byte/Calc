@@ -6012,68 +6012,50 @@ function startLastUpdatedTicker() {
                 return true;
             }
 
+            // One flat pool — no per-pet value filter.
+            // The TOTAL bundle value must hit giveVal*(1+winMin/100), not each individual pet.
+            // Sort by demand desc so best pets appear first in results.
+            // Limit pool to 60 for performance — covers all major pets across all variants.
+            const flatPool = candidatePets.slice(0, 60);
+
+            // Pre-compute max value suffix for pruning: maxSuffix[i] = max total value
+            // achievable from pool[i..] for a given number of slots (used in backtrack)
+            // Simple version: just take top N by value
+            const poolByVal = [...flatPool].sort((a,b) => b._val - a._val);
+
+            function backtrack(startIdx, depth, current, currentVal) {
+                if (results.length >= maxResults) return;
+
+                if (depth === 0) {
+                    checkAndPush([...current]);
+                    return;
+                }
+
+                // Pruning: best case remaining value (take top `depth` by value from remaining)
+                // If even the best case can't reach winMin threshold, skip this branch
+                const target = giveVal * (1 + Math.max(winMin, 0) / 100);
+                let bestRemaining = 0;
+                let counted = 0;
+                for (let k = startIdx; k < flatPool.length && counted < depth; k++) {
+                    bestRemaining += flatPool[k]._val;
+                    counted++;
+                }
+                if (currentVal + bestRemaining < target) return;
+
+                for (let i = startIdx; i <= flatPool.length - depth; i++) {
+                    if (results.length >= maxResults) return;
+                    current.push(flatPool[i]);
+                    backtrack(i + 1, depth - 1, current, currentVal + flatPool[i]._val);
+                    current.pop();
+                }
+            }
+
             for (const size of bundleSizes) {
                 if (results.length >= maxResults) break;
-
-                // For this bundle size, each pet should be worth roughly giveVal/size.
-                // Allow ±60% wiggle so mixed bundles (NFR + reg) work.
-                const targetPerPet = giveVal / size;
-                const lo = targetPerPet * 0.3;
-                const hi = targetPerPet * 2.5;
-
-                // Pool: candidates whose value is in the right range for this bundle size
-                // Sort by demand first for quality results, but shuffle slightly for diversity
-                const sizedPool = candidatePets.filter(p => p._val >= lo && p._val <= hi);
-                // Also include any high-demand pet regardless of value range
-                const highDemExtra = candidatePets.filter(p => p._dem >= 8 && !sizedPool.includes(p)).slice(0, 20);
-                const pool = [...sizedPool, ...highDemExtra];
-
-                if (pool.length === 0) continue;
-
                 if (size === 1) {
-                    // Single pet downgrade
-                    pool.slice(0, 30).forEach(p => {
-                        if (results.length < maxResults) checkAndPush([p]);
-                    });
-
-                } else if (size === 2) {
-                    // Scan all pairs in the pool — pool is already value-bucketed for this size
-                    // so it won't be too large. checkAndPush handles gain filter + dedup.
-                    for (let i = 0; i < pool.length && results.length < maxResults; i++) {
-                        for (let j = i + 1; j < pool.length && results.length < maxResults; j++) {
-                            checkAndPush([pool[i], pool[j]]);
-                        }
-                    }
-
+                    flatPool.forEach(p => { if (results.length < maxResults) checkAndPush([p]); });
                 } else {
-                    // 3+ pets: clean recursive backtracking
-                    // Pass startIdx explicitly to avoid duplicate combos and broken object references
-                    function backtrack(pool, startIdx, depth, current, currentVal) {
-                        if (results.length >= maxResults) return;
-                        if (depth === 0) {
-                            checkAndPush([...current]);
-                            return;
-                        }
-                        // Pruning: remaining slots × max possible per pet must be enough to reach winMin
-                        const remainingSlots = depth;
-                        const maxValRemaining = pool.slice(startIdx, startIdx + remainingSlots)
-                            .reduce((s,p) => s + p._val, 0);
-                        const projectedMax = currentVal + maxValRemaining;
-                        if (projectedMax < giveVal * (1 + winMin/100)) return; // can't reach win min
-
-                        for (let i = startIdx; i < pool.length - (depth - 1); i++) {
-                            if (results.length >= maxResults) return;
-                            const p = pool[i];
-                            // Cap: don't let one pet be more than 80% of the target total
-                            if (p._val > giveVal * 1.5 * 0.8) continue;
-                            current.push(p);
-                            backtrack(pool, i + 1, depth - 1, current, currentVal + p._val);
-                            current.pop();
-                        }
-                    }
-
-                    const poolForSize = pool.slice(0, Math.min(pool.length, 40));
-                    backtrack(poolForSize, 0, size, [], 0);
+                    backtrack(0, size, [], 0);
                 }
             }
 
