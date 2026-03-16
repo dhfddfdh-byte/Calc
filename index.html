@@ -5992,70 +5992,142 @@ function startLastUpdatedTicker() {
                 return Math.max(5, Math.min(85, Math.round(prob)));
             }
 
+            // Track how many results each EXACT variant has appeared in (for variety)
+            // Key: name|type|fly|ride — so NFR Kangaroo and regular Kangaroo are separate
+            const variantResultCount = {};
+
             function checkAndPush(bundle) {
                 const bundleVal = bundle.reduce((s,p) => s + p._val, 0);
                 const gain      = (bundleVal - giveVal) / giveVal * 100;
-                // gain > 0 means bundle is worth MORE than what you give (you win)
-                // No hard cap on gain — show all combos that pass filters
                 if (gain < winMin) return false;
+
+                // ── Demand filter (optional — user can leave at "Any") ────────
                 const avgDem = bundle.reduce((s,p) => s + p._dem, 0) / bundle.length;
                 if (avgDem < demMin) return false;
+
                 const ap = dgAcceptRate(bundleVal, bundle.length);
                 if (ap < acceptMin) return false;
-                const tqs = scorePotentialTarget(bundle[0], giveVal, giveDem, [givePet]);
+
+                // ── Overpay cap ──────────────────────────────────────────────
+                // Low demand (< 4): cap +50 — needs more overpay to move
+                // Good demand (4+): cap +15 — just a small tab over, close to value
+                const rawOverpay = bundleVal - giveVal;
+                const overpayCap = avgDem < 4 ? 50 : 15;
+                if (rawOverpay > overpayCap) return false;
+
+                // ── Max 3 of the EXACT same variant per bundle ────────────────
+                // NFR Kangaroo and regular Kangaroo are DIFFERENT — each has own limit of 3
+                const variantCount = {};
+                for (const p of bundle) {
+                    const vk = p.n + '|' + p.type + '|' + (p.f_st?1:0) + '|' + (p.r_st?1:0);
+                    variantCount[vk] = (variantCount[vk] || 0) + 1;
+                    if (variantCount[vk] > 3) return false;
+                }
+
+                // ── Variety: max 8 results per exact variant across all results ─
+                for (const vk of Object.keys(variantCount)) {
+                    if ((variantResultCount[vk] || 0) >= 8) return false;
+                }
+
                 // Dedup by sorted pet signatures
                 const sig = bundle.map(p => p.n + '|' + p.type + '|' + (p.f_st?1:0) + '|' + (p.r_st?1:0)).sort().join(',');
                 if (sigSet.has(sig)) return false;
                 sigSet.add(sig);
+
+                const tqs = scorePotentialTarget(bundle[0], giveVal, giveDem, [givePet]);
+
+                // Update variant result counts
+                for (const vk of Object.keys(variantCount)) {
+                    variantResultCount[vk] = (variantResultCount[vk] || 0) + 1;
+                }
+
                 results.push({ bundle, bundleVal, gain, avgDem, ap, tqs, size: bundle.length, _sig: sig });
                 if (results.length >= maxResults) return true;
                 return true;
             }
 
-            // One flat pool — no per-pet value filter.
-            // The TOTAL bundle value must hit giveVal*(1+winMin/100), not each individual pet.
-            // Sort by demand desc so best pets appear first in results.
-            // Limit pool to 60 for performance — covers all major pets across all variants.
-            const flatPool = candidatePets.slice(0, 60);
+            // ── TRUE FULL-GAME SEARCH ─────────────────────────────────────────
+            // Approach: sort ALL candidates by value. For each bundle size N,
+            // use a sliding window: for each pet as "anchor", binary-search for
+            // companions that make the total hit the target range.
+            // This covers every pet in the game, not just top-60.
 
-            // Pre-compute max value suffix for pruning: maxSuffix[i] = max total value
-            // achievable from pool[i..] for a given number of slots (used in backtrack)
-            // Simple version: just take top N by value
-            const poolByVal = [...flatPool].sort((a,b) => b._val - a._val);
+            const target    = giveVal * (1 + Math.max(winMin, 0) / 100);
+            const targetMax = giveVal * 3.0; // no point showing 300% wins
 
-            function backtrack(startIdx, depth, current, currentVal) {
-                if (results.length >= maxResults) return;
+            // Sort ALL candidates by value ascending for efficient searching
+            const allByVal = [...candidatePets].sort((a,b) => a._val - b._val);
 
-                if (depth === 0) {
-                    checkAndPush([...current]);
-                    return;
-                }
+            // Also build a demand-sorted view for quality ordering in results
+            const allByDem = [...candidatePets].sort((a,b) => b._dem - a._dem);
 
-                // Pruning: best case remaining value (take top `depth` by value from remaining)
-                // If even the best case can't reach winMin threshold, skip this branch
-                const target = giveVal * (1 + Math.max(winMin, 0) / 100);
-                let bestRemaining = 0;
-                let counted = 0;
-                for (let k = startIdx; k < flatPool.length && counted < depth; k++) {
-                    bestRemaining += flatPool[k]._val;
-                    counted++;
-                }
-                if (currentVal + bestRemaining < target) return;
-
-                for (let i = startIdx; i <= flatPool.length - depth; i++) {
-                    if (results.length >= maxResults) return;
-                    current.push(flatPool[i]);
-                    backtrack(i + 1, depth - 1, current, currentVal + flatPool[i]._val);
-                    current.pop();
-                }
+            // Find index where value >= threshold (binary search)
+            function lowerBound(arr, minVal) {
+                let lo = 0, hi = arr.length;
+                while (lo < hi) { const mid = (lo+hi)>>1; if (arr[mid]._val < minVal) lo=mid+1; else hi=mid; }
+                return lo;
             }
 
             for (const size of bundleSizes) {
                 if (results.length >= maxResults) break;
+
                 if (size === 1) {
-                    flatPool.forEach(p => { if (results.length < maxResults) checkAndPush([p]); });
+                    // Single pet: just find all pets in target range
+                    const lo = lowerBound(allByVal, target);
+                    for (let i = lo; i < allByVal.length && results.length < maxResults; i++) {
+                        if (allByVal[i]._val > targetMax) break;
+                        checkAndPush([allByVal[i]]);
+                    }
+
+                } else if (size === 2) {
+                    // Two pets: for each pet i, binary search for pets j where i+j >= target
+                    for (let i = 0; i < allByVal.length && results.length < maxResults; i++) {
+                        const need = target - allByVal[i]._val;
+                        const jStart = lowerBound(allByVal, need);
+                        for (let j = Math.max(i+1, jStart); j < allByVal.length && results.length < maxResults; j++) {
+                            const sum = allByVal[i]._val + allByVal[j]._val;
+                            if (sum > targetMax) break;
+                            checkAndPush([allByVal[i], allByVal[j]]);
+                        }
+                    }
+
                 } else {
-                    backtrack(0, size, [], 0);
+                    // 3+ pets: backtrack on ALL candidates (not just top 60)
+                    // but with tight pruning using the sorted order
+                    // maxSuffix[i] = sum of top `size` values from index i onwards
+                    const n = allByVal.length;
+                    // For pruning: suffix max sums
+                    const suffixMax = new Array(n + 1).fill(0);
+                    for (let i = n - 1; i >= 0; i--) {
+                        suffixMax[i] = suffixMax[i+1] + allByVal[i]._val;
+                    }
+
+                    function bt(idx, depth, current, currentVal) {
+                        if (results.length >= maxResults) return;
+                        if (depth === 0) {
+                            if (currentVal >= target && currentVal <= targetMax) {
+                                checkAndPush([...current]);
+                            }
+                            return;
+                        }
+                        // Prune: even if we take the highest-value remaining pets,
+                        // can we reach target?
+                        if (currentVal + suffixMax[idx] < target) return;
+                        // Prune: already over max even with smallest remaining
+                        if (currentVal + allByVal[idx]?._val > targetMax) return;
+
+                        for (let i = idx; i <= n - depth; i++) {
+                            if (results.length >= maxResults) return;
+                            const p = allByVal[i];
+                            // Early termination: adding this pet already exceeds max
+                            if (currentVal + p._val > targetMax) break;
+                            current.push(p);
+                            bt(i + 1, depth - 1, current, currentVal + p._val);
+                            current.pop();
+                        }
+                    }
+
+                    bt(0, size, [], 0);
                 }
             }
 
