@@ -1028,14 +1028,14 @@
                     </div>
                     <!-- Variant buttons -->
                     <div style="display:flex;gap:4px;flex-wrap:wrap" id="dgVariantBtns">
-                        <button class="dg-var-btn active" id="dgVarReg"    onclick="setDgVariant('reg',false,false)">Reg</button>
-                        <button class="dg-var-btn"        id="dgVarF"      onclick="setDgVariant('reg',true,false)">F</button>
-                        <button class="dg-var-btn"        id="dgVarR"      onclick="setDgVariant('reg',false,true)">R</button>
-                        <button class="dg-var-btn"        id="dgVarFR"     onclick="setDgVariant('reg',true,true)">FR</button>
-                        <button class="dg-var-btn"        id="dgVarNeon"   onclick="setDgVariant('neon',false,false)">Neon</button>
-                        <button class="dg-var-btn"        id="dgVarNFR"    onclick="setDgVariant('neon',true,true)">NFR</button>
-                        <button class="dg-var-btn"        id="dgVarMega"   onclick="setDgVariant('mega',false,false)">Mega</button>
-                        <button class="dg-var-btn"        id="dgVarMFR"    onclick="setDgVariant('mega',true,true)">MFR</button>
+                        <button class="dg-var-btn active" id="dgVarReg"  onclick="setDgVariant('reg')">Reg</button>
+                        <button class="dg-var-btn"        id="dgVarF"    onclick="setDgVariant('f')">F</button>
+                        <button class="dg-var-btn"        id="dgVarR"    onclick="setDgVariant('r')">R</button>
+                        <button class="dg-var-btn"        id="dgVarFR"   onclick="setDgVariant('fr')">FR</button>
+                        <button class="dg-var-btn"        id="dgVarNeon" onclick="setDgVariant('neon')">Neon</button>
+                        <button class="dg-var-btn"        id="dgVarNFR"  onclick="setDgVariant('nfr')">NFR</button>
+                        <button class="dg-var-btn"        id="dgVarMega" onclick="setDgVariant('mega')">Mega</button>
+                        <button class="dg-var-btn"        id="dgVarMFR"  onclick="setDgVariant('mfr')">MFR</button>
                     </div>
                     <button class="nav-btn" style="background:var(--accent);border-color:var(--accent);padding:7px 16px;font-weight:900" onclick="runDowngradeFinder()">Find Downgrades</button>
                 </div>
@@ -1077,13 +1077,7 @@
                         <option value="classy">Classy</option>
                         <option value="mid tier">Mid Tier</option>
                     </select>
-                    <select class="advisor-filter-select" id="dgVariantFilter" onchange="runDowngradeFinder()">
-                        <option value="reg">Reg only</option>
-                        <option value="all">Include FR/R/F</option>
-                        <option value="neon">Include Neons</option>
-                        <option value="mega">Include Megas</option>
-                        <option value="everything">Everything</option>
-                    </select>
+
                     <select class="advisor-filter-select" id="dgSortFilter" onchange="runDowngradeFinder()">
                         <option value="tqs">Sort: Quality</option>
                         <option value="accept">Sort: Accept%</option>
@@ -5730,7 +5724,8 @@ function startLastUpdatedTicker() {
 
         // ── DOWNGRADE FINDER ─────────────────────────────────────────────────
         let dgSelectedPet  = null;   // base pet object from ALL_PETS
-        let dgType = 'reg', dgFly = false, dgRide = false;
+        // Set of active variants for receive side — user can pick multiple
+        const dgActiveVariants = new Set(['reg']); // default: reg only
 
         let _dgMatchedPets = [];
         function dgAutocomplete(val) {
@@ -5764,92 +5759,98 @@ function startLastUpdatedTicker() {
             runDowngradeFinder();
         }
 
-        function setDgVariant(type, fly, ride) {
-            dgType = type; dgFly = fly; dgRide = ride;
-            // Update active button
-            const map = {
-                'reg-false-false': 'dgVarReg', 'reg-true-false': 'dgVarF',
-                'reg-false-true': 'dgVarR',   'reg-true-true':  'dgVarFR',
-                'neon-false-false':'dgVarNeon','neon-true-true': 'dgVarNFR',
-                'mega-false-false':'dgVarMega','mega-true-true': 'dgVarMFR'
-            };
-            const activeId = map[type + '-' + fly + '-' + ride];
-            document.querySelectorAll('.dg-var-btn').forEach(b => b.classList.remove('active'));
-            if (activeId) document.getElementById(activeId).classList.add('active');
+        function setDgVariant(key) {
+            // Toggle: add if not present, remove if already active (but keep at least one)
+            if (dgActiveVariants.has(key) && dgActiveVariants.size > 1) {
+                dgActiveVariants.delete(key);
+            } else {
+                dgActiveVariants.add(key);
+            }
+            // Update button states
+            const varKeys = ['reg','f','r','fr','neon','nfr','mega','mfr'];
+            const idMap = { reg:'dgVarReg', f:'dgVarF', r:'dgVarR', fr:'dgVarFR', neon:'dgVarNeon', nfr:'dgVarNFR', mega:'dgVarMega', mfr:'dgVarMFR' };
+            varKeys.forEach(k => {
+                const el = document.getElementById(idMap[k]);
+                if (el) el.classList.toggle('active', dgActiveVariants.has(k));
+            });
             runDowngradeFinder();
         }
 
+        let _dgRunTimeout = null;
         function runDowngradeFinder() {
+            // Debounce to prevent lag on rapid filter changes
+            clearTimeout(_dgRunTimeout);
+            _dgRunTimeout = setTimeout(_doRunDowngradeFinder, 120);
+        }
+
+        function _doRunDowngradeFinder() {
             const resultsEl = document.getElementById('dgResults');
             if (!dgSelectedPet) {
-                // Try reading from input
                 const name = document.getElementById('dgPetInput').value.trim();
                 if (name) {
                     const found = ALL_PETS.find(p => p.n.toLowerCase() === name.toLowerCase());
                     if (found) dgSelectedPet = found;
                 }
-                if (!dgSelectedPet) { return; }
+                if (!dgSelectedPet) return;
             }
 
-            // Build the "you give" pet object
-            const givePet = { ...dgSelectedPet, type: dgType, f_st: dgFly, r_st: dgRide };
+            // "You give" pet — always reg FR (the max value version of the base pet)
+            // User picks THIS in the variant buttons above the search
+            // For now use reg FR as default for the give side (they'll pick via buttons)
+            const givePet = { ...dgSelectedPet, type: 'reg', f_st: false, r_st: false };
             const giveVal = calculatePetVal(givePet, 'value');
             if (giveVal <= 0) {
-                resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:30px">This variant has no value. Try a different one.</div>';
+                resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:30px">This variant has no value.</div>';
                 return;
             }
 
             resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:30px">Searching...</div>';
 
-            // Read filters
-            const countFilter  = parseInt(document.getElementById('dgCountFilter').value) || 0;
-            const winMin       = parseFloat(document.getElementById('dgWinFilter').value) || 0;
-            const demMin       = parseFloat(document.getElementById('dgDemandFilter').value) || 0;
-            const acceptMin    = parseFloat(document.getElementById('dgAcceptFilter').value) || 0;
-            const catFilter    = document.getElementById('dgCatFilter').value;
-            const variantMode  = document.getElementById('dgVariantFilter').value;
-            const sortBy       = document.getElementById('dgSortFilter').value;
+            const countFilter = parseInt(document.getElementById('dgCountFilter').value) || 0;
+            const winMin      = parseFloat(document.getElementById('dgWinFilter').value) || 0;
+            const demMin      = parseFloat(document.getElementById('dgDemandFilter').value) || 0;
+            const acceptMin   = parseFloat(document.getElementById('dgAcceptFilter').value) || 0;
+            const catFilter   = document.getElementById('dgCatFilter').value;
+            const sortBy      = document.getElementById('dgSortFilter').value;
 
-            // Build list of candidate pets with variants
+            // Build variant specs from the multi-select dgActiveVariants set
+            const variantSpecs = [];
+            if (dgActiveVariants.has('reg'))  variantSpecs.push({ type:'reg',  f_st:false, r_st:false });
+            if (dgActiveVariants.has('f'))    variantSpecs.push({ type:'reg',  f_st:true,  r_st:false });
+            if (dgActiveVariants.has('r'))    variantSpecs.push({ type:'reg',  f_st:false, r_st:true  });
+            if (dgActiveVariants.has('fr'))   variantSpecs.push({ type:'reg',  f_st:true,  r_st:true  });
+            if (dgActiveVariants.has('neon')) variantSpecs.push({ type:'neon', f_st:false, r_st:false });
+            if (dgActiveVariants.has('nfr'))  variantSpecs.push({ type:'neon', f_st:true,  r_st:true  });
+            if (dgActiveVariants.has('mega')) variantSpecs.push({ type:'mega', f_st:false, r_st:false });
+            if (dgActiveVariants.has('mfr'))  variantSpecs.push({ type:'mega', f_st:true,  r_st:true  });
+
+            // Build candidate pool — one entry per valid pet+variant combo
             const candidatePets = [];
             ALL_PETS.forEach(p => {
-                if (p.n === dgSelectedPet.n) return; // can't receive same pet
-                const variants = [{ type:'reg', f_st:false, r_st:false }];
-                if (variantMode === 'all' || variantMode === 'everything') {
-                    variants.push({ type:'reg', f_st:true, r_st:false });
-                    variants.push({ type:'reg', f_st:false, r_st:true });
-                    variants.push({ type:'reg', f_st:true, r_st:true });
-                }
-                if (variantMode === 'neon' || variantMode === 'everything') {
-                    variants.push({ type:'neon', f_st:false, r_st:false });
-                    variants.push({ type:'neon', f_st:true, r_st:true });
-                }
-                if (variantMode === 'mega' || variantMode === 'everything') {
-                    variants.push({ type:'mega', f_st:false, r_st:false });
-                    variants.push({ type:'mega', f_st:true, r_st:true });
-                }
-                variants.forEach(v => {
+                if (p.n === dgSelectedPet.n) return;
+                if (getManipulationFlag(p.n)) return;
+                if (catFilter !== 'all' && !(p.cat||'').toLowerCase().includes(catFilter)) return;
+                variantSpecs.forEach(v => {
                     const pc = { ...p, ...v };
                     const pv = calculatePetVal(pc, 'value');
-                    if (pv <= 0 || pv >= giveVal) return; // must be worth less (it's a downgrade)
-                    if (catFilter !== 'all' && !(p.cat||'').toLowerCase().includes(catFilter)) return;
-                    if (getManipulationFlag(p.n)) return;
+                    if (pv <= 0 || pv >= giveVal * 0.98) return; // must be clearly less valuable
                     candidatePets.push({ ...pc, _val: pv, _dem: parseFloat(getEffDemand(pc)) || 0 });
                 });
             });
 
-            // Generate bundles of 2, 3, 4 pets
+            // Generate bundles — limit pool size hard to prevent UI freeze
             const results = [];
             const bundleSizes = countFilter > 0 ? [countFilter] : [2, 3, 4];
-            const maxResults = 40;
+            const maxResults = 30;
+            const giveDem = parseFloat(getEffDemand(givePet));
 
-            // Sort candidates by value desc for efficient bundling
-            candidatePets.sort((a,b) => b._val - a._val);
+            // Sort by demand desc (best pets first) then limit pool tightly
+            candidatePets.sort((a,b) => b._dem - a._dem || b._val - a._val);
+            const POOL_2 = 50, POOL_3 = 30, POOL_4 = 20;
 
             for (const size of bundleSizes) {
                 if (results.length >= maxResults) break;
-                // Only use top N candidates per bundle size to keep it fast
-                const pool = candidatePets.slice(0, 80);
+                const pool = candidatePets.slice(0, size === 2 ? POOL_2 : size === 3 ? POOL_3 : POOL_4);
 
                 if (size === 2) {
                     for (let i = 0; i < pool.length && results.length < maxResults; i++) {
@@ -5857,13 +5858,12 @@ function startLastUpdatedTicker() {
                             const bundle = [pool[i], pool[j]];
                             const bundleVal = bundle.reduce((s,p) => s + p._val, 0);
                             const gain = (bundleVal - giveVal) / giveVal * 100;
-                            if (gain < winMin) continue;
-                            if (gain > 60) continue; // cap extreme outliers
-                            const avgDem = bundle.reduce((s,p) => s + p._dem, 0) / 2;
+                            if (gain < winMin || gain > 65) continue;
+                            const avgDem = (pool[i]._dem + pool[j]._dem) / 2;
                             if (avgDem < demMin) continue;
-                            const ap = getAcceptanceProbability(giveVal, parseFloat(getEffDemand(givePet)), bundle[0], [givePet]);
+                            const ap = getAcceptanceProbability(giveVal, giveDem, bundle[0], [givePet]);
                             if (ap < acceptMin) continue;
-                            const tqs = scorePotentialTarget(bundle[0], giveVal, parseFloat(getEffDemand(givePet)), [givePet]);
+                            const tqs = scorePotentialTarget(bundle[0], giveVal, giveDem, [givePet]);
                             results.push({ bundle, bundleVal, gain, avgDem, ap, tqs, size });
                         }
                     }
