@@ -1027,7 +1027,9 @@
                         <div id="dgDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1e2d42;border:1px solid var(--border);border-radius:10px;z-index:100;max-height:180px;overflow-y:auto;margin-top:3px"></div>
                     </div>
                     <!-- Variant buttons -->
-                    <div style="display:flex;gap:4px;flex-wrap:wrap" id="dgVariantBtns">
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center" id="dgVariantBtns">
+                        <button class="dg-var-btn" id="dgVarAny"  onclick="setDgVariantAny()" style="background:#334155;color:#fbbf24;border-color:#fbbf2444;font-weight:900">Any 🎲</button>
+                        <span style="color:#334155;font-size:0.8em">|</span>
                         <button class="dg-var-btn active" id="dgVarReg"  onclick="setDgVariant('reg')">Reg</button>
                         <button class="dg-var-btn"        id="dgVarF"    onclick="setDgVariant('f')">F</button>
                         <button class="dg-var-btn"        id="dgVarR"    onclick="setDgVariant('r')">R</button>
@@ -1047,6 +1049,12 @@
                         <option value="2">2 pets</option>
                         <option value="3">3 pets</option>
                         <option value="4">4 pets</option>
+                        <option value="5">5 pets</option>
+                        <option value="6">6 pets</option>
+                        <option value="8">8 pets</option>
+                        <option value="10">10 pets</option>
+                        <option value="15">15 pets</option>
+                        <option value="18">18 pets</option>
                     </select>
                     <select class="advisor-filter-select" id="dgWinFilter" onchange="runDowngradeFinder()">
                         <option value="0">Any Win%</option>
@@ -1085,6 +1093,17 @@
                         <option value="demand">Sort: Demand</option>
                     </select>
                 </div>
+            </div>
+            <!-- Exclude pets row -->
+            <div style="padding:0 20px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <span style="font-size:0.7em;font-weight:900;color:var(--subtext)">EXCLUDE:</span>
+                <div style="position:relative">
+                    <input id="dgExcludeInput" type="text" placeholder="Add pet to exclude..."
+                        style="background:#1e2d42;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 10px;font-size:0.75em;font-family:inherit;width:160px"
+                        oninput="dgExcludeAutocomplete(this.value)">
+                    <div id="dgExcludeDropdown" style="display:none;position:absolute;top:100%;left:0;width:200px;background:#1e2d42;border:1px solid var(--border);border-radius:8px;z-index:100;max-height:140px;overflow-y:auto;margin-top:2px"></div>
+                </div>
+                <div id="dgExcludedChips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
             </div>
             <!-- Results -->
             <div class="vlist-body" id="dgResults" style="padding:14px 16px">
@@ -5726,6 +5745,61 @@ function startLastUpdatedTicker() {
         let dgSelectedPet  = null;   // base pet object from ALL_PETS
         // Set of active variants for receive side — user can pick multiple
         const dgActiveVariants = new Set(['reg']); // default: reg only
+        const dgExcludedPets   = new Set();        // pet names excluded from results
+
+        function setDgVariantAny() {
+            // "Any" = enable all variants
+            ['reg','f','r','fr','neon','nfr','mega','mfr'].forEach(k => dgActiveVariants.add(k));
+            const idMap = { reg:'dgVarReg', f:'dgVarF', r:'dgVarR', fr:'dgVarFR', neon:'dgVarNeon', nfr:'dgVarNFR', mega:'dgVarMega', mfr:'dgVarMFR' };
+            Object.entries(idMap).forEach(([k,id]) => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('active');
+            });
+            runDowngradeFinder();
+        }
+
+        let _dgExcludeMatches = [];
+        function dgExcludeAutocomplete(val) {
+            const dd = document.getElementById('dgExcludeDropdown');
+            if (!val || val.length < 2) { dd.style.display = 'none'; return; }
+            _dgExcludeMatches = ALL_PETS.filter(p => p.n.toLowerCase().includes(val.toLowerCase()) && !dgExcludedPets.has(p.n)).slice(0, 6);
+            if (!_dgExcludeMatches.length) { dd.style.display = 'none'; return; }
+            dd.innerHTML = _dgExcludeMatches.map((p, i) =>
+                '<div style="padding:6px 10px;cursor:pointer;font-size:0.78em;border-bottom:1px solid var(--border)"' +
+                ' onmousedown="dgAddExclude(' + i + ')">' + p.n + '</div>'
+            ).join('');
+            dd.style.display = 'block';
+        }
+
+        function dgAddExclude(i) {
+            const pet = _dgExcludeMatches[i];
+            if (!pet) return;
+            dgExcludedPets.add(pet.n);
+            document.getElementById('dgExcludeInput').value = '';
+            document.getElementById('dgExcludeDropdown').style.display = 'none';
+            renderDgExcludeChips();
+            runDowngradeFinder();
+        }
+
+        function dgRemoveExclude(name) {
+            dgExcludedPets.delete(name);
+            renderDgExcludeChips();
+            runDowngradeFinder();
+        }
+        function dgRemoveByName(el) {
+            const name = el.getAttribute('data-name');
+            if (name) dgRemoveExclude(name);
+        }
+
+        function renderDgExcludeChips() {
+            const el = document.getElementById('dgExcludedChips');
+            if (!el) return;
+            el.innerHTML = [...dgExcludedPets].map(n =>
+                '<div style="display:flex;align-items:center;gap:4px;background:#2d1a1a;border:1px solid #7f1d1d;border-radius:6px;padding:2px 6px;font-size:0.72em;color:#fca5a5">' +
+                n + '<span style="cursor:pointer;margin-left:2px;color:#f87171" onclick="dgRemoveByName(this)" data-name="' + n.replace(/"/g,'&quot;') + '">&times;</span>' +
+                '</div>'
+            ).join('');
+        }
 
         let _dgMatchedPets = [];
         function dgAutocomplete(val) {
@@ -5828,6 +5902,7 @@ function startLastUpdatedTicker() {
             const candidatePets = [];
             ALL_PETS.forEach(p => {
                 if (p.n === dgSelectedPet.n) return;
+                if (dgExcludedPets.has(p.n)) return;        // user excluded this pet
                 if (getManipulationFlag(p.n)) return;
                 if (catFilter !== 'all' && !(p.cat||'').toLowerCase().includes(catFilter)) return;
                 variantSpecs.forEach(v => {
@@ -5838,18 +5913,61 @@ function startLastUpdatedTicker() {
                 });
             });
 
-            // Generate bundles — limit pool size hard to prevent UI freeze
+            // Generate bundles — supports 2–18 pets
+            // For small bundles (2-4): combinatorial search on limited pool
+            // For large bundles (5+): greedy fill — pick best pets by demand until value fills
             const results = [];
             const bundleSizes = countFilter > 0 ? [countFilter] : [2, 3, 4];
             const maxResults = 30;
             const giveDem = parseFloat(getEffDemand(givePet));
 
-            // Sort by demand desc (best pets first) then limit pool tightly
             candidatePets.sort((a,b) => b._dem - a._dem || b._val - a._val);
-            const POOL_2 = 50, POOL_3 = 30, POOL_4 = 20;
+
+            // Large bundle generator (5+ pets): greedy approach
+            // Pick top-demand pets repeatedly until combined value hits the target range
+            function buildLargeBundle(targetSize) {
+                const pool = candidatePets.slice(0, 60);
+                const largeResults = [];
+                // Try starting from different anchors for variety
+                for (let start = 0; start < Math.min(pool.length, 15) && largeResults.length < 8; start++) {
+                    const bundle = [];
+                    let bundleVal = 0;
+                    const used = new Set();
+                    // Greedily fill to targetSize, picking highest demand that fits
+                    for (let iter = 0; iter < targetSize && bundle.length < targetSize; iter++) {
+                        // Find best pet that keeps us under budget
+                        const budget = giveVal * 1.5 - bundleVal;
+                        const best = pool.find((p, idx) => !used.has(idx) && p._val <= budget * 1.1);
+                        if (!best) break;
+                        const idx = pool.indexOf(best);
+                        used.add(idx + start); // slight offset for variety
+                        bundle.push(best);
+                        bundleVal += best._val;
+                    }
+                    if (bundle.length < targetSize) continue;
+                    const gain = (bundleVal - giveVal) / giveVal * 100;
+                    if (gain < winMin || gain > 80) continue;
+                    const avgDem = bundle.reduce((s,p) => s + p._dem, 0) / bundle.length;
+                    if (avgDem < demMin) continue;
+                    const ap = getAcceptanceProbability(giveVal, giveDem, bundle[0], [givePet]);
+                    if (ap < acceptMin) continue;
+                    const tqs = scorePotentialTarget(bundle[0], giveVal, giveDem, [givePet]);
+                    const sig = bundle.map(p=>p.n+'|'+p.type).sort().join(',');
+                    if (largeResults.some(r => r._sig === sig)) continue;
+                    largeResults.push({ bundle, bundleVal, gain, avgDem, ap, tqs, size: targetSize, _sig: sig });
+                }
+                return largeResults;
+            }
 
             for (const size of bundleSizes) {
                 if (results.length >= maxResults) break;
+
+                if (size >= 5) {
+                    results.push(...buildLargeBundle(size));
+                    continue;
+                }
+
+                const POOL_2 = 50, POOL_3 = 30, POOL_4 = 20;
                 const pool = candidatePets.slice(0, size === 2 ? POOL_2 : size === 3 ? POOL_3 : POOL_4);
 
                 if (size === 2) {
