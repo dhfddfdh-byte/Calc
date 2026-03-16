@@ -5892,6 +5892,15 @@ function startLastUpdatedTicker() {
             _dgRunTimeout = setTimeout(_doRunDowngradeFinder, 120);
         }
 
+        // ── DOWNGRADE FINDER ENGINE ─────────────────────────────────────────
+        // Uses a JS generator to lazily produce combos — no freeze, no skip hacks.
+        // Each "Load More" resumes the generator from where it left off.
+
+        let _dgGenerator = null;   // active generator instance
+        let _dgGiveLabel = '';
+        let _dgGiveVal   = 0;
+        const PAGE_SIZE  = 5;
+
         function _doRunDowngradeFinder() {
             const resultsEl = document.getElementById('dgResults');
             if (!dgSelectedPet) {
@@ -5903,7 +5912,6 @@ function startLastUpdatedTicker() {
                 if (!dgSelectedPet) return;
             }
 
-            // Build give pet from user's selected variant
             const givePet = { ...dgSelectedPet, type: dgGiveType, f_st: dgGiveFly, r_st: dgGiveRide };
             const giveVal = calculatePetVal(givePet, 'value');
             if (giveVal <= 0) {
@@ -5911,12 +5919,7 @@ function startLastUpdatedTicker() {
                 return;
             }
 
-            resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:30px">Searching...</div>';
-            if (!window._dgIsLoadMore) {
-                window._dgWasLoadMore = false;
-                window._dgSkipCount   = 0;
-            }
-
+            // Read filters
             const countFilter = parseInt(document.getElementById('dgCountFilter').value) || 0;
             const winMin      = parseFloat(document.getElementById('dgWinFilter').value) || 0;
             const demMin      = parseFloat(document.getElementById('dgDemandFilter').value) || 0;
@@ -5924,7 +5927,7 @@ function startLastUpdatedTicker() {
             const catFilter   = document.getElementById('dgCatFilter').value;
             const sortBy      = document.getElementById('dgSortFilter').value;
 
-            // Build variant specs from the multi-select dgActiveVariants set
+            // Build variant specs
             const variantSpecs = [];
             if (dgActiveVariants.has('reg'))  variantSpecs.push({ type:'reg',  f_st:false, r_st:false });
             if (dgActiveVariants.has('f'))    variantSpecs.push({ type:'reg',  f_st:true,  r_st:false });
@@ -5935,315 +5938,200 @@ function startLastUpdatedTicker() {
             if (dgActiveVariants.has('mega')) variantSpecs.push({ type:'mega', f_st:false, r_st:false });
             if (dgActiveVariants.has('mfr'))  variantSpecs.push({ type:'mega', f_st:true,  r_st:true  });
 
-            // Build candidate pool — one entry per valid pet+variant combo
-            const candidatePets = [];
+            // Build full candidate pool — every pet × every selected variant
+            const candidates = [];
             ALL_PETS.forEach(p => {
                 if (p.n === dgSelectedPet.n) return;
-                if (dgExcludedPets.has(p.n)) return;        // user excluded this pet
+                if (dgExcludedPets.has(p.n)) return;
                 if (getManipulationFlag(p.n)) return;
                 if (catFilter !== 'all' && !(p.cat||'').toLowerCase().includes(catFilter)) return;
                 variantSpecs.forEach(v => {
                     const pc = { ...p, ...v };
                     const pv = calculatePetVal(pc, 'value');
-                    if (pv <= 0 || pv >= giveVal * 0.98) return; // must be clearly less valuable
-                    candidatePets.push({ ...pc, _val: pv, _dem: parseFloat(getEffDemand(pc)) || 0 });
+                    if (pv <= 0 || pv >= giveVal * 0.98) return;
+                    candidates.push({ ...pc, _val: pv, _dem: parseFloat(getEffDemand(pc)) || 0 });
                 });
             });
 
-            // ── SMART BUNDLE GENERATOR ───────────────────────────────────────
-            // Key insight: for N pets, each pet should be worth roughly giveVal/N.
-            // Pre-filter candidatePets into "buckets" by what count they're good for.
-            // This gives diversity and makes 5+ pet searches actually work.
-            const results = [];
-            const bundleSizes = countFilter > 0 ? [countFilter] : [2, 3, 4];
-            const maxResults  = 20; // stop after 20 — Load More continues
-            const giveDem     = parseFloat(getEffDemand(givePet));
+            // Sort by value ascending for efficient search
+            candidates.sort((a,b) => a._val - b._val);
 
-            // Sort all candidates by demand desc for quality, but we'll use value-range
-            // filtering to find the RIGHT pets for each bundle size
-            candidatePets.sort((a,b) => b._dem - a._dem || b._val - a._val);
+            const target    = giveVal * (1 + Math.max(winMin,0) / 100);
+            const giveDem   = parseFloat(getEffDemand(givePet));
+            const sigSet    = new Set();
+            const varCount  = {};  // variant key → how many results it's appeared in
+            const bundleSizes = countFilter > 0 ? [countFilter] : [2,3,4];
 
-            // On fresh search reset sigSet; on load more keep it to avoid duplicates
-            if (!window._dgIsLoadMore) window._dgSigSet = new Set();
-            const sigSet = window._dgSigSet;
-
-            // Downgrade-specific accept rate:
-            // YOU give high-value pet, THEY give bundle. Their motivation to accept
-            // depends on how much your pet is worth vs what they give.
-            // If your pet is worth more (you win), they're getting a GOOD deal → higher accept
-            // If you win by a lot (>30%), they're getting a great deal but it's suspicious → slight drop
-            // Bundle size friction still applies (more pets = more friction for them to send)
-            function dgAcceptRate(bundleVal, bundleSize) {
-                const valRatio = giveVal / Math.max(bundleVal, 0.01); // how much MORE your pet is worth
-                // valRatio > 1 means you're giving MORE than you get (they benefit)
-                let prob;
-                if      (valRatio >= 1.30) prob = 72; // you overpay massively — they love it
-                else if (valRatio >= 1.15) prob = 68;
-                else if (valRatio >= 1.05) prob = 62;
-                else if (valRatio >= 0.97) prob = 55; // roughly fair
-                else if (valRatio >= 0.90) prob = 42; // you're getting more value
-                else if (valRatio >= 0.80) prob = 30;
-                else                       prob = 18; // big win for you = big loss for them
-
-                // Bundle size friction — they have to send multiple pets
-                if (bundleSize === 2) prob -= 3;
-                else if (bundleSize === 3) prob -= 7;
-                else if (bundleSize === 4) prob -= 11;
-                else if (bundleSize >= 5)  prob -= 15;
-
-                // Demand of what they're giving up — if your pet has high demand they want it more
-                if (giveDem >= 9) prob += 8;
-                else if (giveDem >= 7) prob += 4;
-
-                return Math.max(5, Math.min(85, Math.round(prob)));
-            }
-
-            // Track how many results each EXACT variant has appeared in (for variety)
-            if (!window._dgIsLoadMore) window._dgVariantCount = {};
-            const variantResultCount = window._dgVariantCount;
-
-            function checkAndPush(bundle) {
-                const bundleVal = bundle.reduce((s,p) => s + p._val, 0);
-                const gain      = (bundleVal - giveVal) / giveVal * 100;
-                if (gain < winMin) return false;
-
-                // ── Demand filter (optional — user can leave at "Any") ────────
-                const avgDem = bundle.reduce((s,p) => s + p._dem, 0) / bundle.length;
-                if (avgDem < demMin) return false;
-
+            function isValid(bundle) {
+                const bundleVal = bundle.reduce((s,p)=>s+p._val,0);
+                const gain = (bundleVal - giveVal) / giveVal * 100;
+                if (gain < winMin) return null;
+                const avgDem = bundle.reduce((s,p)=>s+p._dem,0) / bundle.length;
+                if (avgDem < demMin) return null;
                 const ap = dgAcceptRate(bundleVal, bundle.length);
-                if (ap < acceptMin) return false;
-
-                // ── Overpay cap ──────────────────────────────────────────────
-                // Low demand (< 4): cap +50 — needs more overpay to move
-                // Good demand (4+): cap +15 — just a small tab over, close to value
+                if (ap < acceptMin) return null;
+                // Overpay cap
                 const rawOverpay = bundleVal - giveVal;
                 const overpayCap = avgDem < 4 ? 50 : 15;
-                if (rawOverpay > overpayCap) return false;
-
-                // ── Max 3 of the EXACT same variant per bundle ────────────────
-                // NFR Kangaroo and regular Kangaroo are DIFFERENT — each has own limit of 3
-                const variantCount = {};
+                if (rawOverpay > overpayCap) return null;
+                // Max 3 of same exact variant in one bundle
+                const vc = {};
                 for (const p of bundle) {
-                    const vk = p.n + '|' + p.type + '|' + (p.f_st?1:0) + '|' + (p.r_st?1:0);
-                    variantCount[vk] = (variantCount[vk] || 0) + 1;
-                    if (variantCount[vk] > 3) return false;
+                    const k = p.n+'|'+p.type+'|'+(p.f_st?1:0)+'|'+(p.r_st?1:0);
+                    vc[k] = (vc[k]||0)+1;
+                    if (vc[k] > 3) return null;
                 }
-
-                // ── Variety: max 8 results per exact variant across all results ─
-                for (const vk of Object.keys(variantCount)) {
-                    if ((variantResultCount[vk] || 0) >= 8) return false;
+                // Variety: max 8 results per exact variant
+                for (const k of Object.keys(vc)) {
+                    if ((varCount[k]||0) >= 8) return null;
                 }
-
-                // Dedup by sorted pet signatures
-                const sig = bundle.map(p => p.n + '|' + p.type + '|' + (p.f_st?1:0) + '|' + (p.r_st?1:0)).sort().join(',');
-                if (sigSet.has(sig)) return false;
-                sigSet.add(sig);
-
-                const tqs = scorePotentialTarget(bundle[0], giveVal, giveDem, [givePet]);
-
-                // Update variant result counts
-                for (const vk of Object.keys(variantCount)) {
-                    variantResultCount[vk] = (variantResultCount[vk] || 0) + 1;
-                }
-
-                results.push({ bundle, bundleVal, gain, avgDem, ap, tqs, size: bundle.length, _sig: sig });
-                if (results.length >= maxResults) return true;
-                return true;
+                // Dedup
+                const sig = bundle.map(p=>p.n+'|'+p.type+'|'+(p.f_st?1:0)+'|'+(p.r_st?1:0)).sort().join(',');
+                if (sigSet.has(sig)) return null;
+                return { sig, vc, bundleVal, gain, avgDem, ap };
             }
 
-            // ── TRUE FULL-GAME SEARCH ─────────────────────────────────────────
-            // Approach: sort ALL candidates by value. For each bundle size N,
-            // use a sliding window: for each pet as "anchor", binary-search for
-            // companions that make the total hit the target range.
-            // This covers every pet in the game, not just top-60.
+            // Build suffix max for pruning
+            const n = candidates.length;
+            const suffixMax = new Array(n+1).fill(0);
+            for (let i = n-1; i >= 0; i--) suffixMax[i] = suffixMax[i+1] + candidates[i]._val;
 
-            const target    = giveVal * (1 + Math.max(winMin, 0) / 100);
-            const targetMax = giveVal * 3.0; // no point showing 300% wins
-
-            // Sort ALL candidates by value ascending for efficient searching
-            const allByVal = [...candidatePets].sort((a,b) => a._val - b._val);
-
-            // Also build a demand-sorted view for quality ordering in results
-            const allByDem = [...candidatePets].sort((a,b) => b._dem - a._dem);
-
-            // Find index where value >= threshold (binary search)
-            function lowerBound(arr, minVal) {
-                let lo = 0, hi = arr.length;
-                while (lo < hi) { const mid = (lo+hi)>>1; if (arr[mid]._val < minVal) lo=mid+1; else hi=mid; }
-                return lo;
-            }
-
-            // On load more, skip combos already shown (by counting skipped)
-            const skipCount = window._dgIsLoadMore ? (window._dgSkipCount || 0) : 0;
-            let skipped = 0;
-            const origCheckAndPush = checkAndPush;
-            const checkAndPushWithSkip = window._dgIsLoadMore ? function(bundle) {
-                if (skipped < skipCount) { skipped++; return false; }
-                return origCheckAndPush(bundle);
-            } : origCheckAndPush;
-
-            for (const size of bundleSizes) {
-                if (results.length >= maxResults) break;
-
-                if (size === 1) {
-                    // Single pet: just find all pets in target range
-                    const lo = lowerBound(allByVal, target);
-                    for (let i = lo; i < allByVal.length && results.length < maxResults; i++) {
-                        if (allByVal[i]._val > targetMax) break;
-                        checkAndPushWithSkip([allByVal[i]]);
-                    }
-
-                } else if (size === 2) {
-                    // Two pets: for each pet i, binary search for pets j where i+j >= target
-                    for (let i = 0; i < allByVal.length && results.length < maxResults; i++) {
-                        const need = target - allByVal[i]._val;
-                        const jStart = lowerBound(allByVal, need);
-                        for (let j = Math.max(i+1, jStart); j < allByVal.length && results.length < maxResults; j++) {
-                            const sum = allByVal[i]._val + allByVal[j]._val;
-                            if (sum > targetMax) break;
-                            checkAndPushWithSkip([allByVal[i], allByVal[j]]);
-                        }
-                    }
-
-                } else {
-                    // 3+ pets: backtrack on ALL candidates (not just top 60)
-                    // but with tight pruning using the sorted order
-                    // maxSuffix[i] = sum of top `size` values from index i onwards
-                    const n = allByVal.length;
-                    // For pruning: suffix max sums
-                    const suffixMax = new Array(n + 1).fill(0);
-                    for (let i = n - 1; i >= 0; i--) {
-                        suffixMax[i] = suffixMax[i+1] + allByVal[i]._val;
-                    }
-
-                    function bt(idx, depth, current, currentVal) {
-                        if (results.length >= maxResults) return;
-                        if (depth === 0) {
-                            if (currentVal >= target && currentVal <= targetMax) {
-                                checkAndPushWithSkip([...current]);
+            // Generator — lazily yields valid bundles one at a time
+            function* makeGenerator() {
+                for (const size of bundleSizes) {
+                    if (size === 1) {
+                        for (let i = 0; i < n; i++) {
+                            const bundle = [candidates[i]];
+                            const v = isValid(bundle);
+                            if (v) {
+                                sigSet.add(v.sig);
+                                for (const k of Object.keys(v.vc)) varCount[k] = (varCount[k]||0)+1;
+                                const tqs = scorePotentialTarget(bundle[0], giveVal, giveDem, [givePet]);
+                                yield { bundle, bundleVal:v.bundleVal, gain:v.gain, avgDem:v.avgDem, ap:v.ap, tqs, size:1 };
                             }
-                            return;
                         }
-                        // Prune: even if we take the highest-value remaining pets,
-                        // can we reach target?
-                        if (currentVal + suffixMax[idx] < target) return;
-                        // Prune: already over max even with smallest remaining
-                        if (currentVal + allByVal[idx]?._val > targetMax) return;
-
-                        for (let i = idx; i <= n - depth; i++) {
-                            if (results.length >= maxResults) return;
-                            const p = allByVal[i];
-                            // Early termination: adding this pet already exceeds max
-                            if (currentVal + p._val > targetMax) break;
-                            current.push(p);
-                            bt(i + 1, depth - 1, current, currentVal + p._val);
-                            current.pop();
+                    } else {
+                        // Recursive generator helper
+                        function* btGen(idx, depth, current, currentVal) {
+                            if (depth === 0) {
+                                const bundle = [...current];
+                                const v = isValid(bundle);
+                                if (v) {
+                                    sigSet.add(v.sig);
+                                    for (const k of Object.keys(v.vc)) varCount[k] = (varCount[k]||0)+1;
+                                    const tqs = scorePotentialTarget(bundle[0], giveVal, giveDem, [givePet]);
+                                    yield { bundle, bundleVal:v.bundleVal, gain:v.gain, avgDem:v.avgDem, ap:v.ap, tqs, size };
+                                }
+                                return;
+                            }
+                            if (currentVal + suffixMax[idx] < target) return;
+                            for (let i = idx; i <= n - depth; i++) {
+                                const p = candidates[i];
+                                if (currentVal + p._val > giveVal * 3) break;
+                                yield* btGen(i+1, depth-1, [...current, p], currentVal + p._val);
+                            }
                         }
+                        yield* btGen(0, size, [], 0);
                     }
-
-                    bt(0, size, [], 0);
                 }
             }
 
-            if (results.length === 0) {
-                resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px"><div style="font-size:1em;margin-bottom:8px">No downgrades found</div><div style="font-size:0.8em">Try widening filters — lower the win %, demand, or accept % requirements</div></div>';
-                return;
+            // Store generator and metadata globally
+            _dgGenerator  = makeGenerator();
+            _dgGiveLabel  = getPetLabel(givePet);
+            _dgGiveVal    = giveVal;
+            window._dgCollected = [];
+
+            resultsEl.innerHTML = '';
+            dgFetchMore(true);
+        }
+
+        function dgFetchMore(isFirst) {
+            const resultsEl = document.getElementById('dgResults');
+            let count = 0;
+            while (count < PAGE_SIZE) {
+                const { value, done } = _dgGenerator.next();
+                if (done) {
+                    // No more results
+                    dgRenderResults(isFirst);
+                    const noMore = '<div style="text-align:center;color:var(--subtext);font-size:0.75em;margin-top:12px">No more combinations found</div>';
+                    resultsEl.insertAdjacentHTML('beforeend', noMore);
+                    return;
+                }
+                window._dgCollected.push(value);
+                count++;
             }
-
-            // Sort
-            if (sortBy === 'accept') results.sort((a,b) => b.ap - a.ap);
-            else if (sortBy === 'win')    results.sort((a,b) => b.gain - a.gain);
-            else if (sortBy === 'demand') results.sort((a,b) => b.avgDem - a.avgDem);
-            else                          results.sort((a,b) => b.tqs - a.tqs);
-
-            // Save skip count for next load more (total combos evaluated so far)
-            window._dgSkipCount = skipCount + skipped + results.length;
-            window._dgIsLoadMore = false; // reset flag
-
-            if (window._dgWasLoadMore) {
-                window._dgAllResults = (window._dgAllResults || []).concat(results);
-            } else {
-                window._dgAllResults = results;
-            }
-            window._dgGiveLabel = getPetLabel(givePet);
-            window._dgGiveVal   = giveVal;
-            window._dgPage      = 0;
-            renderDgPage();
+            dgRenderResults(isFirst);
         }
 
         function dgLoadMore() {
-            window._dgIsLoadMore    = true;
-            window._dgWasLoadMore   = true;
-            runDowngradeFinder();
+            dgFetchMore(false);
         }
 
-        function renderDgPage() {
+        function dgRenderResults(replaceAll) {
             const resultsEl = document.getElementById('dgResults');
-            const results   = window._dgAllResults || [];
-            const giveLabel = window._dgGiveLabel || '';
-            const giveVal   = window._dgGiveVal   || 0;
-            const slice     = results; // all collected results shown at once
+            const collected = window._dgCollected || [];
+            const giveLabel = _dgGiveLabel;
+            const giveVal   = _dgGiveVal;
 
-            const header = '<div style="font-size:0.7em;font-weight:900;color:var(--subtext);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">' +
-                results.length + ' combos found for ' + giveLabel + ' (' + giveVal.toFixed(2) + ')' +
-                (results.length >= 999 ? ' — showing top results' : '') + '</div>';
+            const header = replaceAll
+                ? '<div style="font-size:0.7em;font-weight:900;color:var(--subtext);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">' +
+                  collected.length + ' combos for ' + giveLabel + ' (' + giveVal.toFixed(2) + ')</div>'
+                : '';
+
+            // Only render the newest PAGE_SIZE cards
+            const slice = replaceAll ? collected : collected.slice(-PAGE_SIZE);
 
             const cards = slice.map(r => {
-                    const tqsCls = r.tqs >= 7 ? '#34d399' : r.tqs >= 4 ? '#fbbf24' : '#f87171';
-                    const apColor = r.ap >= 55 ? '#34d399' : r.ap >= 35 ? '#fbbf24' : '#f87171';
-                    const gainColor = r.gain >= 5 ? '#34d399' : r.gain >= 0 ? '#fbbf24' : '#f87171';
-                    const demColor = r.avgDem >= 7 ? '#34d399' : r.avgDem >= 5 ? '#fbbf24' : '#f87171';
-                    const chips = r.bundle.map(p => {
-                        const pLabel = getPetLabel(p);
-                        const varBadge = p.type === 'neon' ? '<span style="color:#34d399;font-size:0.65em;background:#1e3a1e;border-radius:4px;padding:0 4px">N</span>' :
-                                         p.type === 'mega' ? '<span style="color:#a855f7;font-size:0.65em;background:#2d1a4a;border-radius:4px;padding:0 4px">M</span>' : '';
-                        return '<div class="dg-pet-chip">' +
-                            petImgTag(p.n, 'width:32px;height:32px;object-fit:contain;flex-shrink:0') +
-                            '<div>' +
-                                '<div class="dg-chip-name">' + pLabel + ' ' + varBadge + '</div>' +
-                                '<div class="dg-chip-val">' + p._val.toFixed(2) + '</div>' +
-                                '<div class="dg-chip-dem">Dem: ' + p._dem.toFixed(1) + '</div>' +
-                            '</div>' +
-                        '</div>';
-                    }).join('<span style="color:var(--subtext);font-size:1.2em">+</span>');
+                const tqsCls   = r.tqs >= 7 ? '#34d399' : r.tqs >= 4 ? '#fbbf24' : '#f87171';
+                const apColor  = r.ap  >= 55 ? '#34d399' : r.ap  >= 35 ? '#fbbf24' : '#f87171';
+                const gainColor= r.gain>= 5  ? '#34d399' : r.gain>= 0  ? '#fbbf24' : '#f87171';
+                const demColor = r.avgDem>=7  ? '#34d399' : r.avgDem>=5 ? '#fbbf24' : '#f87171';
+                const chips = r.bundle.map(p => {
+                    const pLabel = getPetLabel(p);
+                    const varBadge = p.type==='neon' ? '<span style="color:#34d399;font-size:0.65em;background:#1e3a1e;border-radius:4px;padding:0 4px">N</span>' :
+                                     p.type==='mega' ? '<span style="color:#a855f7;font-size:0.65em;background:#2d1a4a;border-radius:4px;padding:0 4px">M</span>' : '';
+                    return '<div class="dg-pet-chip">' +
+                        petImgTag(p.n,'width:32px;height:32px;object-fit:contain;flex-shrink:0') +
+                        '<div><div class="dg-chip-name">'+pLabel+' '+varBadge+'</div>' +
+                        '<div class="dg-chip-val">'+p._val.toFixed(2)+'</div>' +
+                        '<div class="dg-chip-dem">Dem: '+p._dem.toFixed(1)+'</div></div></div>';
+                }).join('<span style="color:var(--subtext);font-size:1.2em">+</span>');
 
-                    return '<div class="dg-result-card">' +
-                        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:0.72em;color:var(--subtext)">' +
-                            '<span style="font-weight:800;color:#cbd5e1">' + giveLabel + '</span>' +
-                            '<span>→</span>' +
-                            '<span style="font-weight:800;color:var(--frost)">' + r.bundle.length + ' pets (' + r.bundleVal.toFixed(2) + ')</span>' +
-                        '</div>' +
-                        '<div class="dg-bundle-row">' + chips + '</div>' +
-                        '<div class="dg-stats-row">' +
-                            '<span class="ai-stat-pill" style="color:' + tqsCls + '">TQS: ' + r.tqs.toFixed(1) + '/10</span>' +
-                            '<span class="ai-stat-pill" style="color:' + apColor + '">~' + r.ap + '% accept</span>' +
-                            '<span class="ai-stat-pill" style="color:' + gainColor + '">' + (r.gain >= 0 ? '+' : '') + r.gain.toFixed(1) + '% value</span>' +
-                            '<span class="ai-stat-pill" style="color:' + demColor + '">Avg Dem: ' + r.avgDem.toFixed(1) + '</span>' +
-                            '<span class="ai-stat-pill" style="color:var(--subtext)">' + r.size + ' pets</span>' +
-                        '</div>' +
-                    '</div>';
+                return '<div class="dg-result-card">' +
+                    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:0.72em;color:var(--subtext)">' +
+                        '<span style="font-weight:800;color:#cbd5e1">'+giveLabel+'</span>' +
+                        '<span>→</span>' +
+                        '<span style="font-weight:800;color:var(--frost)">'+r.bundle.length+' pets ('+r.bundleVal.toFixed(2)+')</span>' +
+                    '</div>' +
+                    '<div class="dg-bundle-row">'+chips+'</div>' +
+                    '<div class="dg-stats-row">' +
+                        '<span class="ai-stat-pill" style="color:'+tqsCls+'">TQS: '+r.tqs.toFixed(1)+'/10</span>' +
+                        '<span class="ai-stat-pill" style="color:'+apColor+'">~'+r.ap+'% accept</span>' +
+                        '<span class="ai-stat-pill" style="color:'+gainColor+'">'+(r.gain>=0?'+':'')+r.gain.toFixed(1)+'% value</span>' +
+                        '<span class="ai-stat-pill" style="color:'+demColor+'">Avg Dem: '+r.avgDem.toFixed(1)+'</span>' +
+                        '<span class="ai-stat-pill" style="color:var(--subtext)">'+r.size+' pets</span>' +
+                    '</div></div>';
             }).join('');
 
-            const hasMore = true; // always show load more (more combos exist in game)
-            const loadMoreBtn = hasMore
-                ? '<div style="text-align:center;margin-top:14px">' +
-                    '<button class="nav-btn" style="padding:8px 24px;font-weight:900" onclick="dgLoadMore()">' +
-                        'Load More' +
-                    '</button>' +
-                  '</div>'
-                : (results.length > pageSize ? '<div style="text-align:center;color:var(--subtext);font-size:0.75em;margin-top:12px">All ' + results.length + ' combos shown</div>' : '');
+            const loadMoreBtn = '<div style="text-align:center;margin-top:14px">' +
+                '<button class="nav-btn" style="padding:8px 24px;font-weight:900" onclick="dgLoadMore()">Load More</button></div>';
 
-            if (page === 0) {
+            if (replaceAll) {
                 resultsEl.innerHTML = header + cards + loadMoreBtn;
             } else {
-                // Append to existing cards (remove old load more button first)
-                const old = resultsEl.querySelector('.dg-load-more');
-                if (old) old.remove();
-                resultsEl.insertAdjacentHTML('beforeend', cards);
-                resultsEl.insertAdjacentHTML('beforeend', loadMoreBtn);
+                // Remove old Load More button and append new cards + new button
+                const oldBtn = resultsEl.querySelector('div:last-child');
+                if (oldBtn) oldBtn.remove();
+                // Update header count
+                const hdr = resultsEl.querySelector('div:first-child');
+                if (hdr && hdr.textContent.includes('combos for')) {
+                    hdr.textContent = collected.length + ' combos for ' + giveLabel + ' (' + giveVal.toFixed(2) + ')';
+                }
+                resultsEl.insertAdjacentHTML('beforeend', cards + loadMoreBtn);
             }
         }
+
 
         // ── TRENDS LIST ──────────────────────────────────────────────────────
         let trendSortMode = 'rising_val';
