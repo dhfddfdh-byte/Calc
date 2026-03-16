@@ -618,6 +618,29 @@
         .tag-played { background: rgba(239,68,68,0.22); color: #f87171; border: 2px solid #ef4444; font-size: 0.8em; font-weight: 900; padding: 5px 14px; border-radius: 20px; animation: pulse 2s infinite; }
         .verdict-mobile-info { display: none; } /* shown only on mobile */
 
+        /* ── DOWNGRADE FINDER ── */
+        .dg-var-btn {
+            background: #1e293b; border: 1px solid var(--border); color: var(--subtext);
+            padding: 4px 10px; border-radius: 8px; font-size: 0.72em; font-weight: 800;
+            cursor: pointer; transition: 0.15s; font-family: inherit;
+        }
+        .dg-var-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+        .dg-var-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .dg-result-card {
+            background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+            padding: 14px; margin-bottom: 10px; transition: border-color 0.15s;
+        }
+        .dg-result-card:hover { border-color: var(--accent); }
+        .dg-bundle-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+        .dg-pet-chip {
+            display: flex; align-items: center; gap: 6px; background: #0f172a;
+            border: 1px solid var(--border); border-radius: 10px; padding: 5px 8px;
+        }
+        .dg-chip-name { font-size: 0.75em; font-weight: 800; color: #cbd5e1; }
+        .dg-chip-val  { font-size: 0.68em; color: var(--frost); font-weight: 700; }
+        .dg-chip-dem  { font-size: 0.65em; color: var(--subtext); }
+        .dg-stats-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+
         /* ── TRENDS TAB ── */
         .trends-grid { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
         .trends-card {
@@ -983,6 +1006,100 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><line x1="16" y1="7" x2="22" y2="7"/><line x1="22" y1="7" x2="22" y2="13"/></svg>
             Trends
         </button>
+        <button class="tab-btn" id="tabBtnDowngrades" onclick="switchTab('downgrades')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><line x1="16" y1="17" x2="22" y2="17"/><line x1="22" y1="17" x2="22" y2="11"/></svg>
+            Downgrades
+        </button>
+    </div>
+
+    <!-- DOWNGRADES TAB -->
+    <div class="tab-content" id="tabDowngrades">
+        <div class="vlist-container" style="padding:0">
+            <!-- Header: Input + Filters -->
+            <div class="vlist-header" style="flex-direction:column;align-items:stretch;gap:12px;padding:16px 20px">
+                <!-- Row 1: Pet input -->
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                    <span style="font-weight:900;color:white;font-size:1em">⬇️ Downgrade Finder</span>
+                    <div style="position:relative;flex:1;min-width:180px">
+                        <input id="dgPetInput" type="text" placeholder="Type a pet to downgrade..."
+                            style="width:100%;background:#1e2d42;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:7px 12px;font-size:0.82em;font-family:inherit;box-sizing:border-box"
+                            oninput="dgAutocomplete(this.value)" onkeydown="if(event.key==='Enter')runDowngradeFinder()">
+                        <div id="dgDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1e2d42;border:1px solid var(--border);border-radius:10px;z-index:100;max-height:180px;overflow-y:auto;margin-top:3px"></div>
+                    </div>
+                    <!-- Variant buttons -->
+                    <div style="display:flex;gap:4px;flex-wrap:wrap" id="dgVariantBtns">
+                        <button class="dg-var-btn active" id="dgVarReg"    onclick="setDgVariant('reg',false,false)">Reg</button>
+                        <button class="dg-var-btn"        id="dgVarF"      onclick="setDgVariant('reg',true,false)">F</button>
+                        <button class="dg-var-btn"        id="dgVarR"      onclick="setDgVariant('reg',false,true)">R</button>
+                        <button class="dg-var-btn"        id="dgVarFR"     onclick="setDgVariant('reg',true,true)">FR</button>
+                        <button class="dg-var-btn"        id="dgVarNeon"   onclick="setDgVariant('neon',false,false)">Neon</button>
+                        <button class="dg-var-btn"        id="dgVarNFR"    onclick="setDgVariant('neon',true,true)">NFR</button>
+                        <button class="dg-var-btn"        id="dgVarMega"   onclick="setDgVariant('mega',false,false)">Mega</button>
+                        <button class="dg-var-btn"        id="dgVarMFR"    onclick="setDgVariant('mega',true,true)">MFR</button>
+                    </div>
+                    <button class="nav-btn" style="background:var(--accent);border-color:var(--accent);padding:7px 16px;font-weight:900" onclick="runDowngradeFinder()">Find Downgrades</button>
+                </div>
+                <!-- Row 2: Filters -->
+                <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+                    <span style="font-size:0.7em;font-weight:900;color:var(--subtext)">FILTERS:</span>
+                    <select class="advisor-filter-select" id="dgCountFilter" onchange="runDowngradeFinder()">
+                        <option value="0">Any Count</option>
+                        <option value="2">2 pets</option>
+                        <option value="3">3 pets</option>
+                        <option value="4">4 pets</option>
+                    </select>
+                    <select class="advisor-filter-select" id="dgWinFilter" onchange="runDowngradeFinder()">
+                        <option value="0">Any Win%</option>
+                        <option value="1">1%+ win</option>
+                        <option value="5">5%+ win</option>
+                        <option value="10">10%+ win</option>
+                        <option value="20">20%+ win</option>
+                    </select>
+                    <select class="advisor-filter-select" id="dgDemandFilter" onchange="runDowngradeFinder()">
+                        <option value="0">Any Avg Demand</option>
+                        <option value="4">Avg 4+</option>
+                        <option value="6">Avg 6+</option>
+                        <option value="7">Avg 7+</option>
+                        <option value="8">Avg 8+</option>
+                        <option value="9">Avg 9+</option>
+                    </select>
+                    <select class="advisor-filter-select" id="dgAcceptFilter" onchange="runDowngradeFinder()">
+                        <option value="0">Any Accept%</option>
+                        <option value="30">30%+ accept</option>
+                        <option value="45">45%+ accept</option>
+                        <option value="60">60%+ accept</option>
+                    </select>
+                    <select class="advisor-filter-select" id="dgCatFilter" onchange="runDowngradeFinder()">
+                        <option value="all">All Categories</option>
+                        <option value="exotic">Exotic</option>
+                        <option value="high tier">High Tier</option>
+                        <option value="preppy">Preppy</option>
+                        <option value="classy">Classy</option>
+                        <option value="mid tier">Mid Tier</option>
+                    </select>
+                    <select class="advisor-filter-select" id="dgVariantFilter" onchange="runDowngradeFinder()">
+                        <option value="reg">Reg only</option>
+                        <option value="all">Include FR/R/F</option>
+                        <option value="neon">Include Neons</option>
+                        <option value="mega">Include Megas</option>
+                        <option value="everything">Everything</option>
+                    </select>
+                    <select class="advisor-filter-select" id="dgSortFilter" onchange="runDowngradeFinder()">
+                        <option value="tqs">Sort: Quality</option>
+                        <option value="accept">Sort: Accept%</option>
+                        <option value="win">Sort: Win%</option>
+                        <option value="demand">Sort: Demand</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Results -->
+            <div class="vlist-body" id="dgResults" style="padding:14px 16px">
+                <div style="text-align:center;color:var(--subtext);padding:50px 20px">
+                    <div style="font-size:1.1em;margin-bottom:8px">⬇️ Find what you can get for your pet</div>
+                    <div style="font-size:0.82em">Type a pet name above and click Find Downgrades</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- TRENDS TAB -->
@@ -5482,6 +5599,7 @@ function startLastUpdatedTicker() {
             document.documentElement.style.fontSize = state.uiScale + 'em';
             document.getElementById('uiScaleSlider').value = pct;
             document.getElementById('uiScaleLabel').textContent = pct + '%';
+            saveTrade();
         }
 
         // Adds a new keybind slot in Settings. The user assigns a pet name,
@@ -5507,6 +5625,7 @@ function startLastUpdatedTicker() {
         function setKeybindSource(idx, source) {
             state.keybinds[idx].source = source;
             state.keybinds[idx].petName = '';
+            saveTrade();
             renderKeybindList();
         }
 
@@ -5589,8 +5708,8 @@ function startLastUpdatedTicker() {
         // Triggers the relevant render function for value/demand lists and trade board.
         function switchTab(tab) {
             currentTab = tab;
-            ['value','demand','calc','trades','trends'].forEach(t => {
-                const key = t === 'trends' ? 'Trends' : t.charAt(0).toUpperCase() + t.slice(1);
+            ['value','demand','calc','trades','trends','downgrades'].forEach(t => {
+                const key = t === 'trends' ? 'Trends' : t === 'downgrades' ? 'Downgrades' : t.charAt(0).toUpperCase() + t.slice(1);
                 const tabEl = document.getElementById('tab' + key);
                 const btnEl = document.getElementById('tabBtn' + key);
                 if (tabEl) tabEl.classList.toggle('active', t === tab);
@@ -5607,6 +5726,251 @@ function startLastUpdatedTicker() {
             if (tab === 'demand' && ALL_PETS.length > 0) renderDemandList();
             if (tab === 'trends' && ALL_PETS.length > 0) renderTrendsList();
             if (tab === 'trades') { renderTradeBoard(); startTBTimers(); }
+        }
+
+        // ── DOWNGRADE FINDER ─────────────────────────────────────────────────
+        let dgSelectedPet  = null;   // base pet object from ALL_PETS
+        let dgType = 'reg', dgFly = false, dgRide = false;
+
+        let _dgMatchedPets = [];
+        function dgAutocomplete(val) {
+            const dd = document.getElementById('dgDropdown');
+            if (!val || val.length < 2) { dd.style.display = 'none'; return; }
+            _dgMatchedPets = ALL_PETS.filter(p => p.n.toLowerCase().includes(val.toLowerCase())).slice(0, 8);
+            if (!_dgMatchedPets.length) { dd.style.display = 'none'; return; }
+            dd.innerHTML = _dgMatchedPets.map((p, i) =>
+                '<div style="padding:7px 12px;cursor:pointer;font-size:0.82em;display:flex;justify-content:space-between;border-bottom:1px solid var(--border)"' +
+                ' onmousedown="dgSelectByIndex(' + i + ')">' +
+                '<span>' + p.n + '</span><span style="color:var(--subtext)">' + p.v + '</span></div>'
+            ).join('');
+            dd.style.display = 'block';
+        }
+
+        function dgSelectByIndex(i) {
+            const pet = _dgMatchedPets[i];
+            if (!pet) return;
+            dgSelectedPet = pet;
+            document.getElementById('dgPetInput').value = pet.n;
+            document.getElementById('dgDropdown').style.display = 'none';
+            runDowngradeFinder();
+        }
+
+        function dgSelectPet(name) {
+            const pet = ALL_PETS.find(p => p.n === name);
+            if (!pet) return;
+            dgSelectedPet = pet;
+            document.getElementById('dgPetInput').value = name;
+            document.getElementById('dgDropdown').style.display = 'none';
+            runDowngradeFinder();
+        }
+
+        function setDgVariant(type, fly, ride) {
+            dgType = type; dgFly = fly; dgRide = ride;
+            // Update active button
+            const map = {
+                'reg-false-false': 'dgVarReg', 'reg-true-false': 'dgVarF',
+                'reg-false-true': 'dgVarR',   'reg-true-true':  'dgVarFR',
+                'neon-false-false':'dgVarNeon','neon-true-true': 'dgVarNFR',
+                'mega-false-false':'dgVarMega','mega-true-true': 'dgVarMFR'
+            };
+            const activeId = map[type + '-' + fly + '-' + ride];
+            document.querySelectorAll('.dg-var-btn').forEach(b => b.classList.remove('active'));
+            if (activeId) document.getElementById(activeId).classList.add('active');
+            runDowngradeFinder();
+        }
+
+        function runDowngradeFinder() {
+            const resultsEl = document.getElementById('dgResults');
+            if (!dgSelectedPet) {
+                // Try reading from input
+                const name = document.getElementById('dgPetInput').value.trim();
+                if (name) {
+                    const found = ALL_PETS.find(p => p.n.toLowerCase() === name.toLowerCase());
+                    if (found) dgSelectedPet = found;
+                }
+                if (!dgSelectedPet) { return; }
+            }
+
+            // Build the "you give" pet object
+            const givePet = { ...dgSelectedPet, type: dgType, f_st: dgFly, r_st: dgRide };
+            const giveVal = calculatePetVal(givePet, 'value');
+            if (giveVal <= 0) {
+                resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:30px">This variant has no value. Try a different one.</div>';
+                return;
+            }
+
+            resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:30px">Searching...</div>';
+
+            // Read filters
+            const countFilter  = parseInt(document.getElementById('dgCountFilter').value) || 0;
+            const winMin       = parseFloat(document.getElementById('dgWinFilter').value) || 0;
+            const demMin       = parseFloat(document.getElementById('dgDemandFilter').value) || 0;
+            const acceptMin    = parseFloat(document.getElementById('dgAcceptFilter').value) || 0;
+            const catFilter    = document.getElementById('dgCatFilter').value;
+            const variantMode  = document.getElementById('dgVariantFilter').value;
+            const sortBy       = document.getElementById('dgSortFilter').value;
+
+            // Build list of candidate pets with variants
+            const candidatePets = [];
+            ALL_PETS.forEach(p => {
+                if (p.n === dgSelectedPet.n) return; // can't receive same pet
+                const variants = [{ type:'reg', f_st:false, r_st:false }];
+                if (variantMode === 'all' || variantMode === 'everything') {
+                    variants.push({ type:'reg', f_st:true, r_st:false });
+                    variants.push({ type:'reg', f_st:false, r_st:true });
+                    variants.push({ type:'reg', f_st:true, r_st:true });
+                }
+                if (variantMode === 'neon' || variantMode === 'everything') {
+                    variants.push({ type:'neon', f_st:false, r_st:false });
+                    variants.push({ type:'neon', f_st:true, r_st:true });
+                }
+                if (variantMode === 'mega' || variantMode === 'everything') {
+                    variants.push({ type:'mega', f_st:false, r_st:false });
+                    variants.push({ type:'mega', f_st:true, r_st:true });
+                }
+                variants.forEach(v => {
+                    const pc = { ...p, ...v };
+                    const pv = calculatePetVal(pc, 'value');
+                    if (pv <= 0 || pv >= giveVal) return; // must be worth less (it's a downgrade)
+                    if (catFilter !== 'all' && !(p.cat||'').toLowerCase().includes(catFilter)) return;
+                    if (getManipulationFlag(p.n)) return;
+                    candidatePets.push({ ...pc, _val: pv, _dem: parseFloat(getEffDemand(pc)) || 0 });
+                });
+            });
+
+            // Generate bundles of 2, 3, 4 pets
+            const results = [];
+            const bundleSizes = countFilter > 0 ? [countFilter] : [2, 3, 4];
+            const maxResults = 40;
+
+            // Sort candidates by value desc for efficient bundling
+            candidatePets.sort((a,b) => b._val - a._val);
+
+            for (const size of bundleSizes) {
+                if (results.length >= maxResults) break;
+                // Only use top N candidates per bundle size to keep it fast
+                const pool = candidatePets.slice(0, 80);
+
+                if (size === 2) {
+                    for (let i = 0; i < pool.length && results.length < maxResults; i++) {
+                        for (let j = i + 1; j < pool.length && results.length < maxResults; j++) {
+                            const bundle = [pool[i], pool[j]];
+                            const bundleVal = bundle.reduce((s,p) => s + p._val, 0);
+                            const gain = (bundleVal - giveVal) / giveVal * 100;
+                            if (gain < winMin) continue;
+                            if (gain > 60) continue; // cap extreme outliers
+                            const avgDem = bundle.reduce((s,p) => s + p._dem, 0) / 2;
+                            if (avgDem < demMin) continue;
+                            const ap = getAcceptanceProbability(giveVal, parseFloat(getEffDemand(givePet)), bundle[0], [givePet]);
+                            if (ap < acceptMin) continue;
+                            const tqs = scorePotentialTarget(bundle[0], giveVal, parseFloat(getEffDemand(givePet)), [givePet]);
+                            results.push({ bundle, bundleVal, gain, avgDem, ap, tqs, size });
+                        }
+                    }
+                } else {
+                    // For 3 and 4, use a greedy approach: pick best complement for each anchor
+                    for (let i = 0; i < Math.min(pool.length, 40) && results.length < maxResults; i++) {
+                        const anchor = pool[i];
+                        const remaining = pool.filter((_,idx) => idx !== i);
+                        if (size === 3) {
+                            for (let j = 0; j < Math.min(remaining.length, 30) && results.length < maxResults; j++) {
+                                const bundle = [anchor, remaining[j]];
+                                const bv2 = bundle.reduce((s,p) => s + p._val, 0);
+                                // Find best 3rd to complete
+                                const best3rd = remaining.filter((_,idx) => idx !== j)
+                                    .find(p => { const tv = bv2 + p._val; const g = (tv-giveVal)/giveVal*100; return g >= winMin && g <= 60; });
+                                if (!best3rd) continue;
+                                const fullBundle = [...bundle, best3rd];
+                                const bundleVal = fullBundle.reduce((s,p) => s + p._val, 0);
+                                const gain = (bundleVal - giveVal) / giveVal * 100;
+                                const avgDem = fullBundle.reduce((s,p) => s + p._dem, 0) / 3;
+                                if (avgDem < demMin) continue;
+                                const ap = getAcceptanceProbability(giveVal, parseFloat(getEffDemand(givePet)), fullBundle[0], [givePet]);
+                                if (ap < acceptMin) continue;
+                                const tqs = scorePotentialTarget(fullBundle[0], giveVal, parseFloat(getEffDemand(givePet)), [givePet]);
+                                // Dedup
+                                const sig = fullBundle.map(p=>p.n+'|'+p.type+'|'+p.f_st+'|'+p.r_st).sort().join(',');
+                                if (results.some(r => r._sig === sig)) continue;
+                                results.push({ bundle: fullBundle, bundleVal, gain, avgDem, ap, tqs, size, _sig: sig });
+                            }
+                        } else { // size 4
+                            const b2val = anchor._val;
+                            const targets = remaining.filter(p => b2val + p._val < giveVal * 1.6).slice(0, 15);
+                            for (const t2 of targets) {
+                                const bv = anchor._val + t2._val;
+                                const rest = remaining.filter(p => p !== t2);
+                                const t3 = rest.find(p => { const v = bv + p._val; return v < giveVal * 1.4 && v > giveVal * 0.5; });
+                                if (!t3) continue;
+                                const bv3 = bv + t3._val;
+                                const t4 = rest.filter(p => p !== t3).find(p => { const v = bv3 + p._val; const g=(v-giveVal)/giveVal*100; return g >= winMin && g <= 60; });
+                                if (!t4) continue;
+                                const fullBundle = [anchor, t2, t3, t4];
+                                const bundleVal = fullBundle.reduce((s,p) => s + p._val, 0);
+                                const gain = (bundleVal - giveVal) / giveVal * 100;
+                                const avgDem = fullBundle.reduce((s,p) => s + p._dem, 0) / 4;
+                                if (avgDem < demMin) continue;
+                                const ap = getAcceptanceProbability(giveVal, parseFloat(getEffDemand(givePet)), fullBundle[0], [givePet]);
+                                if (ap < acceptMin) continue;
+                                const tqs = scorePotentialTarget(fullBundle[0], giveVal, parseFloat(getEffDemand(givePet)), [givePet]);
+                                const sig = fullBundle.map(p=>p.n+'|'+p.type+'|'+p.f_st+'|'+p.r_st).sort().join(',');
+                                if (results.some(r => r._sig === sig)) continue;
+                                results.push({ bundle: fullBundle, bundleVal, gain, avgDem, ap, tqs, size, _sig: sig });
+                                if (results.length >= maxResults) break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (results.length === 0) {
+                resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px"><div style="font-size:1em;margin-bottom:8px">No downgrades found</div><div style="font-size:0.8em">Try widening filters — lower the win %, demand, or accept % requirements</div></div>';
+                return;
+            }
+
+            // Sort
+            if (sortBy === 'accept') results.sort((a,b) => b.ap - a.ap);
+            else if (sortBy === 'win')    results.sort((a,b) => b.gain - a.gain);
+            else if (sortBy === 'demand') results.sort((a,b) => b.avgDem - a.avgDem);
+            else                          results.sort((a,b) => b.tqs - a.tqs);
+
+            const giveLabel = getPetLabel(givePet);
+            resultsEl.innerHTML = '<div style="font-size:0.7em;font-weight:900;color:var(--subtext);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">' +
+                results.length + ' downgrade combos for ' + giveLabel + ' (' + giveVal.toFixed(2) + ')</div>' +
+                results.slice(0, 30).map(r => {
+                    const tqsCls = r.tqs >= 7 ? '#34d399' : r.tqs >= 4 ? '#fbbf24' : '#f87171';
+                    const apColor = r.ap >= 55 ? '#34d399' : r.ap >= 35 ? '#fbbf24' : '#f87171';
+                    const gainColor = r.gain >= 5 ? '#34d399' : r.gain >= 0 ? '#fbbf24' : '#f87171';
+                    const demColor = r.avgDem >= 7 ? '#34d399' : r.avgDem >= 5 ? '#fbbf24' : '#f87171';
+                    const chips = r.bundle.map(p => {
+                        const pLabel = getPetLabel(p);
+                        const varBadge = p.type === 'neon' ? '<span style="color:#34d399;font-size:0.65em;background:#1e3a1e;border-radius:4px;padding:0 4px">N</span>' :
+                                         p.type === 'mega' ? '<span style="color:#a855f7;font-size:0.65em;background:#2d1a4a;border-radius:4px;padding:0 4px">M</span>' : '';
+                        return '<div class="dg-pet-chip">' +
+                            petImgTag(p.n, 'width:32px;height:32px;object-fit:contain;flex-shrink:0') +
+                            '<div>' +
+                                '<div class="dg-chip-name">' + pLabel + ' ' + varBadge + '</div>' +
+                                '<div class="dg-chip-val">' + p._val.toFixed(2) + '</div>' +
+                                '<div class="dg-chip-dem">Dem: ' + p._dem.toFixed(1) + '</div>' +
+                            '</div>' +
+                        '</div>';
+                    }).join('<span style="color:var(--subtext);font-size:1.2em">+</span>');
+
+                    return '<div class="dg-result-card">' +
+                        '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:0.72em;color:var(--subtext)">' +
+                            '<span style="font-weight:800;color:#cbd5e1">' + giveLabel + '</span>' +
+                            '<span>→</span>' +
+                            '<span style="font-weight:800;color:var(--frost)">' + r.bundle.length + ' pets (' + r.bundleVal.toFixed(2) + ')</span>' +
+                        '</div>' +
+                        '<div class="dg-bundle-row">' + chips + '</div>' +
+                        '<div class="dg-stats-row">' +
+                            '<span class="ai-stat-pill" style="color:' + tqsCls + '">TQS: ' + r.tqs.toFixed(1) + '/10</span>' +
+                            '<span class="ai-stat-pill" style="color:' + apColor + '">~' + r.ap + '% accept</span>' +
+                            '<span class="ai-stat-pill" style="color:' + gainColor + '">' + (r.gain >= 0 ? '+' : '') + r.gain.toFixed(1) + '% value</span>' +
+                            '<span class="ai-stat-pill" style="color:' + demColor + '">Avg Dem: ' + r.avgDem.toFixed(1) + '</span>' +
+                            '<span class="ai-stat-pill" style="color:var(--subtext)">' + r.size + ' pets</span>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
         }
 
         // ── TRENDS LIST ──────────────────────────────────────────────────────
