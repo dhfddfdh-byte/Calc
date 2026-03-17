@@ -6062,8 +6062,17 @@ function startLastUpdatedTicker() {
                 return;
             }
 
-            // Sort ascending by value for binary search / backtrack
-            candidates.sort((a,b)=>a._val-b._val);
+            // Sort: LF pets first, then by demand desc, then value asc
+            // This makes the backtrack find LF combos early instead of at the end
+            const lfSet = new Set([...dgLFPets]);
+            candidates.sort((a,b) => {
+                const aLF = lfSet.has(a.n) ? 1 : 0;
+                const bLF = lfSet.has(b.n) ? 1 : 0;
+                if (aLF !== bLF) return bLF - aLF; // LF first
+                // Then by demand desc (higher demand = better results first)
+                if (b._dem !== a._dem) return b._dem - a._dem;
+                return a._val - b._val; // value asc for backtrack pruning
+            });
             const n = candidates.length;
 
             // Accept rate specific to downgrade context
@@ -6095,15 +6104,20 @@ function startLastUpdatedTicker() {
 
                 const avgDem = bundle.reduce((s,p)=>s+p._dem,0)/bundle.length;
                 if (avgDem < demMin) return null;
-                // Per-pet minimum demand — every pet must meet this
                 if (minPerPet > 0 && bundle.some(p => p._dem < minPerPet)) return null;
 
                 const ap = dgAccept(bundleVal, bundle.length, avgDem);
                 if (ap < acceptMin) return null;
 
-                // Overpay cap: good demand = max +15, low demand = max +50
                 const overpay = bundleVal - giveVal;
                 if (overpay > (avgDem < 4 ? 50 : 15)) return null;
+
+                // ── No dominant pet: for 3+ pet bundles, no single pet can be
+                // more than 60% of total bundle value. Prevents "1 good pet + filler junk"
+                if (bundle.length >= 3) {
+                    const maxSingle = bundleVal * 0.60;
+                    if (bundle.some(p => p._val > maxSingle)) return null;
+                }
 
                 // Max 3 of same exact variant per bundle
                 const vc = {};
@@ -6112,20 +6126,26 @@ function startLastUpdatedTicker() {
                     vc[k]=(vc[k]||0)+1;
                     if (vc[k]>3) return null;
                 }
-                // Variety: max 8 results per variant
+                // Variety: max 4 results per variant (reduced from 8 for better diversity)
                 for (const k of Object.keys(vc)) {
-                    if ((varCount[k]||0)>=8) return null;
+                    if ((varCount[k]||0)>=4) return null;
                 }
-                // Dedup
                 const sig = bundle.map(p=>p.n+'|'+p.type+'|'+(p.f_st?1:0)+'|'+(p.r_st?1:0)).sort().join(',');
                 if (sigSet.has(sig)) return null;
 
                 return {sig, vc, bundleVal, gain, avgDem, ap};
             }
 
-            // Suffix max sums for pruning backtrack
-            // suffixTopN[i][d] = sum of top d values from candidates[i..]
-            // Simplified: suffixMax[i] = sum of ALL from i.. (overestimates but fast to compute)
+            // Build suffix max: at each index i, what's the max value achievable
+            // by picking `depth` pets from candidates[i..]?
+            // We compute it as: suffixMax[i] = max single value from i..n
+            // For depth>1 we accumulate. This is a conservative overestimate.
+            // Actually simplest correct approach: sort a value copy descending for max lookups
+            const valDesc = [...candidates].sort((a,b)=>b._val-a._val).map(p=>p._val);
+            // prefixSumVal[d] = sum of top d values across all candidates (absolute max)
+            const prefixSumVal = [0];
+            for (let i=0;i<valDesc.length;i++) prefixSumVal.push(prefixSumVal[i]+valDesc[i]);
+            // suffixMax[i] = sum of ALL values from i.. (simple overestimate, fine for pruning)
             const suffixMax = new Array(n+1).fill(0);
             for (let i=n-1;i>=0;i--) suffixMax[i]=suffixMax[i+1]+candidates[i]._val;
 
@@ -6142,7 +6162,7 @@ function startLastUpdatedTicker() {
             _dgGiveVal   = giveVal;
 
             resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:30px">Searching...</div>';
-            setTimeout(()=>dgFetchMore(true), 0);
+            requestAnimationFrame(()=>dgFetchMore(true));
         }
 
         // Iterative combo finder — runs for max 5ms then yields control back to browser
@@ -6207,6 +6227,13 @@ function startLastUpdatedTicker() {
                         continue;
                     }
 
+                    // Early pruning: if this one pet is already >60% of target
+                    // and we still need more slots, it'll dominate — skip it
+                    const size = s.bundleSizes[s.bundleSizeIdx];
+                    if (size >= 3 && remaining > 1 && (frame.currentVal + p._val) > s.target * 0.60) {
+                        continue;
+                    }
+
                     // Push child frame
                     s.stack.push({
                         idx: i+1,
@@ -6229,12 +6256,12 @@ function startLastUpdatedTicker() {
 
         function dgFetchMore(isFirst) {
             const prevLen = (window._dgCollected||[]).length;
-            const found = dgFetchNext(80);
+            const found = dgFetchNext(25); // 25ms max per chunk = smooth UI
             window._dgCollected = (window._dgCollected||[]).concat(found);
             const newCount = (window._dgCollected||[]).length - prevLen;
 
             if (found.length === 0 && window._dgState && !window._dgState.done) {
-                setTimeout(()=>dgFetchMore(isFirst), 0);
+                requestAnimationFrame(()=>dgFetchMore(isFirst));
                 return;
             }
 
