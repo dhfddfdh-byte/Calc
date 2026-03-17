@@ -6012,22 +6012,24 @@ function startLastUpdatedTicker() {
             const resultsEl = document.getElementById('dgResults');
             if (!dgSelectedPet) {
                 const name = (document.getElementById('dgPetInput').value||'').trim();
-                if (name) dgSelectedPet = ALL_PETS.find(p => p.n.toLowerCase()===name.toLowerCase()) || null;
+                if (name) dgSelectedPet = ALL_PETS.find(p=>p.n.toLowerCase()===name.toLowerCase())||null;
                 if (!dgSelectedPet) return;
             }
 
-            const givePet = { ...dgSelectedPet, type: dgGiveType, f_st: dgGiveFly, r_st: dgGiveRide };
-            const giveVal = calculatePetVal(givePet, 'value');
-            if (giveVal <= 0) { resultsEl.innerHTML='<div style="text-align:center;color:var(--subtext);padding:30px">This variant has no value.</div>'; return; }
+            const givePet  = {...dgSelectedPet, type:dgGiveType, f_st:dgGiveFly, r_st:dgGiveRide};
+            const giveVal  = calculatePetVal(givePet,'value');
+            if (giveVal <= 0) { resultsEl.innerHTML='<div style="text-align:center;color:var(--subtext);padding:30px">No value for this variant.</div>'; return; }
 
             const countFilter = parseInt(document.getElementById('dgCountFilter').value)||0;
             const winMin      = parseFloat(document.getElementById('dgWinFilter').value)||0;
             const demMin      = parseFloat(document.getElementById('dgAvgDemFilter').value)||0;
             const minPerPet   = parseFloat(document.getElementById('dgMinDemFilter').value)||0;
             const acceptMin   = parseFloat(document.getElementById('dgAcceptFilter').value)||0;
+            const catFilter   = document.getElementById('dgCatFilter').value;
             const giveDem     = parseFloat(getEffDemand(givePet));
+            const lfNames     = new Set([...dgLFPets]);
 
-            // Build variant specs for receive side
+            // Variant specs for receive side
             const variantSpecs = [];
             if (dgActiveVariants.has('reg'))  variantSpecs.push({type:'reg', f_st:false,r_st:false});
             if (dgActiveVariants.has('f'))    variantSpecs.push({type:'reg', f_st:true, r_st:false});
@@ -6038,126 +6040,94 @@ function startLastUpdatedTicker() {
             if (dgActiveVariants.has('mega')) variantSpecs.push({type:'mega',f_st:false,r_st:false});
             if (dgActiveVariants.has('mfr'))  variantSpecs.push({type:'mega',f_st:true, r_st:true});
 
-            // Build every candidate: all pets × all selected variants
-            const candidates = [];
+            // Build all candidates
+            const rawCandidates = [];
             ALL_PETS.forEach(p => {
                 if (p.n === dgSelectedPet.n) return;
                 if (dgExcludedPets.has(p.n)) return;
                 if (dgExcludeHTT && isHTT(p.n)) return;
-                // Exclude selected rarities
                 const pcat = (p.cat||'').toLowerCase();
-                for (const r of dgExcludedRarities) {
-                    if (pcat.includes(r)) return;
-                }
+                for (const r of dgExcludedRarities) { if (pcat.includes(r)) return; }
+                if (catFilter !== 'all' && !pcat.includes(catFilter)) return;
                 variantSpecs.forEach(v => {
-                    const pc = {...p, ...v};
+                    const pc = {...p,...v};
                     const pv = calculatePetVal(pc,'value');
                     if (pv <= 0) return;
-                    candidates.push({...pc, _val:pv, _dem:parseFloat(getEffDemand(pc))||0});
+                    rawCandidates.push({...pc, _val:pv, _dem:parseFloat(getEffDemand(pc))||0});
                 });
             });
 
-            if (candidates.length === 0) {
-                resultsEl.innerHTML='<div style="text-align:center;color:var(--subtext);padding:30px">No candidates — try selecting more variant types.</div>';
-                return;
-            }
-
-            // Sort: LF pets first, then by demand desc, then value asc
-            // This makes the backtrack find LF combos early instead of at the end
-            const lfSet = new Set([...dgLFPets]);
-            candidates.sort((a,b) => {
-                const aLF = lfSet.has(a.n) ? 1 : 0;
-                const bLF = lfSet.has(b.n) ? 1 : 0;
-                if (aLF !== bLF) return bLF - aLF; // LF first
-                // Then by demand desc (higher demand = better results first)
-                if (b._dem !== a._dem) return b._dem - a._dem;
-                return a._val - b._val; // value asc for backtrack pruning
+            // Sort: LF pets first, then demand desc
+            rawCandidates.sort((a,b) => {
+                const aLF = lfNames.has(a.n)?1:0, bLF = lfNames.has(b.n)?1:0;
+                if (aLF !== bLF) return bLF - aLF;
+                return b._dem - a._dem;
             });
-            const n = candidates.length;
 
-            // Accept rate specific to downgrade context
-            function dgAccept(bundleVal, bundleSize, avgDem) {
-                const ratio = giveVal / Math.max(bundleVal, 0.01);
-                let prob;
-                if      (ratio >= 1.30) prob = 72;
-                else if (ratio >= 1.15) prob = 68;
-                else if (ratio >= 1.05) prob = 62;
-                else if (ratio >= 0.97) prob = 55;
-                else if (ratio >= 0.90) prob = 42;
-                else if (ratio >= 0.80) prob = 30;
-                else                    prob = 18;
+            // Cap at 150 (LF always included)
+            const lfCands   = rawCandidates.filter(p=>lfNames.has(p.n));
+            const nonLFCands = rawCandidates.filter(p=>!lfNames.has(p.n)).slice(0, 150 - lfCands.length);
+            const candidates = [...lfCands, ...nonLFCands];
+            const N = candidates.length;
+
+            // Build suffix max sums (value-sorted copy for pruning)
+            const valSorted = [...candidates].sort((a,b)=>b._val-a._val);
+            // suffixMax[i] = sum of candidates[i..N-1]._val (demand-sorted order)
+            const suffixMax = new Array(N+1).fill(0);
+            for (let i=N-1;i>=0;i--) suffixMax[i]=suffixMax[i+1]+candidates[i]._val;
+
+            const target   = giveVal*(1+Math.max(winMin,0)/100);
+            const targetMax= giveVal*3.0;
+            const sigSet   = new Set();
+            const varCount = {};
+
+            // Accept rate for downgrade context
+            function dgAccept(bundleVal, bundleSize) {
+                const ratio = giveVal/Math.max(bundleVal,0.01);
+                let prob = ratio>=1.30?72:ratio>=1.15?68:ratio>=1.05?62:ratio>=0.97?55:ratio>=0.90?42:ratio>=0.80?30:18;
                 if (bundleSize===2) prob-=3; else if (bundleSize===3) prob-=7;
                 else if (bundleSize===4) prob-=11; else if (bundleSize>=5) prob-=15;
                 if (giveDem>=9) prob+=8; else if (giveDem>=7) prob+=4;
-                return Math.max(5, Math.min(85, Math.round(prob)));
+                return Math.max(5,Math.min(85,Math.round(prob)));
             }
-
-            const target    = giveVal * (1 + Math.max(winMin,0)/100);
-            const sigSet    = new Set();
-            const varCount  = {};
-            const bundleSizes = countFilter>0 ? [countFilter] : [2,3,4,5,6,7,8,9,10,12,15,18];
 
             function checkBundle(bundle) {
-                const bundleVal = bundle.reduce((s,p)=>s+p._val,0);
-                const gain = (bundleVal - giveVal)/giveVal*100;
+                const bv  = bundle.reduce((s,p)=>s+p._val,0);
+                const gain= (bv-giveVal)/giveVal*100;
                 if (gain < winMin) return null;
-
-                const avgDem = bundle.reduce((s,p)=>s+p._dem,0)/bundle.length;
+                const overpay = bv - giveVal;
+                const avgDem  = bundle.reduce((s,p)=>s+p._dem,0)/bundle.length;
+                if (overpay > (avgDem<4?50:15)) return null;
                 if (avgDem < demMin) return null;
-                if (minPerPet > 0 && bundle.some(p => p._dem < minPerPet)) return null;
-
-                const ap = dgAccept(bundleVal, bundle.length, avgDem);
+                if (minPerPet>0 && bundle.some(p=>p._dem<minPerPet)) return null;
+                const ap = dgAccept(bv, bundle.length);
                 if (ap < acceptMin) return null;
-
-                const overpay = bundleVal - giveVal;
-                if (overpay > (avgDem < 4 ? 50 : 15)) return null;
-
-                // ── No dominant pet: for 3+ pet bundles, no single pet can be
-                // more than 60% of total bundle value. Prevents "1 good pet + filler junk"
-                if (bundle.length >= 3) {
-                    const maxSingle = bundleVal * 0.60;
-                    if (bundle.some(p => p._val > maxSingle)) return null;
-                }
-
-                // Max 3 of same exact variant per bundle
-                const vc = {};
+                // No dominant pet for 3+ bundles: no single pet > 60% of total
+                if (bundle.length>=3 && bundle.some(p=>p._val > bv*0.60)) return null;
+                // Max 3 of same exact variant
+                const vc={};
                 for (const p of bundle) {
-                    const k = p.n+'|'+p.type+'|'+(p.f_st?1:0)+'|'+(p.r_st?1:0);
-                    vc[k]=(vc[k]||0)+1;
-                    if (vc[k]>3) return null;
+                    const k=p.n+'|'+p.type+'|'+(p.f_st?1:0)+'|'+(p.r_st?1:0);
+                    vc[k]=(vc[k]||0)+1; if (vc[k]>3) return null;
                 }
-                // Variety: max 4 results per variant (reduced from 8 for better diversity)
-                for (const k of Object.keys(vc)) {
-                    if ((varCount[k]||0)>=4) return null;
-                }
-                const sig = bundle.map(p=>p.n+'|'+p.type+'|'+(p.f_st?1:0)+'|'+(p.r_st?1:0)).sort().join(',');
+                // Max 4 results per variant for variety
+                for (const k of Object.keys(vc)) { if ((varCount[k]||0)>=4) return null; }
+                const sig=bundle.map(p=>p.n+'|'+p.type+'|'+(p.f_st?1:0)+'|'+(p.r_st?1:0)).sort().join(',');
                 if (sigSet.has(sig)) return null;
-
-                return {sig, vc, bundleVal, gain, avgDem, ap};
+                return {sig,vc,bv,gain,avgDem,ap};
             }
 
-            // Build suffix max: at each index i, what's the max value achievable
-            // by picking `depth` pets from candidates[i..]?
-            // We compute it as: suffixMax[i] = max single value from i..n
-            // For depth>1 we accumulate. This is a conservative overestimate.
-            // Actually simplest correct approach: sort a value copy descending for max lookups
-            const valDesc = [...candidates].sort((a,b)=>b._val-a._val).map(p=>p._val);
-            // prefixSumVal[d] = sum of top d values across all candidates (absolute max)
-            const prefixSumVal = [0];
-            for (let i=0;i<valDesc.length;i++) prefixSumVal.push(prefixSumVal[i]+valDesc[i]);
-            // suffixMax[i] = sum of ALL values from i.. (simple overestimate, fine for pruning)
-            const suffixMax = new Array(n+1).fill(0);
-            for (let i=n-1;i>=0;i--) suffixMax[i]=suffixMax[i+1]+candidates[i]._val;
+            const bundleSizes = countFilter>0?[countFilter]:[2,3,4,5,6,7,8,9,10,12,15,18];
 
-            // Queue of pending combos — populated incrementally
-            // Use a simple index-stack based iteration instead of recursive generator
-            // to avoid slow yield* recursion
-            window._dgQueue   = [];
-            window._dgState   = { candidates, n, bundleSizes, bundleSizeIdx:0, stack:null, done:false,
-                                   target, giveDem, sigSet, varCount, checkBundle, dgAccept,
-                                   giveVal, givePet, suffixMax, winMin, demMin, acceptMin };
+            window._dgState = {
+                candidates, N, bundleSizes, sizeIdx:0,
+                stack:null, greedyStart:0, done:false,
+                target, targetMax, sigSet, varCount,
+                checkBundle, dgAccept, giveVal, givePet, giveDem,
+                suffixMax, lfNames
+            };
             window._dgCollected = [];
-            window._dgLFBoost   = [...dgLFPets];  // snapshot for scoring
+            window._dgLFBoost   = [...lfNames];
             _dgGiveLabel = getPetLabel(givePet);
             _dgGiveVal   = giveVal;
 
@@ -6165,90 +6135,90 @@ function startLastUpdatedTicker() {
             requestAnimationFrame(()=>dgFetchMore(true));
         }
 
-        // Iterative combo finder — runs for max 5ms then yields control back to browser
         function dgFetchNext(maxMs) {
             const s = window._dgState;
-            if (!s || s.done) return [];
-            const {candidates,n,suffixMax,checkBundle,giveVal,givePet,giveDem} = s;
+            if (!s||s.done) return [];
+            const {candidates,N,suffixMax,checkBundle,giveVal,givePet,giveDem,target,targetMax,lfNames} = s;
             const found = [];
-            const deadline = Date.now() + maxMs;
+            const deadline = Date.now()+maxMs;
+
+            function emitResult(bundle, v) {
+                s.sigSet.add(v.sig);
+                for (const k of Object.keys(v.vc)) s.varCount[k]=(s.varCount[k]||0)+1;
+                const tqs = scorePotentialTarget(bundle[0],giveVal,giveDem,[givePet]);
+                const lfBoost = bundle.some(p=>s.lfNames.has(p.n))?1:0;
+                found.push({bundle,bundleVal:v.bv,gain:v.gain,avgDem:v.avgDem,ap:v.ap,tqs,size:bundle.length,lfBoost});
+            }
 
             outer:
-            while (Date.now() < deadline) {
-                // Initialise stack for current bundle size
+            while (Date.now()<deadline) {
+                if (s.sizeIdx >= s.bundleSizes.length) { s.done=true; break; }
+                const size = s.bundleSizes[s.sizeIdx];
+
+                // ── Large bundles (5+): greedy multi-start ────────────────────
+                if (size >= 5) {
+                    while (s.greedyStart < N && Date.now()<deadline) {
+                        const anchor = candidates[s.greedyStart++];
+                        const bundle = [anchor];
+                        let bv = anchor._val;
+                        const used = new Set([candidates.indexOf(anchor)]);
+                        for (let slot=1; slot<size; slot++) {
+                            const budget = targetMax - bv;
+                            const perSlot = (target*1.05 - bv) / (size-slot);
+                            let best=-1, bestScore=-Infinity;
+                            for (let j=0;j<N;j++) {
+                                if (used.has(j)) continue;
+                                const p=candidates[j];
+                                if (p._val>budget) continue;
+                                if (bundle.length>=2 && p._val>bv*0.6) continue; // no dominator
+                                const score=(lfNames.has(p.n)?1000:0)+p._dem*10-Math.abs(p._val-perSlot)*0.1;
+                                if (score>bestScore){bestScore=score;best=j;}
+                            }
+                            if (best<0) break;
+                            used.add(best); bundle.push(candidates[best]); bv+=candidates[best]._val;
+                        }
+                        if (bundle.length===size) {
+                            const v=checkBundle(bundle);
+                            if (v){emitResult(bundle,v); if(found.length>=5) break outer;}
+                        }
+                    }
+                    if (s.greedyStart>=N){s.greedyStart=0; s.sizeIdx++;}
+                    continue;
+                }
+
+                // ── Small bundles (2-4): iterative backtrack ──────────────────
                 if (!s.stack) {
-                    if (s.bundleSizeIdx >= s.bundleSizes.length) { s.done=true; break; }
-                    const size = s.bundleSizes[s.bundleSizeIdx];
-                    // Stack frames: [{idx, depth, current, currentVal}]
                     s.stack = [{idx:0, depth:size, current:[], currentVal:0, childIdx:0}];
                 }
 
-                const size = s.bundleSizes[s.bundleSizeIdx];
-
-                while (s.stack.length > 0) {
-                    if (Date.now() >= deadline) break outer;
-
+                while (s.stack.length>0) {
+                    if (Date.now()>=deadline) break outer;
                     const frame = s.stack[s.stack.length-1];
 
-                    if (frame.depth === 0) {
-                        // Evaluate this combo
+                    if (frame.depth===0) {
                         s.stack.pop();
-                        const v = checkBundle(frame.current);
-                        if (v) {
-                            s.sigSet.add(v.sig);
-                            for (const k of Object.keys(v.vc)) s.varCount[k]=(s.varCount[k]||0)+1;
-                            const tqs = scorePotentialTarget(frame.current[0], giveVal, giveDem, [givePet]);
-                            const lfBoost = (window._dgLFBoost||[]).length > 0 &&
-                                frame.current.some(p => (window._dgLFBoost||[]).includes(p.n)) ? 1 : 0;
-                            found.push({bundle:[...frame.current],bundleVal:v.bundleVal,gain:v.gain,avgDem:v.avgDem,ap:v.ap,tqs,size,lfBoost});
-                            if (found.length >= 5) break outer;
-                        }
+                        const v=checkBundle(frame.current);
+                        if (v){emitResult(frame.current,v); if(found.length>=5) break outer;}
                         continue;
                     }
 
-                    // Pruning
-                    const remaining = frame.depth;
-                    if (frame.currentVal + suffixMax[frame.idx] < s.target) {
-                        s.stack.pop();
-                        continue;
-                    }
+                    // Prune: can we still reach target?
+                    if (frame.currentVal+suffixMax[frame.idx] < target) { s.stack.pop(); continue; }
 
-                    // Find next child to expand
-                    const maxI = n - remaining;
-                    if (frame.childIdx > maxI) {
-                        s.stack.pop();
-                        continue;
-                    }
+                    const maxI = N-frame.depth;
+                    if (frame.childIdx>maxI) { s.stack.pop(); continue; }
 
-                    const i = frame.childIdx++;
-                    const p = candidates[i];
-                    if (frame.currentVal + p._val > giveVal * 3) {
-                        s.stack.pop();
-                        continue;
-                    }
+                    const i=frame.childIdx++;
+                    const p=candidates[i];
+                    // Prune: already over max
+                    if (frame.currentVal+p._val>targetMax) { s.stack.pop(); continue; }
+                    // Prune: dominant pet early
+                    if (size>=3 && frame.depth>1 && frame.currentVal+p._val > target*0.65) continue;
 
-                    // Early pruning: if this one pet is already >60% of target
-                    // and we still need more slots, it'll dominate — skip it
-                    const size = s.bundleSizes[s.bundleSizeIdx];
-                    if (size >= 3 && remaining > 1 && (frame.currentVal + p._val) > s.target * 0.60) {
-                        continue;
-                    }
-
-                    // Push child frame
-                    s.stack.push({
-                        idx: i+1,
-                        depth: remaining-1,
-                        current: [...frame.current, p],
-                        currentVal: frame.currentVal + p._val,
-                        childIdx: i+1
-                    });
+                    s.stack.push({idx:i+1, depth:frame.depth-1, current:[...frame.current,p], currentVal:frame.currentVal+p._val, childIdx:i+1});
                 }
 
-                if (s.stack.length === 0) {
-                    s.stack = null;
-                    s.bundleSizeIdx++;
-                    if (s.bundleSizeIdx >= s.bundleSizes.length) { s.done=true; break; }
-                }
+                if (s.stack.length===0) { s.stack=null; s.sizeIdx++; }
             }
 
             return found;
@@ -6256,72 +6226,53 @@ function startLastUpdatedTicker() {
 
         function dgFetchMore(isFirst) {
             const prevLen = (window._dgCollected||[]).length;
-            const found = dgFetchNext(25); // 25ms max per chunk = smooth UI
+            const found = dgFetchNext(25);
             window._dgCollected = (window._dgCollected||[]).concat(found);
-            const newCount = (window._dgCollected||[]).length - prevLen;
+            const newCount = window._dgCollected.length - prevLen;
 
-            if (found.length === 0 && window._dgState && !window._dgState.done) {
+            if (found.length===0 && window._dgState && !window._dgState.done) {
                 requestAnimationFrame(()=>dgFetchMore(isFirst));
                 return;
-            }
-
-            // Sort LF pets to top
-            if ((window._dgLFBoost||[]).length > 0) {
-                window._dgCollected.sort((a,b) => (b.lfBoost||0) - (a.lfBoost||0));
             }
             dgRenderResults(isFirst, newCount, window._dgState && !window._dgState.done);
         }
 
-        function dgLoadMore() {
-            dgFetchMore(false);
-        }
-
-        let _dgZoom = 32;
-        function applyDgZoom(val) {
-            _dgZoom = parseInt(val);
-            const label = document.getElementById('dgZoomLabel');
-            if (label) label.textContent = val;
-            // Re-render with new zoom if we have results
-            if (window._dgCollected && window._dgCollected.length > 0) {
-                dgRenderResults(true, window._dgCollected.length, window._dgState && !window._dgState.done);
-            }
-        }
+        function dgLoadMore() { dgFetchMore(false); }
 
         function dgRenderResults(replaceAll, newCount, hasMore) {
             const resultsEl = document.getElementById('dgResults');
-            const collected = window._dgCollected || [];
-            const giveLabel = _dgGiveLabel;
-            const giveVal   = _dgGiveVal;
+            const collected = window._dgCollected||[];
+            const giveLabel = _dgGiveLabel, giveVal = _dgGiveVal;
 
-            if (collected.length === 0) {
-                if (!hasMore) {
-                    resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">No downgrades found. Try changing filters or selecting more variant types.</div>';
-                }
+            if (collected.length===0) {
+                if (!hasMore) resultsEl.innerHTML='<div style="text-align:center;color:var(--subtext);padding:40px">No downgrades found. Try widening filters or selecting more variant types.</div>';
                 return;
             }
 
-            const header = '<div style="font-size:0.7em;font-weight:900;color:var(--subtext);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">' +
-                collected.length + ' combos for ' + giveLabel + ' (' + giveVal.toFixed(2) + ')</div>';
+            // Sort: LF first
+            if ((window._dgLFBoost||[]).length>0) collected.sort((a,b)=>(b.lfBoost||0)-(a.lfBoost||0));
 
-            // On first load show all collected; on Load More only show the new ones
-            const renderSlice = replaceAll ? collected : collected.slice(collected.length - newCount);
+            const header = '<div style="font-size:0.7em;font-weight:900;color:var(--subtext);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">'+
+                collected.length+' combos for '+giveLabel+' ('+giveVal.toFixed(2)+')</div>';
 
-            const cards = renderSlice.map(r => {
+            const renderSlice = replaceAll ? collected : collected.slice(collected.length-Math.max(newCount,1));
+
+            const sz = (_dgZoom||32)+'px';
+            const cards = renderSlice.map(r=>{
                 const apColor = r.ap>=55?'#34d399':r.ap>=35?'#fbbf24':'#f87171';
                 const gainCol = r.gain>=5?'#34d399':r.gain>=0?'#fbbf24':'#f87171';
                 const demCol  = r.avgDem>=7?'#34d399':r.avgDem>=5?'#fbbf24':'#f87171';
+                const hasLF   = r.lfBoost?'<span style="background:#1e3a1e;color:#34d399;font-size:0.65em;font-weight:900;border-radius:4px;padding:1px 6px;border:1px solid #34d39944">✅ LF</span>':'';
                 const chips   = r.bundle.map(p=>{
-                    const lbl = getPetLabel(p);
-                    const badge = p.type==='neon'?'<span style="color:#34d399;font-size:0.65em;background:#1e3a1e;border-radius:4px;padding:0 4px">N</span>':
-                                  p.type==='mega'?'<span style="color:#a855f7;font-size:0.65em;background:#2d1a4a;border-radius:4px;padding:0 4px">M</span>':'';
-                    const sz=_dgZoom+'px'; return '<div class="dg-pet-chip">'+petImgTag(p.n,'width:'+sz+';height:'+sz+';object-fit:contain;flex-shrink:0')+
+                    const lbl=getPetLabel(p);
+                    const badge=p.type==='neon'?'<span style="color:#34d399;font-size:0.65em;background:#1e3a1e;border-radius:4px;padding:0 4px">N</span>':
+                                p.type==='mega'?'<span style="color:#a855f7;font-size:0.65em;background:#2d1a4a;border-radius:4px;padding:0 4px">M</span>':'';
+                    return '<div class="dg-pet-chip">'+petImgTag(p.n,'width:'+sz+';height:'+sz+';object-fit:contain;flex-shrink:0')+
                         '<div><div class="dg-chip-name">'+lbl+' '+badge+'</div>'+
                         '<div class="dg-chip-val">'+p._val.toFixed(2)+'</div>'+
                         '<div class="dg-chip-dem">Dem: '+p._dem.toFixed(1)+'</div></div></div>';
                 }).join('<span style="color:var(--subtext);font-size:1.2em">+</span>');
-
-                const hasLF = r.lfBoost ? '<span style="background:#1e3a1e;color:#34d399;font-size:0.65em;font-weight:900;border-radius:4px;padding:1px 6px;border:1px solid #34d39944">✅ LF</span>' : '';
-                return '<div class="dg-result-card" style="'+(r.lfBoost?'border-color:#34d39966;':'')+'">' +
+                return '<div class="dg-result-card" style="'+(r.lfBoost?'border-color:#34d39966;':'')+'">'+
                     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:0.72em;color:var(--subtext)">'+
                         '<span style="font-weight:800;color:#cbd5e1">'+giveLabel+'</span><span>→</span>'+
                         '<span style="font-weight:800;color:var(--frost)">'+r.bundle.length+' pets ('+r.bundleVal.toFixed(2)+')</span>'+
@@ -6329,26 +6280,24 @@ function startLastUpdatedTicker() {
                     '</div>'+
                     '<div class="dg-bundle-row">'+chips+'</div>'+
                     '<div class="dg-stats-row">'+
-                        '<span class="ai-stat-pill" style="color:'+apColor+'">Dem: '+r.avgDem.toFixed(1)+'</span>'+
                         '<span class="ai-stat-pill" style="color:'+apColor+'">~'+r.ap+'% accept</span>'+
                         '<span class="ai-stat-pill" style="color:'+gainCol+'">'+(r.gain>=0?'+':'')+r.gain.toFixed(1)+'% value</span>'+
-
+                        '<span class="ai-stat-pill" style="color:'+demCol+'">Avg Dem: '+r.avgDem.toFixed(1)+'</span>'+
                         '<span class="ai-stat-pill" style="color:var(--subtext)">'+r.size+' pets</span>'+
                     '</div></div>';
             }).join('');
 
             const loadMoreBtn = hasMore
-                ? '<div style="text-align:center;margin-top:14px"><button class="nav-btn" style="padding:8px 24px;font-weight:900" onclick="dgLoadMore()">Load More</button></div>'
-                : '<div style="text-align:center;color:var(--subtext);font-size:0.75em;margin-top:12px">All combinations found</div>';
+                ?'<div style="text-align:center;margin-top:14px"><button class="nav-btn" style="padding:8px 24px;font-weight:900" onclick="dgLoadMore()">Load More</button></div>'
+                :'<div style="text-align:center;color:var(--subtext);font-size:0.75em;margin-top:12px">All combinations found</div>';
 
             if (replaceAll) {
-                resultsEl.innerHTML = header + cards + loadMoreBtn;
+                resultsEl.innerHTML=header+cards+loadMoreBtn;
             } else {
-                const oldBtn = resultsEl.lastElementChild;
-                if (oldBtn) oldBtn.remove();
-                const hdr = resultsEl.firstElementChild;
-                if (hdr) hdr.textContent = collected.length + ' combos for ' + giveLabel + ' (' + giveVal.toFixed(2) + ')';
-                resultsEl.insertAdjacentHTML('beforeend', cards + loadMoreBtn);
+                const oldBtn=resultsEl.lastElementChild; if(oldBtn) oldBtn.remove();
+                const hdr=resultsEl.firstElementChild;
+                if (hdr) hdr.textContent=collected.length+' combos for '+giveLabel+' ('+giveVal.toFixed(2)+')';
+                resultsEl.insertAdjacentHTML('beforeend',cards+loadMoreBtn);
             }
         }
 
