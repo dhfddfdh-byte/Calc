@@ -1087,13 +1087,29 @@
                         <option value="10">10%+ win</option>
                         <option value="20">20%+ win</option>
                     </select>
-                    <select class="advisor-filter-select" id="dgDemandFilter" onchange="runDowngradeFinder()">
-                        <option value="0">Any Avg Demand</option>
-                        <option value="4">Avg 4+</option>
-                        <option value="6">Avg 6+</option>
-                        <option value="7">Avg 7+</option>
-                        <option value="8">Avg 8+</option>
-                        <option value="9">Avg 9+</option>
+                    <select class="advisor-filter-select" id="dgAvgDemFilter" onchange="runDowngradeFinder()">
+                        <option value="0">Avg Dem: Any</option>
+                        <option value="1">Avg Dem 1+</option>
+                        <option value="2">Avg Dem 2+</option>
+                        <option value="3">Avg Dem 3+</option>
+                        <option value="4">Avg Dem 4+</option>
+                        <option value="5">Avg Dem 5+</option>
+                        <option value="6">Avg Dem 6+</option>
+                        <option value="7">Avg Dem 7+</option>
+                        <option value="8">Avg Dem 8+</option>
+                        <option value="9">Avg Dem 9+</option>
+                    </select>
+                    <select class="advisor-filter-select" id="dgMinDemFilter" onchange="runDowngradeFinder()">
+                        <option value="0">Min Dem: Any</option>
+                        <option value="1">Every pet 1+</option>
+                        <option value="2">Every pet 2+</option>
+                        <option value="3">Every pet 3+</option>
+                        <option value="4">Every pet 4+</option>
+                        <option value="5">Every pet 5+</option>
+                        <option value="6">Every pet 6+</option>
+                        <option value="7">Every pet 7+</option>
+                        <option value="8">Every pet 8+</option>
+                        <option value="9">Every pet 9+</option>
                     </select>
                     <select class="advisor-filter-select" id="dgAcceptFilter" onchange="runDowngradeFinder()">
                         <option value="0">Any Accept%</option>
@@ -1101,21 +1117,30 @@
                         <option value="45">45%+ accept</option>
                         <option value="60">60%+ accept</option>
                     </select>
-                    <select class="advisor-filter-select" id="dgCatFilter" onchange="runDowngradeFinder()">
-                        <option value="all">All Categories</option>
-                        <option value="exotic">Exotic</option>
-                        <option value="high tier">High Tier</option>
-                        <option value="preppy">Preppy</option>
-                        <option value="classy">Classy</option>
-                        <option value="mid tier">Mid Tier</option>
-                    </select>
-
                     <select class="advisor-filter-select" id="dgSortFilter" onchange="runDowngradeFinder()">
-                        <option value="tqs">Sort: Quality</option>
                         <option value="accept">Sort: Accept%</option>
                         <option value="win">Sort: Win%</option>
                         <option value="demand">Sort: Demand</option>
                     </select>
+                </div>
+                <!-- Row 3: Rarity exclude + HTT + LF pets -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                    <span style="font-size:0.7em;font-weight:900;color:var(--subtext)">EXCLUDE:</span>
+                    <button class="dg-var-btn" id="dgExCommon"    onclick="toggleDgRarity('common')">Common</button>
+                    <button class="dg-var-btn" id="dgExUncommon"  onclick="toggleDgRarity('uncommon')">Uncommon</button>
+                    <button class="dg-var-btn" id="dgExRare"      onclick="toggleDgRarity('rare')">Rare</button>
+                    <button class="dg-var-btn" id="dgExUltraRare" onclick="toggleDgRarity('ultra rare')">Ultra Rare</button>
+                    <button class="dg-var-btn" id="dgExLegendary" onclick="toggleDgRarity('legendary')">Legendary</button>
+                    <button class="dg-var-btn" id="dgExHTT"       onclick="toggleDgHTT()" style="border-color:#f8717144;color:#f87171">No HTT</button>
+                    <span style="color:#334155;font-size:0.8em">|</span>
+                    <span style="font-size:0.7em;font-weight:900;color:var(--subtext)">LF:</span>
+                    <div style="position:relative">
+                        <input id="dgLFInput" type="text" placeholder="Add pet you want..."
+                            style="background:#1e2d42;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:4px 10px;font-size:0.75em;font-family:inherit;width:150px"
+                            oninput="dgLFAutocomplete(this.value)">
+                        <div id="dgLFDropdown" style="display:none;position:absolute;top:100%;left:0;width:200px;background:#1e2d42;border:1px solid var(--border);border-radius:8px;z-index:100;max-height:140px;overflow-y:auto;margin-top:2px"></div>
+                    </div>
+                    <div id="dgLFChips" style="display:flex;gap:4px;flex-wrap:wrap"></div>
                 </div>
             </div>
             <!-- Exclude pets row -->
@@ -5787,7 +5812,82 @@ function startLastUpdatedTicker() {
 
         // Set of active variants for receive side — user can pick multiple
         const dgActiveVariants = new Set(['reg']); // default: reg only
-        const dgExcludedPets   = new Set();        // pet names excluded from results
+        const dgExcludedPets    = new Set();
+        const dgExcludedRarities = new Set();   // rarity strings to exclude
+        let   dgExcludeHTT      = false;
+        const dgLFPets          = new Set();    // pets user is looking for (prioritised)
+        let   _dgLFMatches      = [];
+
+        function toggleDgRarity(rarity) {
+            if (dgExcludedRarities.has(rarity)) {
+                dgExcludedRarities.delete(rarity);
+            } else {
+                dgExcludedRarities.add(rarity);
+            }
+            const idMap = { 'common':'dgExCommon','uncommon':'dgExUncommon','rare':'dgExRare','ultra rare':'dgExUltraRare','legendary':'dgExLegendary' };
+            const el = document.getElementById(idMap[rarity]);
+            if (el) {
+                const active = dgExcludedRarities.has(rarity);
+                el.style.background = active ? '#2d1a1a' : '#1e293b';
+                el.style.color      = active ? '#f87171' : 'var(--subtext)';
+                el.style.borderColor= active ? '#f8717166' : 'var(--border)';
+            }
+            runDowngradeFinder();
+        }
+
+        function toggleDgHTT() {
+            dgExcludeHTT = !dgExcludeHTT;
+            const el = document.getElementById('dgExHTT');
+            if (el) {
+                el.style.background = dgExcludeHTT ? '#2d1a1a' : '#1e293b';
+                el.style.color      = dgExcludeHTT ? '#f87171' : '#f87171';
+                el.style.borderColor= dgExcludeHTT ? '#f87171' : '#f8717144';
+                el.style.fontWeight = dgExcludeHTT ? '900' : '700';
+            }
+            runDowngradeFinder();
+        }
+
+        function dgLFAutocomplete(val) {
+            const dd = document.getElementById('dgLFDropdown');
+            if (!val || val.length < 2) { dd.style.display='none'; return; }
+            _dgLFMatches = ALL_PETS.filter(p => p.n.toLowerCase().includes(val.toLowerCase()) && !dgLFPets.has(p.n)).slice(0,6);
+            if (!_dgLFMatches.length) { dd.style.display='none'; return; }
+            dd.innerHTML = _dgLFMatches.map((p,i) =>
+                '<div style="padding:6px 10px;cursor:pointer;font-size:0.78em;border-bottom:1px solid var(--border)"' +
+                ' onmousedown="dgAddLF('+i+')">' + p.n + ' <span style="color:var(--subtext);float:right">d:' + p.d + '</span></div>'
+            ).join('');
+            dd.style.display = 'block';
+        }
+
+        function dgAddLF(i) {
+            const pet = _dgLFMatches[i];
+            if (!pet) return;
+            dgLFPets.add(pet.n);
+            document.getElementById('dgLFInput').value = '';
+            document.getElementById('dgLFDropdown').style.display = 'none';
+            renderDgLFChips();
+            runDowngradeFinder();
+        }
+
+        function dgRemoveLF(name) {
+            dgLFPets.delete(name);
+            renderDgLFChips();
+            runDowngradeFinder();
+        }
+        function dgRemoveLFByEl(el) {
+            const name = el.getAttribute('data-name');
+            if (name) dgRemoveLF(name);
+        }
+
+        function renderDgLFChips() {
+            const el = document.getElementById('dgLFChips');
+            if (!el) return;
+            el.innerHTML = [...dgLFPets].map(n =>
+                '<div style="display:flex;align-items:center;gap:4px;background:#1e3a1e;border:1px solid #34d39944;border-radius:6px;padding:2px 7px;font-size:0.72em;color:#34d399">' +
+                n + '<span style="cursor:pointer;margin-left:2px" onclick="dgRemoveLFByEl(this)" data-name="' + n.replace(/"/g,'&quot;') + '">&times;</span>' +
+                '</div>'
+            ).join('');
+        }
 
         function setDgVariantAny() {
             // "Any" = enable all variants
@@ -5922,9 +6022,9 @@ function startLastUpdatedTicker() {
 
             const countFilter = parseInt(document.getElementById('dgCountFilter').value)||0;
             const winMin      = parseFloat(document.getElementById('dgWinFilter').value)||0;
-            const demMin      = parseFloat(document.getElementById('dgDemandFilter').value)||0;
+            const demMin      = parseFloat(document.getElementById('dgAvgDemFilter').value)||0;
+            const minPerPet   = parseFloat(document.getElementById('dgMinDemFilter').value)||0;
             const acceptMin   = parseFloat(document.getElementById('dgAcceptFilter').value)||0;
-            const catFilter   = document.getElementById('dgCatFilter').value;
             const giveDem     = parseFloat(getEffDemand(givePet));
 
             // Build variant specs for receive side
@@ -5943,7 +6043,12 @@ function startLastUpdatedTicker() {
             ALL_PETS.forEach(p => {
                 if (p.n === dgSelectedPet.n) return;
                 if (dgExcludedPets.has(p.n)) return;
-                if (catFilter !== 'all' && !(p.cat||'').toLowerCase().includes(catFilter)) return;
+                if (dgExcludeHTT && isHTT(p.n)) return;
+                // Exclude selected rarities
+                const pcat = (p.cat||'').toLowerCase();
+                for (const r of dgExcludedRarities) {
+                    if (pcat.includes(r)) return;
+                }
                 variantSpecs.forEach(v => {
                     const pc = {...p, ...v};
                     const pv = calculatePetVal(pc,'value');
@@ -5990,6 +6095,8 @@ function startLastUpdatedTicker() {
 
                 const avgDem = bundle.reduce((s,p)=>s+p._dem,0)/bundle.length;
                 if (avgDem < demMin) return null;
+                // Per-pet minimum demand — every pet must meet this
+                if (minPerPet > 0 && bundle.some(p => p._dem < minPerPet)) return null;
 
                 const ap = dgAccept(bundleVal, bundle.length, avgDem);
                 if (ap < acceptMin) return null;
@@ -6030,6 +6137,7 @@ function startLastUpdatedTicker() {
                                    target, giveDem, sigSet, varCount, checkBundle, dgAccept,
                                    giveVal, givePet, suffixMax, winMin, demMin, acceptMin };
             window._dgCollected = [];
+            window._dgLFBoost   = [...dgLFPets];  // snapshot for scoring
             _dgGiveLabel = getPetLabel(givePet);
             _dgGiveVal   = giveVal;
 
@@ -6070,7 +6178,9 @@ function startLastUpdatedTicker() {
                             s.sigSet.add(v.sig);
                             for (const k of Object.keys(v.vc)) s.varCount[k]=(s.varCount[k]||0)+1;
                             const tqs = scorePotentialTarget(frame.current[0], giveVal, giveDem, [givePet]);
-                            found.push({bundle:[...frame.current],bundleVal:v.bundleVal,gain:v.gain,avgDem:v.avgDem,ap:v.ap,tqs,size});
+                            const lfBoost = (window._dgLFBoost||[]).length > 0 &&
+                                frame.current.some(p => (window._dgLFBoost||[]).includes(p.n)) ? 1 : 0;
+                            found.push({bundle:[...frame.current],bundleVal:v.bundleVal,gain:v.gain,avgDem:v.avgDem,ap:v.ap,tqs,size,lfBoost});
                             if (found.length >= 5) break outer;
                         }
                         continue;
@@ -6128,6 +6238,10 @@ function startLastUpdatedTicker() {
                 return;
             }
 
+            // Sort LF pets to top
+            if ((window._dgLFBoost||[]).length > 0) {
+                window._dgCollected.sort((a,b) => (b.lfBoost||0) - (a.lfBoost||0));
+            }
             dgRenderResults(isFirst, newCount, window._dgState && !window._dgState.done);
         }
 
@@ -6179,10 +6293,12 @@ function startLastUpdatedTicker() {
                         '<div class="dg-chip-dem">Dem: '+p._dem.toFixed(1)+'</div></div></div>';
                 }).join('<span style="color:var(--subtext);font-size:1.2em">+</span>');
 
-                return '<div class="dg-result-card">'+
+                const hasLF = r.lfBoost ? '<span style="background:#1e3a1e;color:#34d399;font-size:0.65em;font-weight:900;border-radius:4px;padding:1px 6px;border:1px solid #34d39944">✅ LF</span>' : '';
+                return '<div class="dg-result-card" style="'+(r.lfBoost?'border-color:#34d39966;':'')+'">' +
                     '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:0.72em;color:var(--subtext)">'+
                         '<span style="font-weight:800;color:#cbd5e1">'+giveLabel+'</span><span>→</span>'+
                         '<span style="font-weight:800;color:var(--frost)">'+r.bundle.length+' pets ('+r.bundleVal.toFixed(2)+')</span>'+
+                        hasLF+
                     '</div>'+
                     '<div class="dg-bundle-row">'+chips+'</div>'+
                     '<div class="dg-stats-row">'+
