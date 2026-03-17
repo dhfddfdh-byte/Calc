@@ -1020,6 +1020,13 @@
                 <!-- Row 1: Pet input + give-side variant -->
                 <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                     <span style="font-weight:900;color:white;font-size:1em">⬇️ Downgrade Finder</span>
+                    <div style="display:flex;align-items:center;gap:7px;background:#0f172a;border:1px solid var(--accent);border-radius:8px;padding:4px 10px;margin-left:auto">
+                        <span style="font-size:0.7em;color:var(--accent);font-weight:900">🔍 Zoom</span>
+                        <input type="range" id="dgZoomSlider" min="26" max="72" value="32"
+                            oninput="applyDgZoom(this.value)"
+                            style="width:80px;accent-color:var(--accent);cursor:pointer">
+                        <span id="dgZoomLabel" style="font-size:0.7em;color:var(--accent);font-weight:800;min-width:24px">32</span>
+                    </div>
                     <div style="position:relative;flex:1;min-width:180px">
                         <input id="dgPetInput" type="text" placeholder="Type a pet to downgrade..."
                             style="width:100%;background:#1e2d42;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:7px 12px;font-size:0.82em;font-family:inherit;box-sizing:border-box"
@@ -5974,7 +5981,7 @@ function startLastUpdatedTicker() {
             const target    = giveVal * (1 + Math.max(winMin,0)/100);
             const sigSet    = new Set();
             const varCount  = {};
-            const bundleSizes = countFilter>0 ? [countFilter] : [2,3,4];
+            const bundleSizes = countFilter>0 ? [countFilter] : [2,3,4,5,6,7,8,9,10,12,15,18];
 
             function checkBundle(bundle) {
                 const bundleVal = bundle.reduce((s,p)=>s+p._val,0);
@@ -6111,24 +6118,35 @@ function startLastUpdatedTicker() {
         }
 
         function dgFetchMore(isFirst) {
-            const resultsEl = document.getElementById('dgResults');
-            const found = dgFetchNext(80); // run for max 80ms
+            const prevLen = (window._dgCollected||[]).length;
+            const found = dgFetchNext(80);
             window._dgCollected = (window._dgCollected||[]).concat(found);
+            const newCount = (window._dgCollected||[]).length - prevLen;
 
             if (found.length === 0 && window._dgState && !window._dgState.done) {
-                // Didn't find any in time — schedule another attempt
                 setTimeout(()=>dgFetchMore(isFirst), 0);
                 return;
             }
 
-            dgRenderResults(isFirst, window._dgState && !window._dgState.done);
+            dgRenderResults(isFirst, newCount, window._dgState && !window._dgState.done);
         }
 
         function dgLoadMore() {
             dgFetchMore(false);
         }
 
-        function dgRenderResults(replaceAll, hasMore) {
+        let _dgZoom = 32;
+        function applyDgZoom(val) {
+            _dgZoom = parseInt(val);
+            const label = document.getElementById('dgZoomLabel');
+            if (label) label.textContent = val;
+            // Re-render with new zoom if we have results
+            if (window._dgCollected && window._dgCollected.length > 0) {
+                dgRenderResults(true, window._dgCollected.length, window._dgState && !window._dgState.done);
+            }
+        }
+
+        function dgRenderResults(replaceAll, newCount, hasMore) {
             const resultsEl = document.getElementById('dgResults');
             const collected = window._dgCollected || [];
             const giveLabel = _dgGiveLabel;
@@ -6144,10 +6162,10 @@ function startLastUpdatedTicker() {
             const header = '<div style="font-size:0.7em;font-weight:900;color:var(--subtext);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">' +
                 collected.length + ' combos for ' + giveLabel + ' (' + giveVal.toFixed(2) + ')</div>';
 
-            const slice = replaceAll ? collected : collected.slice(-(found||[]).length||collected.slice(-5));
+            // On first load show all collected; on Load More only show the new ones
+            const renderSlice = replaceAll ? collected : collected.slice(collected.length - newCount);
 
-            const cards = collected.slice(replaceAll ? 0 : collected.length - Math.min(5, collected.length)).map(r => {
-                const tqsCls  = r.tqs>=7?'#34d399':r.tqs>=4?'#fbbf24':'#f87171';
+            const cards = renderSlice.map(r => {
                 const apColor = r.ap>=55?'#34d399':r.ap>=35?'#fbbf24':'#f87171';
                 const gainCol = r.gain>=5?'#34d399':r.gain>=0?'#fbbf24':'#f87171';
                 const demCol  = r.avgDem>=7?'#34d399':r.avgDem>=5?'#fbbf24':'#f87171';
@@ -6155,7 +6173,7 @@ function startLastUpdatedTicker() {
                     const lbl = getPetLabel(p);
                     const badge = p.type==='neon'?'<span style="color:#34d399;font-size:0.65em;background:#1e3a1e;border-radius:4px;padding:0 4px">N</span>':
                                   p.type==='mega'?'<span style="color:#a855f7;font-size:0.65em;background:#2d1a4a;border-radius:4px;padding:0 4px">M</span>':'';
-                    return '<div class="dg-pet-chip">'+petImgTag(p.n,'width:32px;height:32px;object-fit:contain;flex-shrink:0')+
+                    const sz=_dgZoom+'px'; return '<div class="dg-pet-chip">'+petImgTag(p.n,'width:'+sz+';height:'+sz+';object-fit:contain;flex-shrink:0')+
                         '<div><div class="dg-chip-name">'+lbl+' '+badge+'</div>'+
                         '<div class="dg-chip-val">'+p._val.toFixed(2)+'</div>'+
                         '<div class="dg-chip-dem">Dem: '+p._dem.toFixed(1)+'</div></div></div>';
@@ -6168,10 +6186,10 @@ function startLastUpdatedTicker() {
                     '</div>'+
                     '<div class="dg-bundle-row">'+chips+'</div>'+
                     '<div class="dg-stats-row">'+
-                        '<span class="ai-stat-pill" style="color:'+tqsCls+'">TQS: '+r.tqs.toFixed(1)+'/10</span>'+
+                        '<span class="ai-stat-pill" style="color:'+apColor+'">Dem: '+r.avgDem.toFixed(1)+'</span>'+
                         '<span class="ai-stat-pill" style="color:'+apColor+'">~'+r.ap+'% accept</span>'+
                         '<span class="ai-stat-pill" style="color:'+gainCol+'">'+(r.gain>=0?'+':'')+r.gain.toFixed(1)+'% value</span>'+
-                        '<span class="ai-stat-pill" style="color:'+demCol+'">Avg Dem: '+r.avgDem.toFixed(1)+'</span>'+
+
                         '<span class="ai-stat-pill" style="color:var(--subtext)">'+r.size+' pets</span>'+
                     '</div></div>';
             }).join('');
