@@ -5763,7 +5763,6 @@ function startLastUpdatedTicker() {
                 const btn = document.getElementById('scoutCopyBtn');
                 if (btn) { btn.textContent = '✅ Copied! Opening AMVGG...'; btn.style.background = '#16a34a'; setTimeout(() => { btn.textContent = '📋 Copy Script & Open AMVGG'; btn.style.background = '#334155'; }, 3000); }
                 window.open('https://amvgg.com/trades', '_blank');
-                setTimeout(() => window.close(), 300);
             });
         }
 
@@ -6171,7 +6170,6 @@ function startLastUpdatedTicker() {
                 const btn = document.getElementById('elveCopyBtn');
                 if (btn) { btn.textContent = '✅ Copied! Opening Elve…'; btn.style.background = '#16a34a'; setTimeout(() => { btn.textContent = '📋 Copy Script & Open Elve'; btn.style.background = '#334155'; }, 3000); }
                 window.open('https://www.elvebredd.com/trade-center', '_blank');
-                setTimeout(() => window.close(), 300);
             });
         }
 
@@ -6260,7 +6258,7 @@ function startLastUpdatedTicker() {
     close.textContent='✕';close.style.cssText='padding:4px 10px;background:#334155;color:#94a3b8;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:12px';
     close.onclick=()=>bar.remove();
     copy.onclick=()=>{
-      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(json).then(()=>{copy.textContent='✅ Copied!';copy.style.background='#16a34a';}).catch(fb);}else fb();
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(json).then(()=>{copy.textContent='✅ Copied! Tab closing…';copy.style.background='#16a34a';setTimeout(()=>window.close(),1800);}).catch(fb);}else fb();
     };
     function fb(){const ta=document.createElement('textarea');ta.value=json;ta.style.cssText='position:fixed;top:55px;left:5%;right:5%;width:90vw;height:220px;z-index:9999999;background:#0f172a;color:#e2e8f0;border:2px solid #a78bfa;border-radius:12px;padding:14px;font-size:12px;font-family:monospace;box-shadow:0 8px 40px rgba(124,58,237,.5)';document.body.appendChild(ta);ta.select();}
     const btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px';btns.appendChild(copy);btns.appendChild(close);
@@ -6699,6 +6697,7 @@ function startLastUpdatedTicker() {
       bar.style.borderTopColor='#22c55e';
       bar.style.background='#052e16';
       bar.innerHTML=doneHTML;
+      setTimeout(()=>window.close(),1800);
     }).catch(()=>{
       // Clipboard blocked — show inline textarea fallback
       bar.style.borderTopColor='#f59e0b';
