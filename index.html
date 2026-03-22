@@ -6348,8 +6348,12 @@ function startLastUpdatedTicker() {
       if(grids.length<2)return;
       const lf=parsePetGrid(grids[0]),off=parsePetGrid(grids[1]);
       if(!lf.length&&!off.length)return;
-      // Apply offer filter (what you give = LF column on Elve)
-      if(OFFER_FILTER){const m=lf.some(p=>p.name.toLowerCase().includes(OFFER_FILTER)&&(OFFER_VAR==='Any'||p.variant===OFFER_VAR));if(!m)return;}
+      // Apply offer filter: LF must contain ONLY the one pet you are offering
+      if(OFFER_FILTER){
+        const matchO=lf.some(p=>p.name.toLowerCase().includes(OFFER_FILTER)&&(OFFER_VAR==='Any'||p.variant===OFFER_VAR));
+        if(!matchO)return;
+        if(lf.length>1)return;
+      }
       // Apply receive filter (what you get = Offering column on Elve)
       if(RECV_FILTER){const m=off.some(p=>p.name.toLowerCase().includes(RECV_FILTER)&&(RECV_VAR==='Any'||p.variant===RECV_VAR));if(!m)return;}
       const avatarImg=card.querySelector('img[alt="Owner of Listing Roblox Image"]');
@@ -6377,14 +6381,6 @@ function startLastUpdatedTicker() {
     fill.style.background=stopped?'#dc2626':'linear-gradient(90deg,#16a34a,#4ade80)';
     bar.style.borderBottomColor=stopped?'#dc2626':'#4ade80';
     bar.style.background=stopped?'#1a0a0a':'#0a1a0a';
-    const doCopy=()=>{
-      if(navigator.clipboard&&navigator.clipboard.writeText){
-        navigator.clipboard.writeText(json).then(()=>{
-          doneBar(true);
-          setTimeout(()=>window.close(),1000);
-        }).catch(()=>showFallback(json));
-      } else { showFallback(json); }
-    };
     function doneBar(copied){
       var icon=stopped?'\u23f9 Stopped':'\u2705 Done!';
       var cnt=trades.length;
@@ -6412,7 +6408,34 @@ function startLastUpdatedTicker() {
         +'<button onclick="_copyFbTa(this)" style="margin-top:10px;padding:10px 24px;border-radius:8px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:14px;font-weight:900">\U0001f4cb Copy All</button>'
         +'</div>';
     }
-    doCopy();
+    // Show done bar with manual copy button (clipboard API needs user gesture)
+    bar.style.background=stopped?'#1a0a0a':'#0a1a0a';
+    bar.style.borderBottomColor=stopped?'#dc2626':'#4ade80';
+    var cnt2=trades.length;
+    var s2=cnt2===1?'':'s';
+    bar.innerHTML='<div style="padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:16px">'
+      +'<div style="flex:1">'
+      +'<div style="font-size:18px;font-weight:900;color:#4ade80;margin-bottom:4px">'+(stopped?'Stopped':'Done!')+' '+cnt2+' trade'+s2+' found</div>'
+      +'<div style="font-size:13px;color:#86efac;">Click Copy, then paste in the calc</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;flex-shrink:0">'
+      +'<button id="_elve_copy_btn" style="padding:12px 24px;border-radius:10px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:15px;font-weight:900">Copy '+cnt2+' Trades</button>'
+      +'<button onclick="_closeBar()" style="padding:12px 18px;border-radius:10px;background:#334155;border:none;color:#94a3b8;cursor:pointer;font-size:14px;font-weight:800">X Close</button>'
+      +'</div>'
+      +'</div>';
+    var copyBtn=document.getElementById('_elve_copy_btn');
+    if(copyBtn)copyBtn.onclick=function(){
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(json).then(function(){
+          copyBtn.textContent='Copied!';
+          copyBtn.style.background='#16a34a';
+          copyBtn.disabled=true;
+          setTimeout(function(){_closeBar();window.close();},1500);
+        }).catch(function(){showFallback(json);});
+      } else {
+        showFallback(json);
+      }
+    };
   }
   window.scrollTo(0,0);setTimeout(()=>{scan();window._elveScan=setInterval(scan,TMS);},500);
 })();`;
@@ -6859,9 +6882,13 @@ function startLastUpdatedTicker() {
       // Filter: pet you want to RECEIVE must appear in offering column
       if(LF&&!offering.some(p=>p.name.toLowerCase().includes(LF)))return;
       if(LF&&LFVARIANT&&LFVARIANT!=='Any'&&!offering.some(p=>p.name.toLowerCase().includes(LF)&&p.variant===LFVARIANT))return;
-      // Filter: pet you're OFFERING must appear in LF column (what they want)
-      if(OFFER&&!lf.some(p=>p.name.toLowerCase().includes(OFFER)))return;
-      if(OFFER&&OFFERVAR&&OFFERVAR!=='Any'&&!lf.some(p=>p.name.toLowerCase().includes(OFFER)&&p.variant===OFFERVAR))return;
+      // Filter: OFFERING pet - LF must contain ONLY this pet (exact, no bundles)
+      if(OFFER){
+        const matchO=lf.some(p=>p.name.toLowerCase().includes(OFFER));
+        if(!matchO)return;
+        if(lf.length>1)return;
+        if(OFFERVAR&&OFFERVAR!=='Any'&&!lf.some(p=>p.name.toLowerCase().includes(OFFER)&&p.variant===OFFERVAR))return;
+      }
       allFound.set(key,{username,profileHref,avatar,time,lf,offering});
     });
     return [...allFound.values()];
