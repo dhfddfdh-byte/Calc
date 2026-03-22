@@ -5440,8 +5440,30 @@ function startLastUpdatedTicker() {
         }
 
         // ── TRADE SCOUT TAB ──────────────────────────────────────────────────
-        let scoutSite   = 'amvgg';
-        let scoutFilter = 'all';
+
+        // ── Persistent scout prefs ───────────────────────────────────────────
+        function scoutSavePrefs() {
+            try {
+                localStorage.setItem('scout_prefs', JSON.stringify({
+                    site:        scoutSite,
+                    filter:      scoutFilter,
+                    amvggPet:    scoutLFSelected,
+                    amvggVar:    scoutLFVariant,
+                    amvggCount:  (document.getElementById('scoutCount')||{}).value || '10',
+                    elvePet:     elveOfferSelected,
+                    elveVar:     elveOfferVariant,
+                    elveRecvPet: elveReceiveSelected,
+                    elveRecvVar: elveReceiveVariant,
+                    elveCount:   (document.getElementById('elveCount')||{}).value || '15',
+                }));
+            } catch(e) {}
+        }
+        function scoutLoadPrefs() {
+            try { return JSON.parse(localStorage.getItem('scout_prefs') || '{}'); } catch(e) { return {}; }
+        }
+        const _sp = scoutLoadPrefs();
+        let scoutSite   = _sp.site   || 'amvgg';
+        let scoutFilter = _sp.filter || 'all';
 
         function renderScoutTab() {
             const inner = document.getElementById('scoutInner');
@@ -5507,7 +5529,7 @@ function startLastUpdatedTicker() {
                     </div>
                     <div>
                       <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">HOW MANY TRADES</label>
-                      <input id="scoutCount" type="number" value="10" min="1" max="100"
+                      <input id="scoutCount" type="number" value="10" min="1" max="100" onchange="scoutSavePrefs()"
                         style="width:100%;box-sizing:border-box;background:var(--input-bg,#0f172a);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 9px;font-size:12px;font-family:inherit">
                     </div>
                   </div>
@@ -5641,7 +5663,7 @@ function startLastUpdatedTicker() {
                   <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;margin-bottom:12px">
                     <div>
                       <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">HOW MANY TRADES</label>
-                      <input id="elveCount" type="number" value="15" min="1" max="200"
+                      <input id="elveCount" type="number" value="15" min="1" max="200" onchange="scoutSavePrefs()"
                         style="width:90px;box-sizing:border-box;background:var(--input-bg,#0f172a);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 9px;font-size:12px;font-family:inherit">
                     </div>
                     <div>
@@ -5721,7 +5743,33 @@ function startLastUpdatedTicker() {
                 <div id="elveResults"></div>
               </div>
             `;
-            // restore filter state
+            // Restore all persisted values into freshly-rendered inputs
+            const _p = scoutLoadPrefs();
+            // AMVGG tab
+            const scoutLFInp = document.getElementById('scoutLF');
+            if (scoutLFInp && scoutLFSelected) {
+                scoutLFInp.value = scoutLFSelected;
+                const vrow = document.getElementById('scoutLFVariantRow');
+                if (vrow) { vrow.style.display = 'flex'; scoutSetVariant(scoutLFVariant || 'Any'); }
+            }
+            const scoutCntInp = document.getElementById('scoutCount');
+            if (scoutCntInp && _p.amvggCount) scoutCntInp.value = _p.amvggCount;
+            // Elve tab
+            const elveOInp = document.getElementById('elveOfferInput');
+            if (elveOInp && elveOfferSelected) {
+                elveOInp.value = elveOfferSelected;
+                const vr = document.getElementById('elveOfferVariantRow');
+                if (vr) { vr.style.display = 'flex'; elveOfferSetVariant(elveOfferVariant || 'Any'); }
+            }
+            const elveRInp = document.getElementById('elveReceiveInput');
+            if (elveRInp && elveReceiveSelected) {
+                elveRInp.value = elveReceiveSelected;
+                const vr2 = document.getElementById('elveReceiveVariantRow');
+                if (vr2) { vr2.style.display = 'flex'; elveReceiveSetVariant(elveReceiveVariant || 'Any'); }
+            }
+            const elveCntInp = document.getElementById('elveCount');
+            if (elveCntInp && _p.elveCount) elveCntInp.value = _p.elveCount;
+            // Filter state
             scoutSetFilter(scoutFilter, true);
         }
 
@@ -5736,6 +5784,7 @@ function startLastUpdatedTicker() {
             elve.style.display  = site === 'elve'  ? '' : 'none';
             if (btnA) { btnA.style.background = site==='amvgg' ? '#6366f1' : 'transparent'; btnA.style.color = site==='amvgg' ? 'white' : 'var(--subtext)'; btnA.style.borderColor = site==='amvgg' ? '#6366f1' : 'var(--border)'; }
             if (btnE) { btnE.style.background = site==='elve'  ? '#6366f1' : 'transparent'; btnE.style.color = site==='elve'  ? 'white' : 'var(--subtext)'; btnE.style.borderColor = site==='elve'  ? '#6366f1' : 'var(--border)'; }
+            scoutSavePrefs();
         }
 
         function scoutSetFilter(f, silent) {
@@ -5752,6 +5801,7 @@ function startLastUpdatedTicker() {
             const lfVal    = scoutLFSelected || (document.getElementById('scoutLF') || {}).value || '';
             if (stepWins) stepWins.style.display = f==='win' ? '' : 'none';
             if (stepLF)   stepLF.style.display   = lfVal.trim() ? '' : 'none';
+            scoutSavePrefs();
         }
 
         function scoutGenerateScript() {
@@ -6098,11 +6148,11 @@ function startLastUpdatedTicker() {
         }
 
         // Elve state — offer + receive filters
-        let elveOfferSelected   = '';
-        let elveOfferVariant    = 'Any';
+        let elveOfferSelected   = _sp.elvePet     || '';
+        let elveOfferVariant    = _sp.elveVar     || 'Any';
         let elveOfferNavIdx     = -1;
-        let elveReceiveSelected = '';
-        let elveReceiveVariant  = 'Any';
+        let elveReceiveSelected = _sp.elveRecvPet || '';
+        let elveReceiveVariant  = _sp.elveRecvVar || 'Any';
         let elveReceiveNavIdx   = -1;
 
         function elveGenerateScript() {
@@ -6156,6 +6206,7 @@ function startLastUpdatedTicker() {
             if (inp) inp.value = name;
             if (drop) drop.style.display = 'none';
             if (vrow) { vrow.style.display = 'flex'; elveOfferSetVariant('Any'); }
+            scoutSavePrefs();
         }
         function elveOfferSetVariant(v) {
             elveOfferVariant = v;
@@ -6165,6 +6216,7 @@ function startLastUpdatedTicker() {
                 const col = variant==='Any'?'#22c55e':variant==='Reg'?'#64748b':['MFR','MF','MR','Mega'].includes(variant)?'#f97316':['NFR','NF','NR','Neon'].includes(variant)?'#a78bfa':'#60a5fa';
                 btn.style.background = variant===v?col:'transparent'; btn.style.color=variant===v?'white':col; btn.style.borderColor=col+(variant===v?'':'44');
             });
+            scoutSavePrefs();
         }
         function elveOfferKey(e) {
             const drop = document.getElementById('elveOfferDrop');
@@ -6199,6 +6251,7 @@ function startLastUpdatedTicker() {
             if (inp) inp.value = name;
             if (drop) drop.style.display = 'none';
             if (vrow) { vrow.style.display = 'flex'; elveReceiveSetVariant('Any'); }
+            scoutSavePrefs();
         }
         function elveReceiveSetVariant(v) {
             elveReceiveVariant = v;
@@ -6208,6 +6261,7 @@ function startLastUpdatedTicker() {
                 const col = variant==='Any'?'#22c55e':variant==='Reg'?'#64748b':['MFR','MF','MR','Mega'].includes(variant)?'#f97316':['NFR','NF','NR','Neon'].includes(variant)?'#a78bfa':'#60a5fa';
                 btn.style.background=variant===v?col:'transparent'; btn.style.color=variant===v?'white':col; btn.style.borderColor=col+(variant===v?'':'44');
             });
+            scoutSavePrefs();
         }
         function elveReceiveKey(e) {
             const drop = document.getElementById('elveReceiveDrop');
@@ -6248,7 +6302,7 @@ function startLastUpdatedTicker() {
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
         <span style="font-weight:900;font-size:18px;color:#a78bfa;white-space:nowrap">🦌 Elve Scanner</span>
-        <div id="_ec" style="font-size:17px;font-weight:900;color:#c4b5fd;white-space:nowrap;min-width:80px">0${WANT>0?'/'+WANT:''} trades</div>
+        <div id="_ec" style="font-size:17px;font-weight:900;color:#c4b5fd;white-space:nowrap;min-width:80px">0${wantCount>0?'/'+wantCount:''} trades</div>
         <div id="_elve_status" style="font-size:13px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">🔄 Starting scan…</div>
       </div>
       <div style="height:16px;background:#1e293b;border-radius:99px;overflow:hidden;border:1px solid #334155">
@@ -6605,8 +6659,8 @@ function startLastUpdatedTicker() {
         // ── Elve LF autocomplete (mirrors AMVGG version) ──────────────────
 
         // ── Scout LF autocomplete ─────────────────────────────────────────────
-        let scoutLFSelected = '';   // exact pet name chosen from dropdown
-        let scoutLFVariant  = 'Reg'; // chosen variant
+        let scoutLFSelected = _sp.amvggPet || '';
+        let scoutLFVariant  = _sp.amvggVar || 'Reg';
         let scoutLFNavIdx   = -1;   // keyboard nav index
 
         function scoutSetVariant(v) {
@@ -6619,6 +6673,7 @@ function startLastUpdatedTicker() {
                 btn.style.color       = variant === v ? 'white' : col;
                 btn.style.borderColor = col + (variant === v ? '' : '44');
             });
+            scoutSavePrefs();
         }
 
         function scoutLFSearch(val) {
@@ -6700,6 +6755,7 @@ function startLastUpdatedTicker() {
             if (inp)  inp.value = name;
             if (drop && closeAfter) drop.style.display = 'none';
             if (vrow) { vrow.style.display = 'flex'; scoutSetVariant('Any'); }
+            scoutSavePrefs();
         }
 
         // Close dropdown when clicking outside
