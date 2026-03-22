@@ -5637,8 +5637,28 @@ function startLastUpdatedTicker() {
                     </div>
                   </div>
 
-                  <!-- Win filter -->
-                  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <!-- Count + filter row -->
+                  <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;margin-bottom:12px">
+                    <div>
+                      <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">HOW MANY TRADES</label>
+                      <input id="elveCount" type="number" value="15" min="1" max="200"
+                        style="width:90px;box-sizing:border-box;background:var(--input-bg,#0f172a);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 9px;font-size:12px;font-family:inherit">
+                    </div>
+                    <div>
+                      <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">SHOW</label>
+                      <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        <button id="elveFiltAll" onclick="elveSetResultFilter('all')"
+                          style="padding:4px 14px;border-radius:7px;border:1px solid #6366f1;background:#6366f1;color:white;cursor:pointer;font-size:11px;font-weight:700">All Trades</button>
+                        <button id="elveFiltWin" onclick="elveSetResultFilter('winsonly')"
+                          style="padding:4px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--subtext);cursor:pointer;font-size:11px;font-weight:700">⚖️ Hide Losses</button>
+                        <button id="elveFiltStrict" onclick="elveSetResultFilter('strictwin')"
+                          style="padding:4px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--subtext);cursor:pointer;font-size:11px;font-weight:700">✅ Wins Only</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Win filter (hidden — replaced above) -->
+                  <div style="display:none;gap:8px;align-items:center;flex-wrap:wrap">
                     <span style="font-size:11px;color:var(--subtext);font-weight:600">SHOW:</span>
                     <button id="elveFiltAll" onclick="elveSetResultFilter('all')"
                       style="padding:4px 14px;border-radius:7px;border:1px solid #6366f1;background:#6366f1;color:white;cursor:pointer;font-size:11px;font-weight:700">All Trades</button>
@@ -6090,7 +6110,8 @@ function startLastUpdatedTicker() {
             const offerVar  = elveOfferVariant || 'Any';
             const recvPet   = elveReceiveSelected || (document.getElementById('elveReceiveInput')||{}).value || '';
             const recvVar   = elveReceiveVariant || 'Any';
-            const script    = buildElveScript(offerPet.trim(), offerVar, recvPet.trim(), recvVar);
+            const countVal  = parseInt((document.getElementById('elveCount')||{}).value) || 15;
+            const script    = buildElveScript(offerPet.trim(), offerVar, recvPet.trim(), recvVar, countVal);
             const box       = document.getElementById('elveScriptBox');
             if (box) box.value = script;
             const area = document.getElementById('elveScriptArea');
@@ -6206,12 +6227,13 @@ function startLastUpdatedTicker() {
             navigator.clipboard.writeText(script).then(() => {
                 const btn = document.getElementById('elveCopyBtn');
                 if (btn) { btn.textContent = '✅ Copied! Opening Elve…'; btn.style.background = '#16a34a'; setTimeout(() => { btn.textContent = '📋 Copy Script & Open Elve'; btn.style.background = '#334155'; }, 3000); }
-                window.open('https://www.elvebredd.com/trade-center', '_blank');
+                window.open('https://elvebredd.com/trade-center', '_blank');
             });
         }
 
         // ── Build the Elve scanner console script ─────────────────────────
-        function buildElveScript(offerPet, offerVar, recvPet, recvVar) {
+        function buildElveScript(offerPet, offerVar, recvPet, recvVar, wantCount) {
+            wantCount = wantCount || 15;
             offerPet = (offerPet||'').trim().toLowerCase();
             offerVar = offerVar || 'Any';
             recvPet  = (recvPet||'').trim().toLowerCase();
@@ -6221,19 +6243,27 @@ function startLastUpdatedTicker() {
   if(window._elveScan){clearInterval(window._elveScan);window._elveScan=null;}
   const ob=document.getElementById('_elve_scan_bar');if(ob)ob.remove();
   const bar=document.createElement('div');bar.id='_elve_scan_bar';
-  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:4px solid #a78bfa;box-shadow:0 8px 40px rgba(0,0,0,.8)';
-  bar.innerHTML=\`<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;gap:16px">
-    <div style="font-weight:900;font-size:16px;color:#a78bfa;white-space:nowrap">🦌 Elve Scanner</div>
-    <div style="flex:1;background:#1e293b;border-radius:99px;height:12px;overflow:hidden;border:1px solid #334155"><div id="_ef" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;transition:width 0.3s"></div></div>
-    <div id="_ec" style="font-size:15px;font-weight:900;color:#cbd5e1;white-space:nowrap">0 trades</div>
-    <button id="_es" style="padding:10px 20px;background:#dc2626;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:800;font-size:14px">■ Stop</button>
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:4px solid #a78bfa;box-shadow:0 8px 40px rgba(0,0,0,.9)';
+  bar.innerHTML=\`<div style="padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:20px">
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px">
+        <span style="font-weight:900;font-size:18px;color:#a78bfa;white-space:nowrap">🦌 Elve Scanner</span>
+        <div id="_ec" style="font-size:17px;font-weight:900;color:#c4b5fd;white-space:nowrap;min-width:80px">0${WANT>0?'/'+WANT:''} trades</div>
+        <div id="_elve_status" style="font-size:13px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">🔄 Starting scan…</div>
+      </div>
+      <div style="height:16px;background:#1e293b;border-radius:99px;overflow:hidden;border:1px solid #334155">
+        <div id="_ef" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;transition:width 0.4s ease"></div>
+      </div>
+    </div>
+    <button id="_es" style="flex-shrink:0;padding:14px 28px;border-radius:10px;background:#ef4444;border:none;color:white;cursor:pointer;font-size:16px;font-weight:900;letter-spacing:0.5px">■ Stop</button>
   </div>\`;
   document.body.prepend(bar);
   const fill=document.getElementById('_ef'),ctr=document.getElementById('_ec');
   document.getElementById('_es').onclick=()=>{clearInterval(window._elveScan);window._elveScan=null;finish(true);};
 
   const seen=new Map();let scrolled=0,stuckFor=0,lastSize=0;
-  const MAX=400,SPX=1200,TMS=500,STUCK=20;
+  const MAX=400,SPX=2000,TMS=500,STUCK=50;
+  const WANT=${JSON.stringify(wantCount)};
   const OFFER_FILTER=${JSON.stringify(offerPet)};
   const OFFER_VAR=${JSON.stringify(offerVar)};
   const RECV_FILTER=${JSON.stringify(recvPet)};
@@ -6276,41 +6306,50 @@ function startLastUpdatedTicker() {
       seen.set(lid,{listingId:lid,username:uEl?uEl.textContent.trim():'?',avatar,profileHref,time:tEl?tEl.textContent.trim():'',elveDiff,lf,offering:off,listingHref:location.origin+'/trade-center?listing='+lid});
     });
     const tot=seen.size;
-    fill.style.width=Math.min(100,Math.round(scrolled/MAX*100))+'%';
-    ctr.textContent=tot+' trades';
+    const wantPct=WANT>0?Math.min(100,Math.round((tot/WANT)*100)):Math.min(100,Math.round(scrolled/MAX*100));
+    fill.style.width=wantPct+'%';
+    ctr.textContent=tot+(WANT>0?'/'+WANT:'')+ ' trades';
+    const stEl=document.getElementById('_elve_status');if(stEl)stEl.textContent='🔄 Scanning… scroll '+scrolled+'/'+MAX+(WANT>0?' · need '+WANT+' trades':'');
     if(tot===lastSize)stuckFor++;else{stuckFor=0;lastSize=tot;}
-    if(stuckFor>=STUCK||scrolled>=MAX){clearInterval(window._elveScan);window._elveScan=null;finish(false);return;}
+    if((WANT>0&&tot>=WANT)||stuckFor>=STUCK||scrolled>=MAX){clearInterval(window._elveScan);window._elveScan=null;finish(false);return;}
     window.scrollBy(0,SPX);scrolled++;
   }
 
   function finish(stopped){
     const trades=[...seen.values()],json=JSON.stringify(trades);
-    fill.style.width='100%';fill.style.background=stopped?'#dc2626':'linear-gradient(90deg,#16a34a,#4ade80)';
+    fill.style.width='100%';
+    fill.style.background=stopped?'#dc2626':'linear-gradient(90deg,#16a34a,#4ade80)';
     bar.style.borderBottomColor=stopped?'#dc2626':'#4ade80';
-    ctr.textContent=trades.length+(stopped?' trades (stopped)':' trades ✅');
-    const sb=document.getElementById('_es');if(sb)sb.remove();
-    const copy=document.createElement('button'),close=document.createElement('button');
-    copy.textContent='📋 Copy '+trades.length+' Trades';
-    copy.style.cssText='padding:4px 12px;background:#7c3aed;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:800;font-size:12px;white-space:nowrap';
-    close.textContent='✕';close.style.cssText='padding:4px 10px;background:#334155;color:#94a3b8;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:12px';
-    close.onclick=()=>bar.remove();
-    copy.onclick=()=>{
-      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(json).then(()=>{
-        copy.textContent='✅ Copied! Tab closing…';
-        copy.style.background='#16a34a';
-        // Try auto-close; replace copy button with manual close fallback
-        setTimeout(()=>window.close(),800);
-        const closeBtn=document.createElement('button');
-        closeBtn.textContent='✕ Close Tab';
-        closeBtn.style.cssText='padding:4px 12px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:800;font-size:12px;white-space:nowrap';
-        closeBtn.onclick=()=>window.close();
-        copy.parentNode.insertBefore(closeBtn,copy.nextSibling);
-      }).catch(fb);}else fb();
+    bar.style.background=stopped?'#1a0a0a':'#0a1a0a';
+    const doCopy=()=>{
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(json).then(()=>{
+          doneBar(true);
+          setTimeout(()=>window.close(),1000);
+        }).catch(()=>showFallback(json));
+      } else { showFallback(json); }
     };
-    function fb(){const ta=document.createElement('textarea');ta.value=json;ta.style.cssText='position:fixed;top:55px;left:5%;right:5%;width:90vw;height:220px;z-index:9999999;background:#0f172a;color:#e2e8f0;border:2px solid #a78bfa;border-radius:12px;padding:14px;font-size:12px;font-family:monospace;box-shadow:0 8px 40px rgba(124,58,237,.5)';document.body.appendChild(ta);ta.select();}
-    const btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px';btns.appendChild(copy);btns.appendChild(close);
-    bar.querySelector('div').appendChild(btns);
-    copy.click();
+    function doneBar(copied){
+      bar.innerHTML=\`<div style="padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:20px">
+        <div style="flex:1">
+          <div style="font-size:18px;font-weight:900;color:#4ade80;margin-bottom:4px">${stopped?'⏹ Stopped':'✅ Done!'} ${trades.length} trade${trades.length===1?'':'s'} ${copied?'copied to clipboard!':'found'}</div>
+          <div style="font-size:13px;color:#86efac;">Head back to the calc → Trade Scout → Elve tab → Paste & Analyse</div>
+          ${copied?'<div style="font-size:12px;color:#64748b;margin-top:3px">Tab closing automatically…</div>':''}
+        </div>
+        <button onclick="window.close()||bar.remove()" style="flex-shrink:0;padding:14px 28px;border-radius:10px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:16px;font-weight:900">✕ Close Tab</button>
+      </div>\`;
+    }
+    function showFallback(data){
+      bar.innerHTML=\`<div style="padding:18px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-size:16px;font-weight:900;color:#fbbf24">⚠️ Clipboard blocked — copy manually then close</div>
+          <button onclick="window.close()||bar.remove()" style="padding:10px 22px;border-radius:9px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:800">✕ Close Tab</button>
+        </div>
+        <textarea style="width:100%;height:160px;background:#0f172a;color:#e2e8f0;border:2px solid #a78bfa;border-radius:10px;padding:12px;font-size:12px;font-family:monospace;box-sizing:border-box;resize:vertical">${data}</textarea>
+        <button onclick="this.previousElementSibling.select();document.execCommand('copy');this.textContent='✅ Copied!';this.style.background='#16a34a';setTimeout(()=>window.close(),800)" style="margin-top:10px;padding:10px 24px;border-radius:8px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:14px;font-weight:900">📋 Copy All</button>
+      </div>\`;
+    }
+    doCopy();
   }
   window.scrollTo(0,0);setTimeout(()=>{scan();window._elveScan=setInterval(scan,TMS);},500);
 })();`;
@@ -6774,12 +6813,13 @@ function startLastUpdatedTicker() {
       // Try auto-close first; show manual button as fallback
       const closed=setTimeout(()=>window.close(),800);
       bar.innerHTML=\`
-        <div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px">
           <div>
-            <div style="font-size:14px;font-weight:800;color:#22c55e">✅ Copied \${trades.length} trade\${trades.length===1?'':'s'}! Head back to the calc.</div>
-            <div style="font-size:11px;color:#86efac;margin-top:2px">Tab closing automatically… if not, click the button →</div>
+            <div style="font-size:16px;font-weight:900;color:#22c55e">✅ Copied \${trades.length} trade\${trades.length===1?'':'s'}!</div>
+            <div style="font-size:12px;color:#86efac;margin-top:3px">Head back to the calc tab → Trade Scout → Paste & Analyse</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px">Tab will close automatically…</div>
           </div>
-          <button onclick="clearTimeout(\${closed});window.close()" style="flex-shrink:0;padding:6px 18px;border-radius:7px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:13px;font-weight:800">✕ Close Tab</button>
+          <button onclick="clearTimeout(\${closed});window.close()" style="flex-shrink:0;padding:10px 24px;border-radius:9px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:15px;font-weight:900">✕ Close Tab</button>
         </div>
       \`;
     }).catch(()=>{
@@ -6790,7 +6830,7 @@ function startLastUpdatedTicker() {
           <div style="font-size:13px;color:#fbbf24;font-weight:700;margin-bottom:6px">⚠️ Clipboard blocked — manually copy the text below:</div>
           <textarea id="_amvJson" style="width:100%;height:180px;font-size:12px;color:#e2e8f0;background:#0f172a;border:2px solid #f59e0b;resize:vertical;border-radius:10px;padding:12px;box-sizing:border-box;font-family:monospace">\${json}</textarea>
           <button onclick="document.getElementById('_amvJson').select();document.execCommand('copy');this.textContent='✅ Copied!'" style="margin-top:6px;padding:8px 18px;border-radius:7px;background:#f59e0b;border:none;cursor:pointer;font-weight:800;font-size:13px">📋 Copy All</button>
-          <button onclick="document.getElementById('_amvS').remove()" style="margin-top:6px;margin-left:8px;padding:4px 12px;border-radius:5px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:11px">Close</button>
+          <button onclick="window.close()||document.getElementById('_amvS').remove()" style="margin-top:8px;margin-left:8px;padding:8px 18px;border-radius:7px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:13px;font-weight:700">✕ Close Tab</button>
         </div>
       \`;
     });
