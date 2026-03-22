@@ -5568,13 +5568,61 @@ function startLastUpdatedTicker() {
 
               </div><!-- end scoutAmvgg -->
 
-              <!-- Elve placeholder -->
+              <!-- Elve tab -->
               <div id="scoutElve" style="display:none">
-                <div style="text-align:center;padding:48px 20px;color:var(--subtext)">
-                  <div style="font-size:36px;margin-bottom:10px">🚧</div>
-                  <div style="font-weight:700;font-size:15px;margin-bottom:6px">Elve Support Coming Soon</div>
-                  <div style="font-size:12px">AMVGG is working great — Elve integration next.</div>
+
+                <!-- Pet filter (same as AMVGG) -->
+                <div style="margin-bottom:14px">
+                  <div style="font-size:11px;font-weight:700;color:var(--subtext);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Pet You Want To Receive (optional)</div>
+                  <div style="position:relative">
+                    <input id="scoutLFElve" autocomplete="off" placeholder="Search pet name…"
+                      oninput="scoutElveLFSearch(this.value)"
+                      onkeydown="scoutElveLFKey(event)"
+                      style="width:100%;padding:8px 12px;background:#0f172a;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;box-sizing:border-box">
+                    <div id="scoutLFElveDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid var(--border);border-radius:8px;z-index:500;max-height:200px;overflow-y:auto;margin-top:2px"></div>
+                  </div>
+                  <div id="scoutLFElveVariantRow" style="display:none;margin-top:8px;display:flex;flex-wrap:wrap;gap:5px">
+                    ${['Any','Reg','F','R','FR','Neon','NF','NR','NFR','Mega','MF','MR','MFR'].map(v => {
+                      const c = v==='Any'?'#22c55e':v==='Reg'?'#64748b':['MFR','MF','MR','Mega'].includes(v)?'#f97316':['NFR','NF','NR','Neon'].includes(v)?'#a78bfa':'#60a5fa';
+                      return `<button id="scoutElveVar_${v}" onclick="scoutElveSetVariant('${v}')"
+                        style="padding:3px 9px;border-radius:6px;font-size:10px;font-weight:800;cursor:pointer;border:1px solid ${c}44;background:transparent;color:${c}">${v}</button>`;
+                    }).join('')}
+                  </div>
                 </div>
+
+                <!-- Instructions -->
+                <div style="background:#0f172a;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--subtext)">
+                  <div style="font-weight:700;color:var(--text);margin-bottom:8px;font-size:13px">📋 How to scan Elve trades</div>
+                  <ol style="margin:0;padding-left:18px;line-height:2">
+                    <li>Click <b style="color:#a78bfa">Copy Script & Open Elve</b> below</li>
+                    <li>Log in to Elvebredd if needed</li>
+                    <li>Open DevTools (F12) → Console tab</li>
+                    <li>Paste the script and press Enter</li>
+                    <li>Wait for the purple bar to finish scanning</li>
+                    <li>Click <b>Copy Trades</b> when done</li>
+                    <li>Come back here and paste below</li>
+                  </ol>
+                </div>
+
+                <!-- Copy + open button -->
+                <button onclick="elveCopyScript()" id="elveCopyBtn"
+                  style="width:100%;padding:10px;background:#334155;border:1px solid #475569;border-radius:9px;color:#e2e8f0;font-weight:800;font-size:13px;cursor:pointer;margin-bottom:14px">
+                  📋 Copy Script & Open Elve
+                </button>
+
+                <!-- Paste area -->
+                <div style="margin-bottom:10px">
+                  <div style="font-size:11px;font-weight:700;color:var(--subtext);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Paste Results Here</div>
+                  <textarea id="elvePasteBox" placeholder="Paste the copied JSON here…"
+                    style="width:100%;height:80px;background:#0f172a;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:11px;padding:8px;box-sizing:border-box;resize:vertical"></textarea>
+                  <button onclick="elveProcessPaste()"
+                    style="width:100%;margin-top:8px;padding:9px;background:#6366f1;border:none;border-radius:8px;color:white;font-weight:800;font-size:13px;cursor:pointer">
+                    🔍 Analyse Trades
+                  </button>
+                </div>
+
+                <!-- Sort/filter + results (shared with AMVGG) -->
+                <div id="elveResults"></div>
               </div>
             `;
             // restore filter state
@@ -5827,23 +5875,410 @@ function startLastUpdatedTicker() {
                   <!-- Time + save -->
                   <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px solid #1e293b">
                     <span style="color:#475569;font-size:9px">${t.time||''}</span>
-                    <button id="${tradeId}_btn" onclick="
-                      const td=${JSON.stringify(JSON.stringify(t))};
-                      if(window.saveScoutTrade(JSON.parse(td),${idx})){
-                        this.textContent='✅ Saved';
-                        this.style.background='#16a34a';
-                        this.style.color='white';
-                        this.disabled=true;
-                      }
-                    " style="padding:3px 10px;border-radius:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;cursor:pointer;font-size:10px;font-weight:700">
-                      📋 Save
-                    </button>
+                    <div style="display:flex;gap:5px;align-items:center">
+                      ${t.listingId ? `<button onclick="window.elveShowLocator(${JSON.stringify(JSON.stringify(t))})"
+                        style="padding:3px 10px;border-radius:6px;background:#1e293b;border:1px solid #a78bfa44;color:#a78bfa;cursor:pointer;font-size:10px;font-weight:700">
+                        🎯 Find on Elve
+                      </button>` : ''}
+                      <button id="${tradeId}_btn" onclick="
+                        const td=${JSON.stringify(JSON.stringify(t))};
+                        if(window.saveScoutTrade(JSON.parse(td),${idx})){
+                          this.textContent='✅ Saved';
+                          this.style.background='#16a34a';
+                          this.style.color='white';
+                          this.disabled=true;
+                        }
+                      " style="padding:3px 10px;border-radius:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;cursor:pointer;font-size:10px;font-weight:700">
+                        📋 Save
+                      </button>
+                    </div>
                   </div>
                 </div>`;
             }).join('') + `</div>`;
 
             // Expose saveScoutTrade globally so inline onclick can call it
             window.saveScoutTrade = saveScoutTrade;
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // ELVE SCOUT — script builder, accept script, paste handler
+        // ════════════════════════════════════════════════════════════════
+
+        let elveSelectedPet    = '';
+        let elveSelectedVariant = 'Any';
+        let elveLFNavIdx        = -1;
+
+        // ── Copy scanner script + open Elve ──────────────────────────────
+        function elveCopyScript() {
+            const script = buildElveScript();
+            navigator.clipboard.writeText(script).then(() => {
+                const btn = document.getElementById('elveCopyBtn');
+                if (btn) { btn.textContent = '✅ Copied! Opening Elve…'; btn.style.background = '#16a34a'; setTimeout(() => { btn.textContent = '📋 Copy Script & Open Elve'; btn.style.background = '#334155'; }, 3000); }
+                window.open('https://www.elvebredd.com/trade-center', '_blank');
+            });
+        }
+
+        // ── Build the Elve scanner console script ─────────────────────────
+        function buildElveScript() {
+            const lfFilter  = elveSelectedPet.trim();
+            const lfVariant = elveSelectedVariant;
+
+            return `(()=>{
+  if(window._elveScan){clearInterval(window._elveScan);window._elveScan=null;}
+  const ob=document.getElementById('_elve_scan_bar');if(ob)ob.remove();
+  const bar=document.createElement('div');bar.id='_elve_scan_bar';
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:3px solid #a78bfa;box-shadow:0 6px 30px rgba(0,0,0,.7)';
+  bar.innerHTML=\`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;gap:12px">
+    <div style="font-weight:800;font-size:13px;color:#a78bfa;white-space:nowrap">🦌 Elve Scanner</div>
+    <div style="flex:1;background:#1e293b;border-radius:99px;height:8px;overflow:hidden"><div id="_ef" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;transition:width 0.3s"></div></div>
+    <div id="_ec" style="font-size:12px;font-weight:700;color:#cbd5e1;white-space:nowrap">0 trades</div>
+    <button id="_es" style="padding:4px 12px;background:#dc2626;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:800;font-size:12px">■ Stop</button>
+  </div>\`;
+  document.body.prepend(bar);
+  const fill=document.getElementById('_ef'),ctr=document.getElementById('_ec');
+  document.getElementById('_es').onclick=()=>{clearInterval(window._elveScan);window._elveScan=null;finish(true);};
+
+  const seen=new Map();let scrolled=0,stuckFor=0,lastSize=0;
+  const MAX=400,SPX=800,TMS=600,STUCK=8;
+  const LF_FILTER=${JSON.stringify(lfFilter.toLowerCase())};
+  const LF_VAR=${JSON.stringify(lfVariant)};
+
+  function parsePetGrid(g){
+    if(!g)return[];
+    const pets=[];
+    g.querySelectorAll('span.relative').forEach(slot=>{
+      let name=null,variant='Reg';
+      slot.querySelectorAll('img').forEach(img=>{
+        const alt=img.getAttribute('alt')||'',src=img.getAttribute('src')||'';
+        if(alt==='Pet Attributes Overlay'){const m=src.match(/amoverlays\\/([^/.]+)\\.svg/i);if(m)variant=m[1];}
+        else if(alt&&alt!=='Owner of Listing Roblox Image')name=alt;
+      });
+      if(name)pets.push({name,variant});
+    });
+    return pets;
+  }
+
+  function scan(){
+    document.querySelectorAll('[data-listing-id]').forEach(card=>{
+      const lid=card.getAttribute('data-listing-id');
+      if(!lid||seen.has(lid))return;
+      const grids=card.querySelectorAll('[style*="grid-template-columns"][style*="auto-fill"]');
+      if(grids.length<2)return;
+      const lf=parsePetGrid(grids[0]),off=parsePetGrid(grids[1]);
+      if(!lf.length&&!off.length)return;
+      // Apply LF filter if set
+      if(LF_FILTER){
+        const match=off.some(p=>p.name.toLowerCase().includes(LF_FILTER)&&(LF_VAR==='Any'||p.variant===LF_VAR));
+        if(!match)return;
+      }
+      const avatarImg=card.querySelector('img[alt="Owner of Listing Roblox Image"]');
+      let avatar='',profileHref='#';
+      if(avatarImg){avatar=avatarImg.src;const m=avatar.match(/\\/roblox\\/(\\d+)\\.png/);if(m)profileHref='https://www.roblox.com/users/'+m[1]+'/profile';}
+      const uEl=card.querySelector('span.whitespace-nowrap');
+      const tEl=card.querySelector('span.font-normal');
+      let elveDiff=null;
+      card.querySelectorAll('span').forEach(sp=>{const t=sp.textContent.trim();if(/^\\d+(\\.\\d+)?$/.test(t)&&!sp.children.length)elveDiff=parseFloat(t);});
+      seen.set(lid,{listingId:lid,username:uEl?uEl.textContent.trim():'?',avatar,profileHref,time:tEl?tEl.textContent.trim():'',elveDiff,lf,offering:off,listingHref:location.origin+'/trade-center?listing='+lid});
+    });
+    const tot=seen.size;
+    fill.style.width=Math.min(100,Math.round(scrolled/MAX*100))+'%';
+    ctr.textContent=tot+' trades';
+    if(tot===lastSize)stuckFor++;else{stuckFor=0;lastSize=tot;}
+    if(stuckFor>=STUCK||scrolled>=MAX){clearInterval(window._elveScan);window._elveScan=null;finish(false);return;}
+    window.scrollBy(0,SPX);scrolled++;
+  }
+
+  function finish(stopped){
+    const trades=[...seen.values()],json=JSON.stringify(trades);
+    fill.style.width='100%';fill.style.background=stopped?'#dc2626':'linear-gradient(90deg,#16a34a,#4ade80)';
+    bar.style.borderBottomColor=stopped?'#dc2626':'#4ade80';
+    ctr.textContent=trades.length+(stopped?' trades (stopped)':' trades ✅');
+    const sb=document.getElementById('_es');if(sb)sb.remove();
+    const copy=document.createElement('button'),close=document.createElement('button');
+    copy.textContent='📋 Copy '+trades.length+' Trades';
+    copy.style.cssText='padding:4px 12px;background:#7c3aed;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:800;font-size:12px;white-space:nowrap';
+    close.textContent='✕';close.style.cssText='padding:4px 10px;background:#334155;color:#94a3b8;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:12px';
+    close.onclick=()=>bar.remove();
+    copy.onclick=()=>{
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(json).then(()=>{copy.textContent='✅ Copied!';copy.style.background='#16a34a';}).catch(fb);}else fb();
+    };
+    function fb(){const ta=document.createElement('textarea');ta.value=json;ta.style.cssText='position:fixed;top:60px;left:50%;transform:translateX(-50%);width:80vw;height:120px;z-index:9999999;background:#1e293b;color:#e2e8f0;border:1px solid #a78bfa;border-radius:8px;padding:8px;font-size:11px';document.body.appendChild(ta);ta.select();}
+    const btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px';btns.appendChild(copy);btns.appendChild(close);
+    bar.querySelector('div').appendChild(btns);
+    copy.click();
+  }
+  window.scrollTo(0,0);setTimeout(()=>{scan();window._elveScan=setInterval(scan,TMS);},500);
+})();`;
+        }
+
+        // ── Build an "accept" script for a specific trade ─────────────────
+        // This is pasted on Elve AFTER the user decides which trade to accept.
+        // It finds the card by listing-id, draws a glowing overlay + click-to-accept button.
+        function buildElveAcceptScript(listingId) {
+            return `(()=>{
+  // Remove old highlight
+  const ob=document.getElementById('_elve_accept_overlay');if(ob)ob.remove();
+  const obB=document.getElementById('_elve_accept_bar');if(obB)obB.remove();
+
+  // Find the card
+  const card=document.querySelector('[data-listing-id="${listingId}"]');
+  if(!card){alert('Trade #${listingId} not found on screen — scroll down to load it, then run this script again.');return;}
+
+  // Scroll card into view
+  card.scrollIntoView({behavior:'smooth',block:'center'});
+
+  // Pulsing glow overlay
+  const ov=document.createElement('div');ov.id='_elve_accept_overlay';
+  const rect=()=>{const r=card.getBoundingClientRect();return{top:r.top+window.scrollY,left:r.left+window.scrollX,width:r.width,height:r.height};};
+  const r=rect();
+  ov.style.cssText=\`position:absolute;top:\${r.top-6}px;left:\${r.left-6}px;width:\${r.width+12}px;height:\${r.height+12}px;border-radius:18px;border:3px solid #a78bfa;box-shadow:0 0 0 4px #a78bfa44,0 0 30px 10px #7c3aed66;pointer-events:none;z-index:99998;animation:_elve_pulse 1.2s ease-in-out infinite alternate\`;
+  const style=document.createElement('style');style.textContent='@keyframes _elve_pulse{from{box-shadow:0 0 0 4px #a78bfa44,0 0 20px 8px #7c3aed44}to{box-shadow:0 0 0 8px #a78bfa88,0 0 50px 20px #7c3aed99}}';
+  document.head.appendChild(style);
+  document.body.appendChild(ov);
+
+  // Top bar with accept button
+  const bar=document.createElement('div');bar.id='_elve_accept_bar';
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;border-bottom:3px solid #a78bfa;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;font-family:system-ui,sans-serif;box-shadow:0 6px 30px rgba(0,0,0,.7)';
+  bar.innerHTML=\`
+    <div style="color:#e2e8f0;font-weight:800;font-size:13px">🦌 Trade #${listingId} highlighted ↓</div>
+    <div style="display:flex;gap:8px">
+      <button id="_elve_acc_btn" style="padding:6px 18px;background:#a78bfa;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:900;font-size:13px">✅ Accept Trade</button>
+      <button onclick="document.getElementById('_elve_accept_overlay').remove();document.getElementById('_elve_accept_bar').remove();" style="padding:6px 12px;background:#334155;color:#94a3b8;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px">✕ Cancel</button>
+    </div>
+  \`;
+  document.body.prepend(bar);
+
+  // Accept button: find and click Elve's own accept button on the card
+  document.getElementById('_elve_acc_btn').onclick=()=>{
+    const acceptBtn=card.querySelector('button.acceptButton,button[class*="accept"]');
+    if(acceptBtn){acceptBtn.click();document.getElementById('_elve_accept_bar').remove();document.getElementById('_elve_accept_overlay').remove();}
+    else{alert('Could not find the Accept button automatically — please click it manually (it\\'s inside the highlighted card).');}
+  };
+})();`;
+        }
+
+        // ── Elve paste & process ──────────────────────────────────────────
+        function elveProcessPaste() {
+            const raw = (document.getElementById('elvePasteBox') || {}).value || '';
+            if (!raw.trim()) return;
+            let trades;
+            try { trades = JSON.parse(raw.trim()); } catch(e) {
+                document.getElementById('elveResults').innerHTML = `<div style="color:#f87171;padding:12px;background:#1e293b;border-radius:8px;border:1px solid #f8717144">❌ Could not parse data. Paste the exact clipboard text from the script.</div>`;
+                return;
+            }
+            if (!Array.isArray(trades) || !trades.length) {
+                document.getElementById('elveResults').innerHTML = `<div style="color:#f87171;padding:12px;background:#1e293b;border-radius:8px;border:1px solid #f8717144">❌ No trades found in data.</div>`;
+                return;
+            }
+            renderElveResults(trades);
+        }
+
+        // ── Elve results renderer (like AMVGG but with accept button) ─────
+        function renderElveResults(trades) {
+            const el = document.getElementById('elveResults');
+            if (!el) return;
+
+            function getVerdict(lfVal, ofVal) {
+                if (lfVal === 0 && ofVal === 0) return 'unknown';
+                const r = lfVal > 0 ? ofVal / lfVal : 1;
+                if (r >= 1.03) return 'win';
+                if (r >= 0.97) return 'fair';
+                return 'loss';
+            }
+
+            function petCard(p) {
+                const val = scoutGetPetVal(p.name, p.variant);
+                const dem = scoutGetPetDemand(p.name);
+                const col = scoutVariantColor(p.variant);
+                const demColor = getDemandColor(dem);
+                const varBadge = col && p.variant !== 'Reg'
+                    ? `<div style="position:absolute;bottom:2px;right:2px;background:${col};color:white;border-radius:3px;padding:0px 3px;font-size:8px;font-weight:900;line-height:14px">${p.variant}</div>`
+                    : '';
+                return `<div style="display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #334155;border-radius:9px;padding:6px 5px;min-width:68px;max-width:84px;position:relative">
+                  <div style="position:relative;width:42px;height:42px;margin-bottom:3px">
+                    ${petImgTag(p.name,'width:42px;height:42px;object-fit:contain')}
+                    ${varBadge}
+                  </div>
+                  <div style="font-size:9px;font-weight:700;color:#cbd5e1;text-align:center;line-height:1.2;max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%">${p.name}</div>
+                  ${val > 0 ? `<div style="font-size:10px;font-weight:800;color:#60a5fa;margin-top:1px">${val.toFixed(2)}</div>` : ''}
+                  ${dem > 0 ? `<div style="font-size:9px;font-weight:700;color:${demColor}">Dem: ${dem}</div>` : ''}
+                </div>`;
+            }
+
+            const withVals = trades.map(t => {
+                const lfVal = (t.lf||[]).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
+                const ofVal = (t.offering||[]).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
+                return { ...t, lfVal, ofVal, diff: ofVal - lfVal, verd: getVerdict(lfVal, ofVal) };
+            });
+
+            let display = [...withVals];
+            const sf = window._elveSortFilter || 'all';
+            if (sf === 'winsonly') display = display.filter(t => t.verd === 'win' || t.verd === 'fair');
+            if (sf === 'strictwin') display = display.filter(t => t.verd === 'win');
+            display.sort((a, b) => b.diff - a.diff);
+
+            const toolbar = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+              <span style="font-weight:700;font-size:13px;color:var(--text)">${display.length} Trade${display.length===1?'':'s'} Found</span>
+              <div style="display:flex;gap:6px">
+                <button onclick="window._elveSortFilter='all';renderElveResults(${JSON.stringify('__PLACEHOLDER__')})" style="display:none"></button>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button onclick="window._elveSortFilter='all';elveRerender()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='all'?'#6366f1':'#334155'};background:${sf==='all'?'#6366f1':'transparent'};color:${sf==='all'?'white':'#94a3b8'}">All</button>
+                <button onclick="window._elveSortFilter='winsonly';elveRerender()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='winsonly'?'#eab308':'#334155'};background:${sf==='winsonly'?'#eab308':'transparent'};color:${sf==='winsonly'?'#000':'#94a3b8'}">⚖️ Hide Losses</button>
+                <button onclick="window._elveSortFilter='strictwin';elveRerender()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='strictwin'?'#22c55e':'#334155'};background:${sf==='strictwin'?'#22c55e':'transparent'};color:${sf==='strictwin'?'white':'#94a3b8'}">✅ Wins Only</button>
+              </div>
+            </div>`;
+
+            // Store trades for re-render on filter change
+            window._elveLastTrades = trades;
+
+            el.innerHTML = toolbar + `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">` +
+            display.map((t, idx) => {
+                const { lfVal, ofVal, diff, verd } = t;
+                const pct       = lfVal > 0 ? ((diff / lfVal) * 100).toFixed(1) : '?';
+                const verdictHTML = verd==='win' ? `<span style="color:#22c55e;font-weight:800;font-size:11px">✅ WIN</span>`
+                    : verd==='fair' ? `<span style="color:#eab308;font-weight:800;font-size:11px">⚖️ FAIR</span>`
+                    : `<span style="color:#f87171;font-weight:800;font-size:11px">❌ LOSS</span>`;
+                const borderCol = verd==='win'?'#16a34a55':verd==='fair'?'#ca8a0455':'#33415555';
+
+                // Elve's own diff value (from scanner) vs our calc value
+                const elveDiffStr = t.elveDiff != null ? `<span style="font-size:9px;color:#64748b;display:block">Elve: ${t.elveDiff > 0 ? '+' : ''}${t.elveDiff}</span>` : '';
+
+                return `<div style="background:var(--card-bg);border:1px solid ${borderCol};border-radius:12px;padding:10px">
+                  <!-- Header -->
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <div style="display:flex;align-items:center;gap:5px;min-width:0">
+                      ${t.avatar ? `<img src="${t.avatar}" style="width:18px;height:18px;border-radius:50%;border:1px solid #334155;flex-shrink:0">` : ''}
+                      <a href="${t.profileHref||'#'}" target="_blank" rel="noopener noreferrer"
+                        style="font-weight:700;color:#c084fc;text-decoration:none;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.username||'?'}</a>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;margin-left:4px">
+                      ${verdictHTML}
+                      <span style="font-size:13px;font-weight:900;color:white;background:${diff>=0?'#16a34a':'#dc2626'};border-radius:7px;padding:2px 8px;margin-top:2px">${diff>=0?'+':''}${diff.toFixed(2)}<span style="font-size:9px;opacity:0.85"> (${diff>=0?'+':''}${pct}%)</span></span>
+                      ${elveDiffStr}
+                    </div>
+                  </div>
+
+                  <!-- LF -->
+                  <div style="font-size:9px;font-weight:700;color:#60a5fa;margin-bottom:4px">🔍 LF <span style="color:#475569;font-weight:400">(${lfVal>0?lfVal.toFixed(2):'?'})</span></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+                    ${(t.lf||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
+                  </div>
+
+                  <!-- Offering -->
+                  <div style="font-size:9px;font-weight:700;color:#a78bfa;margin-bottom:4px">🤝 Offering <span style="color:#475569;font-weight:400">(${ofVal>0?ofVal.toFixed(2):'?'})</span></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+                    ${(t.offering||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
+                  </div>
+
+                  <!-- Time + Accept button -->
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px solid #1e293b;gap:5px">
+                    <span style="color:#475569;font-size:9px;flex-shrink:0">${t.time||''}</span>
+                    <button onclick="elveShowAccept(${JSON.stringify(t.listingId)})" style="flex:1;padding:5px 6px;border-radius:6px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap">
+                      ⚡ Accept This Trade
+                    </button>
+                  </div>
+                </div>`;
+            }).join('') + `</div>`;
+        }
+
+        function elveRerender() {
+            if (window._elveLastTrades) renderElveResults(window._elveLastTrades);
+        }
+
+        // ── Show accept modal with copyable script ────────────────────────
+        function elveShowAccept(listingId) {
+            const script = buildElveAcceptScript(listingId);
+            const existing = document.getElementById('elveAcceptModal');
+            if (existing) existing.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'elveAcceptModal';
+            modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+            modal.innerHTML = `
+              <div style="background:#0f172a;border:1px solid #a78bfa;border-radius:14px;padding:20px;max-width:480px;width:100%;box-shadow:0 0 60px rgba(124,58,237,.5)">
+                <div style="font-weight:800;font-size:15px;color:#e2e8f0;margin-bottom:6px">⚡ Accept Trade #${listingId}</div>
+                <div style="font-size:12px;color:#94a3b8;margin-bottom:12px">Copy this script, switch to Elve tab, open DevTools (F12) → Console, paste it and press Enter. It will highlight and help you accept the trade.</div>
+                <textarea readonly style="width:100%;height:90px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#a78bfa;font-size:10px;padding:8px;box-sizing:border-box;resize:none;font-family:monospace">${script.replace(/</g,'&lt;')}</textarea>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <button id="elveAcceptCopyBtn" onclick="
+                    navigator.clipboard.writeText(${JSON.stringify(script)}).then(()=>{
+                      this.textContent='✅ Copied! Switch to Elve tab';
+                      this.style.background='#16a34a';
+                    });
+                    window.open('https://www.elvebredd.com/trade-center?listing=${listingId}','_blank');
+                  " style="flex:1;padding:10px;background:#7c3aed;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:800;font-size:13px">
+                    📋 Copy & Open Elve
+                  </button>
+                  <button onclick="document.getElementById('elveAcceptModal').remove()" style="padding:10px 16px;background:#334155;color:#94a3b8;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            `;
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+            document.body.appendChild(modal);
+        }
+        window.elveShowAccept = elveShowAccept;
+
+        // ── Elve LF autocomplete (mirrors AMVGG version) ──────────────────
+        function scoutElveLFSearch(val) {
+            elveSelectedPet = '';
+            elveSelectedVariant = 'Any';
+            const drop = document.getElementById('scoutLFElveDrop');
+            const vrow = document.getElementById('scoutLFElveVariantRow');
+            if (vrow) vrow.style.display = 'none';
+            if (!drop) return;
+            const q = val.trim().toLowerCase();
+            if (!q) { drop.style.display = 'none'; return; }
+            const matches = ALL_PETS.filter(p => p.n.toLowerCase().includes(q))
+                .sort((a, b) => {
+                    const aS = a.n.toLowerCase().startsWith(q), bS = b.n.toLowerCase().startsWith(q);
+                    if (aS && !bS) return -1; if (!aS && bS) return 1;
+                    return (b.d||0) - (a.d||0);
+                }).slice(0, 12);
+            if (!matches.length) { drop.style.display = 'none'; return; }
+            drop.style.display = '';
+            drop.innerHTML = matches.map((p, i) => {
+                const dl = scoutDemandLabel(p.d||0);
+                return `<div data-idx="${i}" onmousedown="scoutElvePickPet('${p.n.replace(/'/g,"\\'")}')"
+                  style="padding:7px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12px;border-bottom:1px solid #1e293b"
+                  onmouseover="this.style.background='#334155'" onmouseout="this.style.background=''"
+                  ><span style="color:var(--text)">${p.n}</span><span style="color:${dl.color};font-size:10px">${dl.label} (${p.d||0})</span></div>`;
+            }).join('');
+            elveLFNavIdx = -1;
+        }
+
+        function scoutElvePickPet(name) {
+            elveSelectedPet = name;
+            const inp = document.getElementById('scoutLFElve');
+            const drop = document.getElementById('scoutLFElveDrop');
+            const vrow = document.getElementById('scoutLFElveVariantRow');
+            if (inp) inp.value = name;
+            if (drop) drop.style.display = 'none';
+            if (vrow) { vrow.style.display = 'flex'; scoutElveSetVariant('Any'); }
+        }
+
+        function scoutElveSetVariant(v) {
+            elveSelectedVariant = v;
+            ['Any','Reg','F','R','FR','Neon','NF','NR','NFR','Mega','MF','MR','MFR'].forEach(variant => {
+                const btn = document.getElementById('scoutElveVar_' + variant);
+                if (!btn) return;
+                const col = variant==='Any'?'#22c55e':variant==='Reg'?'#64748b':['MFR','MF','MR','Mega'].includes(variant)?'#f97316':['NFR','NF','NR','Neon'].includes(variant)?'#a78bfa':'#60a5fa';
+                btn.style.background  = variant===v ? col : 'transparent';
+                btn.style.color       = variant===v ? 'white' : col;
+                btn.style.borderColor = col + (variant===v ? '' : '44');
+            });
+        }
+
+        function scoutElveLFKey(e) {
+            const drop = document.getElementById('scoutLFElveDrop');
+            if (!drop || drop.style.display === 'none') return;
+            const items = drop.querySelectorAll('div[data-idx]');
+            if (e.key === 'ArrowDown') { elveLFNavIdx = Math.min(elveLFNavIdx+1, items.length-1); items.forEach((it,i) => it.style.background = i===elveLFNavIdx?'#334155':''); e.preventDefault(); }
+            else if (e.key === 'ArrowUp') { elveLFNavIdx = Math.max(elveLFNavIdx-1, 0); items.forEach((it,i) => it.style.background = i===elveLFNavIdx?'#334155':''); e.preventDefault(); }
+            else if (e.key === 'Enter' && elveLFNavIdx >= 0) { items[elveLFNavIdx].dispatchEvent(new MouseEvent('mousedown')); }
+            else if (e.key === 'Escape') { drop.style.display = 'none'; }
         }
 
         // ── Scout LF autocomplete ─────────────────────────────────────────────
