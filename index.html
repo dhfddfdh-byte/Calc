@@ -617,31 +617,7 @@
         .tag-penalty { background: rgba(245,158,11,0.18); color: #fcd34d; border: 1.5px solid rgba(245,158,11,0.5); }
         .tag-played { background: rgba(239,68,68,0.22); color: #f87171; border: 2px solid #ef4444; font-size: 0.8em; font-weight: 900; padding: 5px 14px; border-radius: 20px; animation: pulse 2s infinite; }
         .verdict-mobile-info { display: none; } /* shown only on mobile */
-
-        /* ── DOWNGRADE FINDER ── */
-        .dg-var-btn {
-            background: #1e293b; border: 1px solid var(--border); color: var(--subtext);
-            padding: 4px 10px; border-radius: 8px; font-size: 0.72em; font-weight: 800;
-            cursor: pointer; transition: 0.15s; font-family: inherit;
-        }
-        .dg-var-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
-        .dg-var-btn:hover { border-color: var(--accent); color: var(--accent); }
-        .dg-result-card {
-            background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-            padding: 14px; margin-bottom: 10px; transition: border-color 0.15s;
-        }
-        .dg-result-card:hover { border-color: var(--accent); }
-        .dg-bundle-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
-        .dg-pet-chip {
-            display: flex; align-items: center; gap: 6px; background: #0f172a;
-            border: 1px solid var(--border); border-radius: 10px; padding: 5px 8px;
-        }
-        .dg-chip-name { font-size: 0.75em; font-weight: 800; color: #cbd5e1; }
-        .dg-chip-val  { font-size: 0.68em; color: var(--frost); font-weight: 700; }
-        .dg-chip-dem  { font-size: 0.65em; color: var(--subtext); }
-        .dg-stats-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
-
-        /* ── TRENDS TAB ── */
+/* ── TRENDS TAB ── */
         .trends-grid { display: flex; flex-direction: column; gap: 6px; padding: 12px 16px; }
         .trends-card {
             display: flex; align-items: center; gap: 12px;
@@ -4478,69 +4454,6 @@ function startLastUpdatedTicker() {
                 }
             }
 
-            // ── SMART DOWNGRADE SECTION ───────────────────────────────────
-            let downgrades = [];
-            const highValPets = [...inventory]
-                .filter(p => calculatePetVal(p,'value') >= 5)
-                .sort((a,b) => calculatePetVal(b,'value') - calculatePetVal(a,'value'))
-                .slice(0, 5);
-
-            for (const anchor of highValPets) {
-                const anchorVal = calculatePetVal(anchor, 'value');
-                const anchorDem = parseFloat(getEffDemand(anchor));
-                for (let count = 2; count <= 4; count++) {
-                    const perPetTarget = anchorVal / count;
-                    const receivables = ALL_PETS.filter(t => {
-                        if (t.n === anchor.n) return false;
-                        const tv = calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value');
-                        if (tv < perPetTarget * 0.5 || tv > perPetTarget * 1.5) return false;
-                        if (t.d < 5 || isHTT(t.n)) return false;
-                        return true;
-                    }).sort((a,b) => {
-                        const lA = getLiquidityScore(a.n), lB = getLiquidityScore(b.n);
-                        return (b.d * 0.5 + lB * 5) - (a.d * 0.5 + lA * 5);
-                    }).slice(0, 8);
-
-                    if (receivables.length < count) continue;
-                    const combo = receivables.slice(0, count);
-                    const comboVal = combo.reduce((s,t) => s + calculatePetVal({...t,type:'reg',f_st:false,r_st:false},'value'), 0);
-                    const comboAvgDem = combo.reduce((s,t)=>s+t.d,0) / count;
-                    const comboAvgLiq = combo.reduce((s,t)=>s+getLiquidityScore(t.n),0) / count;
-
-                    if (comboVal < anchorVal * 0.97 || comboAvgDem < 5) continue;
-
-                    const valGainPct = ((comboVal - anchorVal) / anchorVal * 100).toFixed(1);
-                    const demGain    = (comboAvgDem - anchorDem).toFixed(1);
-                    const isDupe = downgrades.some(d => d.anchor.n === anchor.n);
-                    if (isDupe) continue;
-
-                    downgrades.push({ anchor, combo, comboVal, comboAvgDem, comboAvgLiq, valGainPct, demGain, anchorVal });
-                    break;
-                }
-            }
-
-            // ── CHAIN TRADE SECTION ───────────────────────────────────────
-            let chainTrade = null;
-            if (results.length < 2 && inventory.length > 0) {
-                // Only suggest chain trade if direct suggestions are sparse
-                const topCat = results[0]?.target ? getCatLabel(results[0].target) : 'High Tier';
-                chainTrade = findChainTrade(inventory, totalInvVal, 6, topCat);
-            }
-
-            // ── APPLY ACCEPT + WIN FILTERS ───────────────────────────────
-            const fsMinAccept = parseFloat((document.getElementById('fsMinAcceptFilter') || {}).value) || 0;
-            const fsMinWin    = parseFloat((document.getElementById('fsMinWinFilter')    || {}).value) || 0;
-            if (fsMinAccept > 0) results    = results.filter(r => (r.acceptPct || 0) >= fsMinAccept);
-            if (fsMinWin    > 0) results    = results.filter(r => parseFloat(r.valGapPct) >= fsMinWin);
-            if (fsMinAccept > 0) downgrades = downgrades.filter(r => {
-                const ap = getAcceptanceProbability(r.anchorVal, parseFloat(getEffDemand(r.anchor)), r.combo[0], [r.anchor]);
-                return ap >= fsMinAccept;
-            });
-
-            // ── RENDER ────────────────────────────────────────────────────
-            if (results.length === 0 && downgrades.length === 0) {
-                html += `<div style="font-size:0.75em;color:var(--subtext);margin-bottom:10px;padding:8px;background:#0f172a;border-radius:8px">${demTierAdvice}</div>`;
-                html += `<div class="ai-suggestion">No suitable trades found. Try adding more pets or switching to Velocity Mode.</div>`;
                 box.innerHTML = html;
                 return;
             }
@@ -4612,36 +4525,6 @@ function startLastUpdatedTicker() {
                     </div>
                     <div style="font-size:0.73em;color:#94a3b8;margin-top:4px">Sometimes the direct path doesn't exist — use a liquid bridge pet to unlock the trade.</div>
                 </div>`;
-            }
-
-            // Smart downgrades
-            if (downgrades.length > 0) {
-                html += `<div style="font-size:0.7em;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin:14px 0 8px">⬇️ SMART DOWNGRADES (gain liquidity)</div>`;
-                downgrades.forEach(d => {
-                    const valGainNum = parseFloat(d.valGainPct);
-                    const demGainNum = parseFloat(d.demGain);
-                    const gainColor  = valGainNum >= 0 ? 'var(--win)' : 'var(--lose)';
-                    const demColor   = demGainNum > 0 ? 'var(--win)' : demGainNum < -1 ? 'var(--lose)' : 'var(--subtext)';
-                    html += `<div class="ai-suggestion" style="border-left-color:#f59e0b">
-                        <div style="margin-bottom:4px">
-                            <span style="font-size:0.8em;color:var(--subtext)">Give:</span>
-                            <span style="font-weight:800;color:#cbd5e1"> ${getPetLabel(d.anchor)}</span>
-                            <span style="font-size:0.75em;color:var(--subtext);margin-left:4px">(${d.anchorVal.toFixed(2)})</span>
-                        </div>
-                        <div style="margin-bottom:5px">
-                            <span style="font-size:0.8em;color:var(--subtext)">Receive:</span>
-                            <span style="font-weight:800;color:#fbbf24"> ${d.combo.map(t=>t.n).join(' + ')}</span>
-                            <span style="font-size:0.75em;color:var(--subtext);margin-left:4px">(${d.comboVal.toFixed(2)})</span>
-                        </div>
-                        <div style="font-size:0.73em;color:#94a3b8;margin-bottom:5px">1 pet → ${d.combo.length} faster-moving pets · avg demand ${d.comboAvgDem.toFixed(1)} · liquidity ${(d.comboAvgLiq*100).toFixed(0)}%</div>
-                        <div class="ai-stats-row">
-                            <span class="ai-stat-pill" style="color:${gainColor};background:rgba(255,255,255,0.05)">Value: ${valGainNum>=0?'+':''}${d.valGainPct}%</span>
-                            <span class="ai-stat-pill" style="color:${demColor};background:rgba(255,255,255,0.05)">Dem: ${demGainNum>=0?'+':''}${d.demGain}</span>
-                            <span class="ai-stat-pill" style="background:#1e3a1e;color:#6ee7b7">${d.combo.length} received</span>
-                            <span class="ai-stat-pill" style="color:${(() => { const ap=getAcceptanceProbability(d.anchorVal, parseFloat(getEffDemand(d.anchor)), d.combo[0], [d.anchor]); return ap>=55?'#34d399':ap>=35?'#fbbf24':'#f87171'; })()}">~${getAcceptanceProbability(d.anchorVal, parseFloat(getEffDemand(d.anchor)), d.combo[0], [d.anchor])}% accept</span>
-                        </div>
-                    </div>`;
-                });
             }
 
             box.innerHTML = html;
@@ -5599,8 +5482,8 @@ function startLastUpdatedTicker() {
                       <!-- Variant buttons -->
                       <div id="scoutLFVariantRow" style="display:none;margin-top:7px;display:flex;gap:5px;flex-wrap:wrap">
                         <span style="font-size:10px;color:var(--subtext);font-weight:600;align-self:center">VARIANT:</span>
-                        ${['Reg','F','R','FR','Neon','NF','NR','NFR','Mega','MF','MR','MFR'].map(v => {
-                            const col = v==='Reg' ? '#64748b' : ['MFR','MF','MR','Mega'].includes(v) ? '#f97316' : ['NFR','NF','NR','Neon'].includes(v) ? '#a78bfa' : '#60a5fa';
+                        ${['Any','Reg','F','R','FR','Neon','NF','NR','NFR','Mega','MF','MR','MFR'].map(v => {
+                            const col = v==='Any' ? '#22c55e' : v==='Reg' ? '#64748b' : ['MFR','MF','MR','Mega'].includes(v) ? '#f97316' : ['NFR','NF','NR','Neon'].includes(v) ? '#a78bfa' : '#60a5fa';
                             return `<button onclick="scoutSetVariant('${v}')" id="scoutVar_${v}"
                               style="padding:2px 8px;border-radius:5px;border:1px solid ${col}44;background:transparent;color:${col};cursor:pointer;font-size:10px;font-weight:700">${v}</button>`;
                         }).join('')}
@@ -5641,15 +5524,17 @@ function startLastUpdatedTicker() {
                   <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:13px;margin-bottom:10px">
                     <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#60a5fa">📋 Step-by-Step Instructions</div>
                     <ol style="margin:0;padding-left:20px;font-size:12px;color:var(--subtext);line-height:2.1">
-                      <li>Open <a href="https://amvgg.com/trades" target="_blank" style="color:#a78bfa;font-weight:600">amvgg.com/trades</a> in your browser and wait for trades to load</li>
+                      <li>Click <b>Copy Script</b> below — it will copy the script <b>and open AMVGG</b> in a new tab automatically</li>
+                      <li><b style="color:#f59e0b">Log in</b> to your AMVGG account if you aren't already (top right corner)</li>
+                      <li>Wait for the trades to fully load on the page</li>
                       <li id="scoutStepWins" style="display:none"><b style="color:#22c55e">Click "Hide Losses"</b> at the top right of the trade list — this filters to winning trades only</li>
                       <li id="scoutStepLF" style="display:none"><b style="color:#60a5fa">Use the LF sort on AMVGG</b> to filter by <b>your own pet</b> (the one you're offering/trading away) — this narrows down listings that want what you have</li>
-                      <li>Press <b>F12</b> (or right-click → Inspect) to open DevTools</li>
+                      <li>Press <b>F12</b> (or right-click anywhere → Inspect) to open DevTools</li>
                       <li>Click the <b>Console</b> tab at the top of DevTools</li>
-                      <li>Click <b>Copy Script</b> below, paste it into the console, and press <b>Enter</b></li>
-                      <li>The script will <b>auto-scroll</b> the page finding trades — do not close the tab</li>
-                      <li>When finished, your clipboard will be filled and you'll see a ✅ notification on AMVGG</li>
-                      <li>Come back here and click <b>Paste &amp; Analyse</b> to see all trades with values and demand</li>
+                      <li>Paste the script into the console (<b>Ctrl+V</b> / <b>Cmd+V</b>) and press <b>Enter</b></li>
+                      <li>The script will <b>auto-scroll</b> and find trades — don't close the tab</li>
+                      <li>When done a <b>green bar</b> will appear saying your clipboard is ready</li>
+                      <li>Come back here and click <b>Paste &amp; Analyse</b> to see full trade analysis</li>
                     </ol>
                   </div>
 
@@ -5659,7 +5544,7 @@ function startLastUpdatedTicker() {
                       <span style="font-size:11px;color:#64748b;font-weight:700;letter-spacing:0.5px">GENERATED SCRIPT</span>
                       <button onclick="scoutCopyScript()" id="scoutCopyBtn"
                         style="padding:4px 14px;border-radius:6px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:11px;font-weight:700">
-                        📋 Copy Script
+                        📋 Copy Script &amp; Open AMVGG
                       </button>
                     </div>
                     <textarea id="scoutScriptBox" readonly
@@ -5754,7 +5639,8 @@ function startLastUpdatedTicker() {
             if (!box) return;
             navigator.clipboard.writeText(box.value).then(() => {
                 const btn = document.getElementById('scoutCopyBtn');
-                if (btn) { btn.textContent = '✅ Copied!'; btn.style.background = '#16a34a'; setTimeout(() => { btn.textContent = '📋 Copy Script'; btn.style.background = '#334155'; }, 2000); }
+                if (btn) { btn.textContent = '✅ Copied! Opening AMVGG...'; btn.style.background = '#16a34a'; setTimeout(() => { btn.textContent = '📋 Copy Script & Open AMVGG'; btn.style.background = '#334155'; }, 3000); }
+                window.open('https://amvgg.com/trades', '_blank');
             });
         }
 
@@ -5873,10 +5759,10 @@ function startLastUpdatedTicker() {
 
         function scoutSetVariant(v) {
             scoutLFVariant = v;
-            ['Reg','F','R','FR','Neon','NF','NR','NFR','Mega','MF','MR','MFR'].forEach(variant => {
+            ['Any','Reg','F','R','FR','Neon','NF','NR','NFR','Mega','MF','MR','MFR'].forEach(variant => {
                 const btn = document.getElementById('scoutVar_' + variant);
                 if (!btn) return;
-                const col = variant==='Reg' ? '#64748b' : ['MFR','MF','MR','Mega'].includes(variant) ? '#f97316' : ['NFR','NF','NR','Neon'].includes(variant) ? '#a78bfa' : '#60a5fa';
+                const col = variant==='Any' ? '#22c55e' : variant==='Reg' ? '#64748b' : ['MFR','MF','MR','Mega'].includes(variant) ? '#f97316' : ['NFR','NF','NR','Neon'].includes(variant) ? '#a78bfa' : '#60a5fa';
                 btn.style.background  = variant === v ? col : 'transparent';
                 btn.style.color       = variant === v ? 'white' : col;
                 btn.style.borderColor = col + (variant === v ? '' : '44');
@@ -5955,13 +5841,13 @@ function startLastUpdatedTicker() {
 
         function scoutLFPick(name, closeAfter) {
             scoutLFSelected = name;
-            scoutLFVariant  = 'Reg';
+            scoutLFVariant  = 'Any';
             const inp  = document.getElementById('scoutLF');
             const drop = document.getElementById('scoutLFDrop');
             const vrow = document.getElementById('scoutLFVariantRow');
             if (inp)  inp.value = name;
             if (drop && closeAfter) drop.style.display = 'none';
-            if (vrow) { vrow.style.display = 'flex'; scoutSetVariant('Reg'); }
+            if (vrow) { vrow.style.display = 'flex'; scoutSetVariant('Any'); }
         }
 
         // Close dropdown when clicking outside
@@ -6013,7 +5899,7 @@ function startLastUpdatedTicker() {
       const lf=parse(grids[0]);const offering=parse(grids[1]);
       // Filter by offering (what they're giving = what you want to receive)
       if(LF&&!offering.some(p=>p.name.toLowerCase().includes(LF)))return;
-      if(LF&&LFVARIANT&&!offering.some(p=>p.name.toLowerCase().includes(LF)&&(LFVARIANT==='Reg'?!['F','R','N','M'].some(x=>p.variant.includes(x)):p.variant===LFVARIANT)))return;
+      if(LF&&LFVARIANT&&LFVARIANT!=='Any'&&!offering.some(p=>p.name.toLowerCase().includes(LF)&&p.variant===LFVARIANT))return;
       found.push({username,profileHref,avatar,time,lf,offering});
     });
     return found;
@@ -6035,522 +5921,11 @@ function startLastUpdatedTicker() {
       });
       return;
     }
-    window.scrollBy(0,600);
+    window.scrollBy(0,1200);
     attempts++;
-  },800);
+  },400);
   scrape();
 })();`;
-        }
-
-        // ── DOWNGRADE FINDER ─────────────────────────────────────────────────
-        let dgSelectedPet  = null;   // base pet object from ALL_PETS
-        // Give-side: what variant YOUR pet is (single select)
-        let dgGiveType = 'reg', dgGiveFly = false, dgGiveRide = false;
-
-        function setDgGive(type, fly, ride) {
-            dgGiveType = type; dgGiveFly = fly; dgGiveRide = ride;
-            // Update active button
-            const map = {
-                'reg-false-false':'dgGiveReg','reg-true-false':'dgGiveF',
-                'reg-false-true':'dgGiveR',  'reg-true-true':'dgGiveFR',
-                'neon-false-false':'dgGiveNeon','neon-true-true':'dgGiveNFR',
-                'mega-false-false':'dgGiveMega','mega-true-true':'dgGiveMFR'
-            };
-            document.querySelectorAll('[id^="dgGive"]').forEach(b => b.classList.remove('active'));
-            const activeId = map[type+'-'+fly+'-'+ride];
-            if (activeId) { const el = document.getElementById(activeId); if (el) el.classList.add('active'); }
-            runDowngradeFinder();
-        }
-
-        // Set of active variants for receive side — user can pick multiple
-        const dgActiveVariants = new Set(['reg']); // default: reg only
-        const dgExcludedPets    = new Set();
-        const dgExcludedRarities = new Set();   // rarity strings to exclude
-        let   dgExcludeHTT      = false;
-        const dgLFPets          = new Set();    // pets user is looking for (prioritised)
-        let   _dgLFMatches      = [];
-
-        function toggleDgRarity(rarity) {
-            if (dgExcludedRarities.has(rarity)) {
-                dgExcludedRarities.delete(rarity);
-            } else {
-                dgExcludedRarities.add(rarity);
-            }
-            const idMap = { 'common':'dgExCommon','uncommon':'dgExUncommon','rare':'dgExRare','ultra rare':'dgExUltraRare','legendary':'dgExLegendary' };
-            const el = document.getElementById(idMap[rarity]);
-            if (el) {
-                const active = dgExcludedRarities.has(rarity);
-                el.style.background = active ? '#2d1a1a' : '#1e293b';
-                el.style.color      = active ? '#f87171' : 'var(--subtext)';
-                el.style.borderColor= active ? '#f8717166' : 'var(--border)';
-            }
-            runDowngradeFinder();
-        }
-
-        function toggleDgHTT() {
-            dgExcludeHTT = !dgExcludeHTT;
-            const el = document.getElementById('dgExHTT');
-            if (el) {
-                el.style.background = dgExcludeHTT ? '#2d1a1a' : '#1e293b';
-                el.style.color      = dgExcludeHTT ? '#f87171' : '#f87171';
-                el.style.borderColor= dgExcludeHTT ? '#f87171' : '#f8717144';
-                el.style.fontWeight = dgExcludeHTT ? '900' : '700';
-            }
-            runDowngradeFinder();
-        }
-
-        function dgLFAutocomplete(val) {
-            const dd = document.getElementById('dgLFDropdown');
-            if (!val || val.length < 2) { dd.style.display='none'; return; }
-            _dgLFMatches = ALL_PETS.filter(p => p.n.toLowerCase().includes(val.toLowerCase()) && !dgLFPets.has(p.n)).slice(0,6);
-            if (!_dgLFMatches.length) { dd.style.display='none'; return; }
-            dd.innerHTML = _dgLFMatches.map((p,i) =>
-                '<div style="padding:6px 10px;cursor:pointer;font-size:0.78em;border-bottom:1px solid var(--border)"' +
-                ' onmousedown="dgAddLF('+i+')">' + p.n + ' <span style="color:var(--subtext);float:right">d:' + p.d + '</span></div>'
-            ).join('');
-            dd.style.display = 'block';
-        }
-
-        function dgAddLF(i) {
-            const pet = _dgLFMatches[i];
-            if (!pet) return;
-            dgLFPets.add(pet.n);
-            document.getElementById('dgLFInput').value = '';
-            document.getElementById('dgLFDropdown').style.display = 'none';
-            renderDgLFChips();
-            runDowngradeFinder();
-        }
-
-        function dgRemoveLF(name) {
-            dgLFPets.delete(name);
-            renderDgLFChips();
-            runDowngradeFinder();
-        }
-        function dgRemoveLFByEl(el) {
-            const name = el.getAttribute('data-name');
-            if (name) dgRemoveLF(name);
-        }
-
-        function renderDgLFChips() {
-            const el = document.getElementById('dgLFChips');
-            if (!el) return;
-            el.innerHTML = [...dgLFPets].map(n =>
-                '<div style="display:flex;align-items:center;gap:4px;background:#1e3a1e;border:1px solid #34d39944;border-radius:6px;padding:2px 7px;font-size:0.72em;color:#34d399">' +
-                n + '<span style="cursor:pointer;margin-left:2px" onclick="dgRemoveLFByEl(this)" data-name="' + n.replace(/"/g,'&quot;') + '">&times;</span>' +
-                '</div>'
-            ).join('');
-        }
-
-        function setDgVariantAny() {
-            // "Any" = enable all variants
-            ['reg','f','r','fr','neon','nfr','mega','mfr'].forEach(k => dgActiveVariants.add(k));
-            const idMap = { reg:'dgVarReg', f:'dgVarF', r:'dgVarR', fr:'dgVarFR', neon:'dgVarNeon', nfr:'dgVarNFR', mega:'dgVarMega', mfr:'dgVarMFR' };
-            Object.entries(idMap).forEach(([k,id]) => {
-                const el = document.getElementById(id);
-                if (el) el.classList.add('active');
-            });
-            runDowngradeFinder();
-        }
-
-        let _dgExcludeMatches = [];
-        function dgExcludeAutocomplete(val) {
-            const dd = document.getElementById('dgExcludeDropdown');
-            if (!val || val.length < 2) { dd.style.display = 'none'; return; }
-            _dgExcludeMatches = ALL_PETS.filter(p => p.n.toLowerCase().includes(val.toLowerCase()) && !dgExcludedPets.has(p.n)).slice(0, 6);
-            if (!_dgExcludeMatches.length) { dd.style.display = 'none'; return; }
-            dd.innerHTML = _dgExcludeMatches.map((p, i) =>
-                '<div style="padding:6px 10px;cursor:pointer;font-size:0.78em;border-bottom:1px solid var(--border)"' +
-                ' onmousedown="dgAddExclude(' + i + ')">' + p.n + '</div>'
-            ).join('');
-            dd.style.display = 'block';
-        }
-
-        function dgAddExclude(i) {
-            const pet = _dgExcludeMatches[i];
-            if (!pet) return;
-            dgExcludedPets.add(pet.n);
-            document.getElementById('dgExcludeInput').value = '';
-            document.getElementById('dgExcludeDropdown').style.display = 'none';
-            renderDgExcludeChips();
-            runDowngradeFinder();
-        }
-
-        function dgRemoveExclude(name) {
-            dgExcludedPets.delete(name);
-            renderDgExcludeChips();
-            runDowngradeFinder();
-        }
-        function dgRemoveByName(el) {
-            const name = el.getAttribute('data-name');
-            if (name) dgRemoveExclude(name);
-        }
-
-        function renderDgExcludeChips() {
-            const el = document.getElementById('dgExcludedChips');
-            if (!el) return;
-            el.innerHTML = [...dgExcludedPets].map(n =>
-                '<div style="display:flex;align-items:center;gap:4px;background:#2d1a1a;border:1px solid #7f1d1d;border-radius:6px;padding:2px 6px;font-size:0.72em;color:#fca5a5">' +
-                n + '<span style="cursor:pointer;margin-left:2px;color:#f87171" onclick="dgRemoveByName(this)" data-name="' + n.replace(/"/g,'&quot;') + '">&times;</span>' +
-                '</div>'
-            ).join('');
-        }
-
-        let _dgMatchedPets = [];
-        function dgAutocomplete(val) {
-            const dd = document.getElementById('dgDropdown');
-            if (!val || val.length < 2) { dd.style.display = 'none'; return; }
-            _dgMatchedPets = ALL_PETS.filter(p => p.n.toLowerCase().includes(val.toLowerCase())).slice(0, 8);
-            if (!_dgMatchedPets.length) { dd.style.display = 'none'; return; }
-            dd.innerHTML = _dgMatchedPets.map((p, i) =>
-                '<div style="padding:7px 12px;cursor:pointer;font-size:0.82em;display:flex;justify-content:space-between;border-bottom:1px solid var(--border)"' +
-                ' onmousedown="dgSelectByIndex(' + i + ')">' +
-                '<span>' + p.n + '</span><span style="color:var(--subtext)">' + p.v + '</span></div>'
-            ).join('');
-            dd.style.display = 'block';
-        }
-
-        function dgSelectByIndex(i) {
-            const pet = _dgMatchedPets[i];
-            if (!pet) return;
-            dgSelectedPet = pet;
-            document.getElementById('dgPetInput').value = pet.n;
-            document.getElementById('dgDropdown').style.display = 'none';
-            runDowngradeFinder();
-        }
-
-        function dgSelectPet(name) {
-            const pet = ALL_PETS.find(p => p.n === name);
-            if (!pet) return;
-            dgSelectedPet = pet;
-            document.getElementById('dgPetInput').value = name;
-            document.getElementById('dgDropdown').style.display = 'none';
-            runDowngradeFinder();
-        }
-
-        function setDgVariant(key) {
-            // Toggle: add if not present, remove if already active (but keep at least one)
-            if (dgActiveVariants.has(key) && dgActiveVariants.size > 1) {
-                dgActiveVariants.delete(key);
-            } else {
-                dgActiveVariants.add(key);
-            }
-            // Update button states
-            const varKeys = ['reg','f','r','fr','neon','nfr','mega','mfr'];
-            const idMap = { reg:'dgVarReg', f:'dgVarF', r:'dgVarR', fr:'dgVarFR', neon:'dgVarNeon', nfr:'dgVarNFR', mega:'dgVarMega', mfr:'dgVarMFR' };
-            varKeys.forEach(k => {
-                const el = document.getElementById(idMap[k]);
-                if (el) el.classList.toggle('active', dgActiveVariants.has(k));
-            });
-            runDowngradeFinder();
-        }
-
-        let _dgRunTimeout = null;
-        function runDowngradeFinder() {
-            // Debounce to prevent lag on rapid filter changes
-            clearTimeout(_dgRunTimeout);
-            _dgRunTimeout = setTimeout(_doRunDowngradeFinder, 120);
-        }
-
-        // ── DOWNGRADE FINDER ENGINE ─────────────────────────────────────────
-        // Uses a JS generator to lazily produce combos — no freeze, no skip hacks.
-        // Each "Load More" resumes the generator from where it left off.
-
-        let _dgGenerator = null;   // active generator instance
-        let _dgGiveLabel = '';
-        let _dgGiveVal   = 0;
-        const PAGE_SIZE  = 5;
-
-        function _doRunDowngradeFinder() {
-            const resultsEl = document.getElementById('dgResults');
-            if (!dgSelectedPet) {
-                const name = (document.getElementById('dgPetInput').value||'').trim();
-                if (name) dgSelectedPet = ALL_PETS.find(p=>p.n.toLowerCase()===name.toLowerCase())||null;
-                if (!dgSelectedPet) return;
-            }
-
-            const givePet  = {...dgSelectedPet, type:dgGiveType, f_st:dgGiveFly, r_st:dgGiveRide};
-            const giveVal  = calculatePetVal(givePet,'value');
-            if (giveVal <= 0) { resultsEl.innerHTML='<div style="text-align:center;color:var(--subtext);padding:30px">No value for this variant.</div>'; return; }
-
-            const countFilter = parseInt(document.getElementById('dgCountFilter').value)||0;
-            const winMin      = parseFloat(document.getElementById('dgWinFilter').value)||0;
-            const demMin      = parseFloat(document.getElementById('dgAvgDemFilter').value)||0;
-            const minPerPet   = parseFloat(document.getElementById('dgMinDemFilter').value)||0;
-            const acceptMin   = parseFloat(document.getElementById('dgAcceptFilter').value)||0;
-            const catFilter   = document.getElementById('dgCatFilter').value;
-            const giveDem     = parseFloat(getEffDemand(givePet));
-            const lfNames     = new Set([...dgLFPets]);
-
-            // Variant specs for receive side
-            const variantSpecs = [];
-            if (dgActiveVariants.has('reg'))  variantSpecs.push({type:'reg', f_st:false,r_st:false});
-            if (dgActiveVariants.has('f'))    variantSpecs.push({type:'reg', f_st:true, r_st:false});
-            if (dgActiveVariants.has('r'))    variantSpecs.push({type:'reg', f_st:false,r_st:true});
-            if (dgActiveVariants.has('fr'))   variantSpecs.push({type:'reg', f_st:true, r_st:true});
-            if (dgActiveVariants.has('neon')) variantSpecs.push({type:'neon',f_st:false,r_st:false});
-            if (dgActiveVariants.has('nfr'))  variantSpecs.push({type:'neon',f_st:true, r_st:true});
-            if (dgActiveVariants.has('mega')) variantSpecs.push({type:'mega',f_st:false,r_st:false});
-            if (dgActiveVariants.has('mfr'))  variantSpecs.push({type:'mega',f_st:true, r_st:true});
-
-            // Build all candidates
-            const rawCandidates = [];
-            ALL_PETS.forEach(p => {
-                if (p.n === dgSelectedPet.n) return;
-                if (dgExcludedPets.has(p.n)) return;
-                if (dgExcludeHTT && isHTT(p.n)) return;
-                const pcat = (p.cat||'').toLowerCase();
-                for (const r of dgExcludedRarities) { if (pcat.includes(r)) return; }
-                if (catFilter !== 'all' && !pcat.includes(catFilter)) return;
-                variantSpecs.forEach(v => {
-                    const pc = {...p,...v};
-                    const pv = calculatePetVal(pc,'value');
-                    if (pv <= 0) return;
-                    rawCandidates.push({...pc, _val:pv, _dem:parseFloat(getEffDemand(pc))||0});
-                });
-            });
-
-            // Sort: LF pets first, then demand desc
-            rawCandidates.sort((a,b) => {
-                const aLF = lfNames.has(a.n)?1:0, bLF = lfNames.has(b.n)?1:0;
-                if (aLF !== bLF) return bLF - aLF;
-                return b._dem - a._dem;
-            });
-
-            // Cap at 150 (LF always included)
-            const lfCands   = rawCandidates.filter(p=>lfNames.has(p.n));
-            const nonLFCands = rawCandidates.filter(p=>!lfNames.has(p.n)).slice(0, 150 - lfCands.length);
-            const candidates = [...lfCands, ...nonLFCands];
-            const N = candidates.length;
-
-            // Build suffix max sums (value-sorted copy for pruning)
-            const valSorted = [...candidates].sort((a,b)=>b._val-a._val);
-            // suffixMax[i] = sum of candidates[i..N-1]._val (demand-sorted order)
-            const suffixMax = new Array(N+1).fill(0);
-            for (let i=N-1;i>=0;i--) suffixMax[i]=suffixMax[i+1]+candidates[i]._val;
-
-            const target   = giveVal*(1+Math.max(winMin,0)/100);
-            const targetMax= giveVal*3.0;
-            const sigSet   = new Set();
-            const varCount = {};
-
-            // Accept rate for downgrade context
-            function dgAccept(bundleVal, bundleSize) {
-                const ratio = giveVal/Math.max(bundleVal,0.01);
-                let prob = ratio>=1.30?72:ratio>=1.15?68:ratio>=1.05?62:ratio>=0.97?55:ratio>=0.90?42:ratio>=0.80?30:18;
-                if (bundleSize===2) prob-=3; else if (bundleSize===3) prob-=7;
-                else if (bundleSize===4) prob-=11; else if (bundleSize>=5) prob-=15;
-                if (giveDem>=9) prob+=8; else if (giveDem>=7) prob+=4;
-                return Math.max(5,Math.min(85,Math.round(prob)));
-            }
-
-            function checkBundle(bundle) {
-                const bv  = bundle.reduce((s,p)=>s+p._val,0);
-                const gain= (bv-giveVal)/giveVal*100;
-                if (gain < winMin) return null;
-                const overpay = bv - giveVal;
-                const avgDem  = bundle.reduce((s,p)=>s+p._dem,0)/bundle.length;
-                if (overpay > (avgDem<4?50:15)) return null;
-                if (avgDem < demMin) return null;
-                if (minPerPet>0 && bundle.some(p=>p._dem<minPerPet)) return null;
-                const ap = dgAccept(bv, bundle.length);
-                if (ap < acceptMin) return null;
-                // No dominant pet for 3+ bundles: no single pet > 60% of total
-                if (bundle.length>=3 && bundle.some(p=>p._val > bv*0.60)) return null;
-                // Max 3 of same exact variant
-                const vc={};
-                for (const p of bundle) {
-                    const k=p.n+'|'+p.type+'|'+(p.f_st?1:0)+'|'+(p.r_st?1:0);
-                    vc[k]=(vc[k]||0)+1; if (vc[k]>3) return null;
-                }
-                // Max 4 results per variant for variety
-                for (const k of Object.keys(vc)) { if ((varCount[k]||0)>=4) return null; }
-                const sig=bundle.map(p=>p.n+'|'+p.type+'|'+(p.f_st?1:0)+'|'+(p.r_st?1:0)).sort().join(',');
-                if (sigSet.has(sig)) return null;
-                return {sig,vc,bv,gain,avgDem,ap};
-            }
-
-            const bundleSizes = countFilter>0?[countFilter]:[2,3,4,5,6,7,8,9,10,12,15,18];
-
-            window._dgState = {
-                candidates, N, bundleSizes, sizeIdx:0,
-                stack:null, greedyStart:0, done:false,
-                target, targetMax, sigSet, varCount,
-                checkBundle, dgAccept, giveVal, givePet, giveDem,
-                suffixMax, lfNames
-            };
-            window._dgCollected = [];
-            window._dgLFBoost   = [...lfNames];
-            _dgGiveLabel = getPetLabel(givePet);
-            _dgGiveVal   = giveVal;
-
-            resultsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:30px">Searching...</div>';
-            requestAnimationFrame(()=>dgFetchMore(true));
-        }
-
-        function dgFetchNext(maxMs) {
-            const s = window._dgState;
-            if (!s||s.done) return [];
-            const {candidates,N,suffixMax,checkBundle,giveVal,givePet,giveDem,target,targetMax,lfNames} = s;
-            const found = [];
-            const deadline = Date.now()+maxMs;
-
-            function emitResult(bundle, v) {
-                s.sigSet.add(v.sig);
-                for (const k of Object.keys(v.vc)) s.varCount[k]=(s.varCount[k]||0)+1;
-                const tqs = scorePotentialTarget(bundle[0],giveVal,giveDem,[givePet]);
-                const lfBoost = bundle.some(p=>s.lfNames.has(p.n))?1:0;
-                found.push({bundle,bundleVal:v.bv,gain:v.gain,avgDem:v.avgDem,ap:v.ap,tqs,size:bundle.length,lfBoost});
-            }
-
-            outer:
-            while (Date.now()<deadline) {
-                if (s.sizeIdx >= s.bundleSizes.length) { s.done=true; break; }
-                const size = s.bundleSizes[s.sizeIdx];
-
-                // ── Large bundles (5+): greedy multi-start ────────────────────
-                if (size >= 5) {
-                    while (s.greedyStart < N && Date.now()<deadline) {
-                        const anchor = candidates[s.greedyStart++];
-                        const bundle = [anchor];
-                        let bv = anchor._val;
-                        const used = new Set([candidates.indexOf(anchor)]);
-                        for (let slot=1; slot<size; slot++) {
-                            const budget = targetMax - bv;
-                            const perSlot = (target*1.05 - bv) / (size-slot);
-                            let best=-1, bestScore=-Infinity;
-                            for (let j=0;j<N;j++) {
-                                if (used.has(j)) continue;
-                                const p=candidates[j];
-                                if (p._val>budget) continue;
-                                if (bundle.length>=2 && p._val>bv*0.6) continue; // no dominator
-                                const score=(lfNames.has(p.n)?1000:0)+p._dem*10-Math.abs(p._val-perSlot)*0.1;
-                                if (score>bestScore){bestScore=score;best=j;}
-                            }
-                            if (best<0) break;
-                            used.add(best); bundle.push(candidates[best]); bv+=candidates[best]._val;
-                        }
-                        if (bundle.length===size) {
-                            const v=checkBundle(bundle);
-                            if (v){emitResult(bundle,v); if(found.length>=5) break outer;}
-                        }
-                    }
-                    if (s.greedyStart>=N){s.greedyStart=0; s.sizeIdx++;}
-                    continue;
-                }
-
-                // ── Small bundles (2-4): iterative backtrack ──────────────────
-                if (!s.stack) {
-                    s.stack = [{idx:0, depth:size, current:[], currentVal:0, childIdx:0}];
-                }
-
-                while (s.stack.length>0) {
-                    if (Date.now()>=deadline) break outer;
-                    const frame = s.stack[s.stack.length-1];
-
-                    if (frame.depth===0) {
-                        s.stack.pop();
-                        const v=checkBundle(frame.current);
-                        if (v){emitResult(frame.current,v); if(found.length>=5) break outer;}
-                        continue;
-                    }
-
-                    // Prune: can we still reach target?
-                    if (frame.currentVal+suffixMax[frame.idx] < target) { s.stack.pop(); continue; }
-
-                    const maxI = N-frame.depth;
-                    if (frame.childIdx>maxI) { s.stack.pop(); continue; }
-
-                    const i=frame.childIdx++;
-                    const p=candidates[i];
-                    // Prune: already over max
-                    if (frame.currentVal+p._val>targetMax) { s.stack.pop(); continue; }
-                    // Prune: dominant pet early
-                    if (size>=3 && frame.depth>1 && frame.currentVal+p._val > target*0.65) continue;
-
-                    s.stack.push({idx:i+1, depth:frame.depth-1, current:[...frame.current,p], currentVal:frame.currentVal+p._val, childIdx:i+1});
-                }
-
-                if (s.stack.length===0) { s.stack=null; s.sizeIdx++; }
-            }
-
-            return found;
-        }
-
-        function dgFetchMore(isFirst) {
-            const prevLen = (window._dgCollected||[]).length;
-            const found = dgFetchNext(25);
-            window._dgCollected = (window._dgCollected||[]).concat(found);
-            const newCount = window._dgCollected.length - prevLen;
-
-            if (found.length===0 && window._dgState && !window._dgState.done) {
-                requestAnimationFrame(()=>dgFetchMore(isFirst));
-                return;
-            }
-            dgRenderResults(isFirst, newCount, window._dgState && !window._dgState.done);
-        }
-
-        function dgLoadMore() { dgFetchMore(false); }
-
-        function dgRenderResults(replaceAll, newCount, hasMore) {
-            const resultsEl = document.getElementById('dgResults');
-            const collected = window._dgCollected||[];
-            const giveLabel = _dgGiveLabel, giveVal = _dgGiveVal;
-
-            if (collected.length===0) {
-                if (!hasMore) resultsEl.innerHTML='<div style="text-align:center;color:var(--subtext);padding:40px">No downgrades found. Try widening filters or selecting more variant types.</div>';
-                return;
-            }
-
-            // Sort: LF first
-            if ((window._dgLFBoost||[]).length>0) collected.sort((a,b)=>(b.lfBoost||0)-(a.lfBoost||0));
-
-            const header = '<div style="font-size:0.7em;font-weight:900;color:var(--subtext);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">'+
-                collected.length+' combos for '+giveLabel+' ('+giveVal.toFixed(2)+')</div>';
-
-            const renderSlice = replaceAll ? collected : collected.slice(collected.length-Math.max(newCount,1));
-
-            const sz = (_dgZoom||32)+'px';
-            const cards = renderSlice.map(r=>{
-                const apColor = r.ap>=55?'#34d399':r.ap>=35?'#fbbf24':'#f87171';
-                const gainCol = r.gain>=5?'#34d399':r.gain>=0?'#fbbf24':'#f87171';
-                const demCol  = r.avgDem>=7?'#34d399':r.avgDem>=5?'#fbbf24':'#f87171';
-                const hasLF   = r.lfBoost?'<span style="background:#1e3a1e;color:#34d399;font-size:0.65em;font-weight:900;border-radius:4px;padding:1px 6px;border:1px solid #34d39944">✅ LF</span>':'';
-                const chips   = r.bundle.map(p=>{
-                    const lbl=getPetLabel(p);
-                    const badge=p.type==='neon'?'<span style="color:#34d399;font-size:0.65em;background:#1e3a1e;border-radius:4px;padding:0 4px">N</span>':
-                                p.type==='mega'?'<span style="color:#a855f7;font-size:0.65em;background:#2d1a4a;border-radius:4px;padding:0 4px">M</span>':'';
-                    return '<div class="dg-pet-chip">'+petImgTag(p.n,'width:'+sz+';height:'+sz+';object-fit:contain;flex-shrink:0')+
-                        '<div><div class="dg-chip-name">'+lbl+' '+badge+'</div>'+
-                        '<div class="dg-chip-val">'+p._val.toFixed(2)+'</div>'+
-                        '<div class="dg-chip-dem">Dem: '+p._dem.toFixed(1)+'</div></div></div>';
-                }).join('<span style="color:var(--subtext);font-size:1.2em">+</span>');
-                return '<div class="dg-result-card" style="'+(r.lfBoost?'border-color:#34d39966;':'')+'">'+
-                    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:0.72em;color:var(--subtext)">'+
-                        '<span style="font-weight:800;color:#cbd5e1">'+giveLabel+'</span><span>→</span>'+
-                        '<span style="font-weight:800;color:var(--frost)">'+r.bundle.length+' pets ('+r.bundleVal.toFixed(2)+')</span>'+
-                        hasLF+
-                    '</div>'+
-                    '<div class="dg-bundle-row">'+chips+'</div>'+
-                    '<div class="dg-stats-row">'+
-                        '<span class="ai-stat-pill" style="color:'+apColor+'">~'+r.ap+'% accept</span>'+
-                        '<span class="ai-stat-pill" style="color:'+gainCol+'">'+(r.gain>=0?'+':'')+r.gain.toFixed(1)+'% value</span>'+
-                        '<span class="ai-stat-pill" style="color:'+demCol+'">Avg Dem: '+r.avgDem.toFixed(1)+'</span>'+
-                        '<span class="ai-stat-pill" style="color:var(--subtext)">'+r.size+' pets</span>'+
-                    '</div></div>';
-            }).join('');
-
-            const loadMoreBtn = hasMore
-                ?'<div style="text-align:center;margin-top:14px"><button class="nav-btn" style="padding:8px 24px;font-weight:900" onclick="dgLoadMore()">Load More</button></div>'
-                :'<div style="text-align:center;color:var(--subtext);font-size:0.75em;margin-top:12px">All combinations found</div>';
-
-            if (replaceAll) {
-                resultsEl.innerHTML=header+cards+loadMoreBtn;
-            } else {
-                const oldBtn=resultsEl.lastElementChild; if(oldBtn) oldBtn.remove();
-                const hdr=resultsEl.firstElementChild;
-                if (hdr) hdr.textContent=collected.length+' combos for '+giveLabel+' ('+giveVal.toFixed(2)+')';
-                resultsEl.insertAdjacentHTML('beforeend',cards+loadMoreBtn);
-            }
         }
 
         // List state — type and zoom are independent per list
