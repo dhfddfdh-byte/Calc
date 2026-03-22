@@ -5756,73 +5756,91 @@ function startLastUpdatedTicker() {
                 return true;
             }
 
-            el.innerHTML = `<div style="font-weight:700;font-size:13px;margin-bottom:12px;color:var(--text)">${trades.length} Trade${trades.length===1?'':'s'} Found</div>` +
-            trades.map((t, idx) => {
-                const lfVal  = (t.lf      || []).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
-                const ofVal  = (t.offering|| []).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
-                const verd   = getVerdict(lfVal, ofVal);
-                const diff   = ofVal - lfVal;
-                const pct    = lfVal > 0 ? ((diff / lfVal) * 100).toFixed(1) : '?';
+            // ── Sort & filter trades ──────────────────────────────────────────
+            const withVals = trades.map(t => {
+                const lfVal = (t.lf||[]).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
+                const ofVal = (t.offering||[]).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
+                const diff  = ofVal - lfVal;
+                const verd  = getVerdict(lfVal, ofVal);
+                return { ...t, lfVal, ofVal, diff, verd };
+            });
+
+            // Apply current sort/filter from state
+            let display = [...withVals];
+            const sf = window._scoutSortFilter || 'all';
+            if (sf === 'winsonly')  display = display.filter(t => t.verd === 'win');
+            if (sf === 'noloss')    display = display.filter(t => t.verd !== 'loss');
+            // Always sort biggest gain first
+            display.sort((a, b) => b.diff - a.diff);
+
+            // ── Sort/filter toolbar ───────────────────────────────────────────
+            const toolbar = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+              <span style="font-weight:700;font-size:13px;color:var(--text)">${display.length} Trade${display.length===1?'':'s'} Found</span>
+              <div style="display:flex;gap:6px">
+                <button onclick="window._scoutSortFilter='all';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='all'?'#6366f1':'#334155'};background:${sf==='all'?'#6366f1':'transparent'};color:${sf==='all'?'white':'#94a3b8'}">All</button>
+                <button onclick="window._scoutSortFilter='noloss';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='noloss'?'#eab308':'#334155'};background:${sf==='noloss'?'#eab308':'transparent'};color:${sf==='noloss'?'#000':'#94a3b8'}">⚖️ Hide Losses</button>
+                <button onclick="window._scoutSortFilter='winsonly';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='winsonly'?'#22c55e':'#334155'};background:${sf==='winsonly'?'#22c55e':'transparent'};color:${sf==='winsonly'?'white':'#94a3b8'}">✅ Wins Only</button>
+              </div>
+            </div>`;
+
+            el.innerHTML = toolbar +
+            `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">` +
+            display.map((t, idx) => {
+                const { lfVal, ofVal, diff, verd } = t;
+                const pct       = lfVal > 0 ? ((diff / lfVal) * 100).toFixed(1) : '?';
                 const verdictHTML = verd === 'win'
-                    ? `<span style="color:#22c55e;font-weight:800;font-size:12px">✅ WIN</span>`
+                    ? `<span style="color:#22c55e;font-weight:800;font-size:11px">✅ WIN</span>`
                     : verd === 'fair'
-                    ? `<span style="color:#eab308;font-weight:800;font-size:12px">⚖️ FAIR</span>`
-                    : `<span style="color:#f87171;font-weight:800;font-size:12px">❌ LOSS</span>`;
+                    ? `<span style="color:#eab308;font-weight:800;font-size:11px">⚖️ FAIR</span>`
+                    : `<span style="color:#f87171;font-weight:800;font-size:11px">❌ LOSS</span>`;
                 const borderCol = verd==='win' ? '#16a34a55' : verd==='fair' ? '#ca8a0455' : '#33415555';
                 const diffCol   = diff >= 0 ? '#22c55e' : '#f87171';
                 const tradeId   = 'scout_trade_' + idx;
 
-                return `<div style="margin-bottom:12px;background:var(--card-bg);border:1px solid ${borderCol};border-radius:12px;padding:11px 12px">
-                  <!-- Header: avatar + username + verdict + time -->
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                    <div style="display:flex;align-items:center;gap:7px">
-                      ${t.avatar ? `<img src="${t.avatar}" style="width:22px;height:22px;border-radius:50%;border:1px solid #334155;flex-shrink:0">` : ''}
+                return `<div style="background:var(--card-bg);border:1px solid ${borderCol};border-radius:12px;padding:10px">
+                  <!-- Header -->
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                    <div style="display:flex;align-items:center;gap:5px;min-width:0">
+                      ${t.avatar ? `<img src="${t.avatar}" style="width:18px;height:18px;border-radius:50%;border:1px solid #334155;flex-shrink:0">` : ''}
                       <a href="${t.profileHref||'#'}" target="_blank" rel="noopener noreferrer"
-                        style="font-weight:700;color:#c084fc;text-decoration:none;font-size:12px"
+                        style="font-weight:700;color:#c084fc;text-decoration:none;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
                         onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${t.username||'?'}</a>
-                      <span style="color:#475569;font-size:10px">${t.time||''}</span>
                     </div>
-                    <div style="display:flex;gap:8px;align-items:center">
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;margin-left:4px">
                       ${verdictHTML}
-                      <span style="font-size:10px;font-weight:700;color:${diffCol}">${diff>=0?'+':''}${diff.toFixed(2)} (${diff>=0?'+':''}${pct}%)</span>
+                      <span style="font-size:13px;font-weight:900;color:white;background:${diff>=0?'#16a34a':'#dc2626'};border-radius:7px;padding:3px 9px;letter-spacing:0.3px;text-shadow:0 1px 3px rgba(0,0,0,.4)">${diff>=0?'+':''}${diff.toFixed(2)} (${diff>=0?'+':''}${pct}%)</span>
                     </div>
                   </div>
 
-                  <!-- Two columns: LF | Offering -->
-                  <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start">
-                    <!-- LF side (what they want = you give) -->
-                    <div>
-                      <div style="font-size:10px;font-weight:700;color:#60a5fa;margin-bottom:6px">🔍 LF <span style="color:#475569;font-weight:400">(${lfVal > 0 ? lfVal.toFixed(2) : '?'})</span></div>
-                      <div style="display:flex;flex-wrap:wrap;gap:5px">
-                        ${(t.lf||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:11px">—</span>'}
-                      </div>
-                    </div>
-                    <!-- Arrow -->
-                    <div style="display:flex;align-items:center;padding-top:28px;color:#475569;font-size:18px">⇄</div>
-                    <!-- Offering side (what they give = you receive) -->
-                    <div>
-                      <div style="font-size:10px;font-weight:700;color:#a78bfa;margin-bottom:6px">🤝 Offering <span style="color:#475569;font-weight:400">(${ofVal > 0 ? ofVal.toFixed(2) : '?'})</span></div>
-                      <div style="display:flex;flex-wrap:wrap;gap:5px">
-                        ${(t.offering||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:11px">—</span>'}
-                      </div>
-                    </div>
+                  <!-- LF pets -->
+                  <div style="font-size:9px;font-weight:700;color:#60a5fa;margin-bottom:4px">🔍 LF <span style="color:#475569;font-weight:400">(${lfVal>0?lfVal.toFixed(2):'?'})</span></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+                    ${(t.lf||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
                   </div>
 
-                  <!-- Save button -->
-                  <div style="margin-top:10px;padding-top:8px;border-top:1px solid #1e293b;display:flex;justify-content:flex-end">
+                  <!-- Offering pets -->
+                  <div style="font-size:9px;font-weight:700;color:#a78bfa;margin-bottom:4px">🤝 Offering <span style="color:#475569;font-weight:400">(${ofVal>0?ofVal.toFixed(2):'?'})</span></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+                    ${(t.offering||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
+                  </div>
+
+                  <!-- Time + save -->
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px solid #1e293b">
+                    <span style="color:#475569;font-size:9px">${t.time||''}</span>
                     <button id="${tradeId}_btn" onclick="
-                      if(saveScoutTrade(${JSON.stringify(t).replace(/"/g,'&quot;')},${idx})){
-                        this.textContent='✅ Saved to Trade Board';
+                      const td=${JSON.stringify(JSON.stringify(t))};
+                      if(window.saveScoutTrade(JSON.parse(td),${idx})){
+                        this.textContent='✅ Saved';
                         this.style.background='#16a34a';
                         this.style.color='white';
                         this.disabled=true;
                       }
-                    " style="padding:5px 14px;border-radius:7px;background:#1e293b;border:1px solid #334155;color:#94a3b8;cursor:pointer;font-size:11px;font-weight:700">
-                      📋 Save to Trade Board
+                    " style="padding:3px 10px;border-radius:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;cursor:pointer;font-size:10px;font-weight:700">
+                      📋 Save
                     </button>
                   </div>
                 </div>`;
-            }).join('');
+            }).join('') + `</div>`;
 
             // Expose saveScoutTrade globally so inline onclick can call it
             window.saveScoutTrade = saveScoutTrade;
