@@ -5588,9 +5588,23 @@ function startLastUpdatedTicker() {
                   <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--text)">⚙️ Filters</div>
                   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
                     <div>
-                      <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">LF PET (optional)</label>
-                      <input id="scoutLF" placeholder="e.g. Parrot"
-                        style="width:100%;box-sizing:border-box;background:var(--input-bg,#0f172a);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 9px;font-size:12px;font-family:inherit">
+                      <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">PET YOU WANT TO RECEIVE (optional)</label>
+                      <div style="position:relative" id="scoutLFWrap">
+                        <input id="scoutLF" placeholder="Type to search pets..." autocomplete="off"
+                          style="width:100%;box-sizing:border-box;background:var(--input-bg,#0f172a);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 9px;font-size:12px;font-family:inherit"
+                          oninput="scoutLFSearch(this.value)"
+                          onkeydown="scoutLFKeyNav(event)">
+                        <div id="scoutLFDrop" style="display:none;position:absolute;top:100%;left:0;right:0;background:#1e293b;border:1px solid #334155;border-radius:0 0 8px 8px;max-height:180px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.5)"></div>
+                      </div>
+                      <!-- Variant buttons -->
+                      <div id="scoutLFVariantRow" style="display:none;margin-top:7px;display:flex;gap:5px;flex-wrap:wrap">
+                        <span style="font-size:10px;color:var(--subtext);font-weight:600;align-self:center">VARIANT:</span>
+                        ${['Reg','F','R','FR','Neon','NF','NR','NFR','Mega','MF','MR','MFR'].map(v => {
+                            const col = v==='Reg' ? '#64748b' : ['MFR','MF','MR','Mega'].includes(v) ? '#f97316' : ['NFR','NF','NR','Neon'].includes(v) ? '#a78bfa' : '#60a5fa';
+                            return `<button onclick="scoutSetVariant('${v}')" id="scoutVar_${v}"
+                              style="padding:2px 8px;border-radius:5px;border:1px solid ${col}44;background:transparent;color:${col};cursor:pointer;font-size:10px;font-weight:700">${v}</button>`;
+                        }).join('')}
+                      </div>
                     </div>
                     <div>
                       <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">HOW MANY TRADES</label>
@@ -5629,7 +5643,7 @@ function startLastUpdatedTicker() {
                     <ol style="margin:0;padding-left:20px;font-size:12px;color:var(--subtext);line-height:2.1">
                       <li>Open <a href="https://amvgg.com/trades" target="_blank" style="color:#a78bfa;font-weight:600">amvgg.com/trades</a> in your browser and wait for trades to load</li>
                       <li id="scoutStepWins" style="display:none"><b style="color:#22c55e">Click "Hide Losses"</b> at the top right of the trade list — this filters to winning trades only</li>
-                      <li id="scoutStepLF" style="display:none"><b style="color:#60a5fa">Use the LF sort</b> on AMVGG to filter by your LF pet if you want even faster results</li>
+                      <li id="scoutStepLF" style="display:none"><b style="color:#60a5fa">Use the LF sort on AMVGG</b> to filter by <b>your own pet</b> (the one you're offering/trading away) — this narrows down listings that want what you have</li>
                       <li>Press <b>F12</b> (or right-click → Inspect) to open DevTools</li>
                       <li>Click the <b>Console</b> tab at the top of DevTools</li>
                       <li>Click <b>Copy Script</b> below, paste it into the console, and press <b>Enter</b></li>
@@ -5710,24 +5724,24 @@ function startLastUpdatedTicker() {
             // Update step visibility in instructions if visible
             const stepWins = document.getElementById('scoutStepWins');
             const stepLF   = document.getElementById('scoutStepLF');
-            const lfVal    = (document.getElementById('scoutLF') || {}).value || '';
+            const lfVal    = scoutLFSelected || (document.getElementById('scoutLF') || {}).value || '';
             if (stepWins) stepWins.style.display = f==='win' ? '' : 'none';
             if (stepLF)   stepLF.style.display   = lfVal.trim() ? '' : 'none';
         }
 
         function scoutGenerateScript() {
-            const lfVal    = (document.getElementById('scoutLF')    || {}).value || '';
-            const countVal = parseInt((document.getElementById('scoutCount') || {}).value) || 10;
+            const lfVal     = scoutLFSelected || (document.getElementById('scoutLF') || {}).value || '';
+            const lfVariant = scoutLFVariant || 'Reg';
+            const countVal  = parseInt((document.getElementById('scoutCount') || {}).value) || 10;
             const filterWin = scoutFilter === 'win';
 
             // Update instruction steps
             const stepWins = document.getElementById('scoutStepWins');
             const stepLF   = document.getElementById('scoutStepLF');
-            if (stepWins) stepWins.style.display = filterWin     ? '' : 'none';
-            if (stepLF)   stepLF.style.display   = lfVal.trim()  ? '' : 'none';
+            if (stepWins) stepWins.style.display = filterWin    ? '' : 'none';
+            if (stepLF)   stepLF.style.display   = lfVal.trim() ? '' : 'none';
 
-            // Build the self-contained inspect element script
-            const script = buildScoutScript(lfVal.trim(), countVal, filterWin);
+            const script = buildScoutScript(lfVal.trim(), lfVariant, countVal, filterWin);
             const box    = document.getElementById('scoutScriptBox');
             if (box) box.value = script;
 
@@ -5852,11 +5866,119 @@ function startLastUpdatedTicker() {
             }).join('');
         }
 
+        // ── Scout LF autocomplete ─────────────────────────────────────────────
+        let scoutLFSelected = '';   // exact pet name chosen from dropdown
+        let scoutLFVariant  = 'Reg'; // chosen variant
+        let scoutLFNavIdx   = -1;   // keyboard nav index
+
+        function scoutSetVariant(v) {
+            scoutLFVariant = v;
+            ['Reg','F','R','FR','Neon','NF','NR','NFR','Mega','MF','MR','MFR'].forEach(variant => {
+                const btn = document.getElementById('scoutVar_' + variant);
+                if (!btn) return;
+                const col = variant==='Reg' ? '#64748b' : ['MFR','MF','MR','Mega'].includes(variant) ? '#f97316' : ['NFR','NF','NR','Neon'].includes(variant) ? '#a78bfa' : '#60a5fa';
+                btn.style.background  = variant === v ? col : 'transparent';
+                btn.style.color       = variant === v ? 'white' : col;
+                btn.style.borderColor = col + (variant === v ? '' : '44');
+            });
+        }
+
+        function scoutLFSearch(val) {
+            scoutLFSelected = ''; // clear selection when typing
+            scoutLFVariant  = 'Reg';
+            const drop = document.getElementById('scoutLFDrop');
+            const vrow = document.getElementById('scoutLFVariantRow');
+            if (vrow) vrow.style.display = 'none';
+            if (!drop) return;
+            const q = val.trim().toLowerCase();
+            if (!q) { drop.style.display = 'none'; return; }
+
+            const matches = ALL_PETS
+                .filter(p => p.n.toLowerCase().includes(q))
+                .sort((a, b) => {
+                    // exact start match first
+                    const aStart = a.n.toLowerCase().startsWith(q);
+                    const bStart = b.n.toLowerCase().startsWith(q);
+                    if (aStart && !bStart) return -1;
+                    if (!aStart && bStart) return 1;
+                    return a.n.localeCompare(b.n);
+                })
+                .slice(0, 12);
+
+            if (!matches.length) { drop.style.display = 'none'; return; }
+
+            scoutLFNavIdx = -1;
+            drop.innerHTML = matches.map((p, i) =>
+                `<div data-idx="${i}" data-name="${p.n}"
+                  onmousedown="scoutLFPick('${p.n.replace(/'/g,"\\'")}',true)"
+                  onmouseover="scoutLFHighlight(${i})"
+                  style="padding:7px 10px;cursor:pointer;font-size:12px;color:var(--text);display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #1e293b">
+                  <span>${p.n}</span>
+                  <span style="font-size:10px;color:var(--subtext)">${p.d || 0} dem</span>
+                </div>`
+            ).join('');
+            drop.style.display = 'block';
+        }
+
+        function scoutLFHighlight(idx) {
+            scoutLFNavIdx = idx;
+            const items = document.querySelectorAll('#scoutLFDrop [data-idx]');
+            items.forEach((el, i) => {
+                el.style.background = i === idx ? '#334155' : '';
+            });
+        }
+
+        function scoutLFKeyNav(e) {
+            const drop  = document.getElementById('scoutLFDrop');
+            const items = drop ? [...drop.querySelectorAll('[data-idx]')] : [];
+            if (!items.length) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                scoutLFNavIdx = Math.min(scoutLFNavIdx + 1, items.length - 1);
+                scoutLFHighlight(scoutLFNavIdx);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                scoutLFNavIdx = Math.max(scoutLFNavIdx - 1, 0);
+                scoutLFHighlight(scoutLFNavIdx);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (scoutLFNavIdx >= 0 && items[scoutLFNavIdx]) {
+                    scoutLFPick(items[scoutLFNavIdx].dataset.name, true);
+                } else if (items.length > 0) {
+                    scoutLFPick(items[0].dataset.name, true);
+                }
+            } else if (e.key === 'Escape') {
+                const drop = document.getElementById('scoutLFDrop');
+                if (drop) drop.style.display = 'none';
+            }
+        }
+
+        function scoutLFPick(name, closeAfter) {
+            scoutLFSelected = name;
+            scoutLFVariant  = 'Reg';
+            const inp  = document.getElementById('scoutLF');
+            const drop = document.getElementById('scoutLFDrop');
+            const vrow = document.getElementById('scoutLFVariantRow');
+            if (inp)  inp.value = name;
+            if (drop && closeAfter) drop.style.display = 'none';
+            if (vrow) { vrow.style.display = 'flex'; scoutSetVariant('Reg'); }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('mousedown', e => {
+            const wrap = document.getElementById('scoutLFWrap');
+            if (wrap && !wrap.contains(e.target)) {
+                const drop = document.getElementById('scoutLFDrop');
+                if (drop) drop.style.display = 'none';
+            }
+        });
+
         // ── Build the self-contained inspect element script ───────────────────
-        function buildScoutScript(lfFilter, wantCount, winsOnly) {
+        function buildScoutScript(lfFilter, lfVariant, wantCount, winsOnly) {
             return `(function(){
   if(document.getElementById('_amvS')){document.getElementById('_amvS').remove();return;}
   const LF=${JSON.stringify(lfFilter.toLowerCase())};
+  const LFVARIANT=${JSON.stringify(lfVariant||'')};
   const WANT=${wantCount};
   // Show a small status bar
   const bar=document.createElement('div');
@@ -5889,7 +6011,9 @@ function startLastUpdatedTicker() {
         return{name:img.alt.trim(),variant:getV(c)};
       }).filter(Boolean);
       const lf=parse(grids[0]);const offering=parse(grids[1]);
-      if(LF&&!lf.some(p=>p.name.toLowerCase().includes(LF))&&!offering.some(p=>p.name.toLowerCase().includes(LF)))return;
+      // Filter by offering (what they're giving = what you want to receive)
+      if(LF&&!offering.some(p=>p.name.toLowerCase().includes(LF)))return;
+      if(LF&&LFVARIANT&&!offering.some(p=>p.name.toLowerCase().includes(LF)&&(LFVARIANT==='Reg'?!['F','R','N','M'].some(x=>p.variant.includes(x)):p.variant===LFVARIANT)))return;
       found.push({username,profileHref,avatar,time,lf,offering});
     });
     return found;
@@ -5897,7 +6021,8 @@ function startLastUpdatedTicker() {
   let attempts=0;const MAX=80;
   window._amvInt=setInterval(()=>{
     const trades=scrape();
-    st.textContent='🔄 Scanning... '+trades.length+'/'+WANT+' trades found (scroll '+attempts+'/'+MAX+')';
+    const varLabel=LFVARIANT&&LFVARIANT!=='Reg'?' ['+LFVARIANT+']':'';
+    st.textContent='🔄 Scanning'+(LF?' for '+LF+varLabel:'')+': '+trades.length+'/'+WANT+' trades found (scroll '+attempts+'/'+MAX+')';
     if(trades.length>=WANT||attempts>=MAX){
       clearInterval(window._amvInt);
       const json=JSON.stringify(trades);
