@@ -6296,6 +6296,8 @@ function startLastUpdatedTicker() {
             return `(()=>{
   if(window._elveScan){clearInterval(window._elveScan);window._elveScan=null;}
   const ob=document.getElementById('_elve_scan_bar');if(ob)ob.remove();
+  function _closeBar(){var b=document.getElementById('_elve_scan_bar');if(b)b.remove();}
+  function _copyFbTa(btn){var t=document.getElementById('_elve_fb_ta');if(t){t.select();document.execCommand('copy');btn.textContent='\u2705 Copied!';btn.style.background='#16a34a';setTimeout(function(){window.close();},800);}}
   const bar=document.createElement('div');bar.id='_elve_scan_bar';
   bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:4px solid #a78bfa;box-shadow:0 8px 40px rgba(0,0,0,.9)';
   bar.innerHTML=\`<div style="padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:20px">
@@ -6397,17 +6399,17 @@ function startLastUpdatedTicker() {
         +'<div style="font-size:13px;color:#86efac;">Head back to the calc \u2192 Trade Scout \u2192 Elve tab \u2192 Paste & Analyse</div>'
         +closingDiv
         +'</div>'
-        +'<button onclick="window.close()||document.getElementById(\'_elve_scan_bar\').remove()" style="flex-shrink:0;padding:14px 28px;border-radius:10px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:16px;font-weight:900">\u2715 Close Tab</button>'
+        +'<button onclick="window.close();_closeBar()" style="flex-shrink:0;padding:14px 28px;border-radius:10px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:16px;font-weight:900">\u2715 Close Tab</button>'
         +'</div>';
     }
     function showFallback(data){
       bar.innerHTML='<div style="padding:18px 24px">'
         +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
         +'<div style="font-size:16px;font-weight:900;color:#fbbf24">\u26a0 Clipboard blocked \u2014 copy manually then close</div>'
-        +'<button onclick="window.close()||document.getElementById(\'_elve_scan_bar\').remove()" style="padding:10px 22px;border-radius:9px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:800">\u2715 Close Tab</button>'
+        +'<button onclick="window.close();_closeBar()" style="padding:10px 22px;border-radius:9px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:14px;font-weight:800">\u2715 Close Tab</button>'
         +'</div>'
         +'<textarea id="_elve_fb_ta" style="width:100%;height:160px;background:#0f172a;color:#e2e8f0;border:2px solid #a78bfa;border-radius:10px;padding:12px;font-size:12px;font-family:monospace;box-sizing:border-box;resize:vertical">'+data+'</textarea>'
-        +'<button onclick="document.getElementById(\'_elve_fb_ta\').select();document.execCommand(\'copy\');this.textContent=\'\u2705 Copied!\';this.style.background=\'#16a34a\';setTimeout(function(){window.close();},800)" style="margin-top:10px;padding:10px 24px;border-radius:8px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:14px;font-weight:900">\U0001f4cb Copy All</button>'
+        +'<button onclick="_copyFbTa(this)" style="margin-top:10px;padding:10px 24px;border-radius:8px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:14px;font-weight:900">\U0001f4cb Copy All</button>'
         +'</div>';
     }
     doCopy();
