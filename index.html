@@ -5820,41 +5820,58 @@ function startLastUpdatedTicker() {
             const el = document.getElementById('scoutResults');
             if (!el) return;
 
-            // ── Verdict thresholds matching the calc ──────────────────────────
-            // WIN = receiving >= 3% more value, FAIR = within 3%, LOSS = receiving less
+            // Store for re-render — build stable pet map keyed by username+time
+            window._scoutLastTrades = trades;
+            if (!window._scoutPetMap || window._scoutPetMap.__src !== trades) {
+                window._scoutPetMap = { __src: trades };
+                trades.forEach(t => {
+                    const k = (t.username||'') + (t.time||'');
+                    window._scoutPetMap[k] = { lf: JSON.parse(JSON.stringify(t.lf||[])), offering: JSON.parse(JSON.stringify(t.offering||[])) };
+                });
+            }
+            if (!window._scoutHidden) window._scoutHidden = new Set();
+            if (!window._scoutZoom)   window._scoutZoom   = 2; // default 2-col
+
             function getVerdict(lfVal, ofVal) {
                 if (lfVal === 0 && ofVal === 0) return 'unknown';
-                const ratio = lfVal > 0 ? ofVal / lfVal : 1;
-                if (ratio >= 1.03) return 'win';
-                if (ratio >= 0.97) return 'fair';
+                const r = lfVal > 0 ? ofVal / lfVal : 1;
+                if (r >= 1.03) return 'win';
+                if (r >= 0.97) return 'fair';
                 return 'loss';
             }
 
-            // ── Pet card (mini version matching calc style) ───────────────────
-            function petCard(p) {
+            function demandBar(pets) {
+                // Show each pet's demand as a colored pill
+                const items = pets.map(p => {
+                    const d  = scoutGetPetDemand(p.name);
+                    const dl = scoutDemandLabel(d);
+                    return `<span style="display:inline-flex;align-items:center;gap:3px;background:${dl.color}22;border:1px solid ${dl.color}55;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:${dl.color}">${dl.label.split(' ')[0]} ${d > 0 ? d : '?'}</span>`;
+                }).join('');
+                return `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${items}</div>`;
+            }
+
+            function petCard(p, zoom, tradeKey, side, petIdx) {
                 const val = scoutGetPetVal(p.name, p.variant);
-                const dem = scoutGetPetDemand(p.name);
                 const col = scoutVariantColor(p.variant);
-                const demColor = getDemandColor(dem);
+                const sz  = zoom === 1 ? 52 : zoom === 2 ? 44 : 38;
                 const varBadge = col && p.variant !== 'Reg'
-                    ? `<div style="position:absolute;bottom:2px;right:2px;background:${col};color:white;border-radius:3px;padding:0px 3px;font-size:8px;font-weight:900;line-height:14px">${p.variant}</div>`
+                    ? `<div style="position:absolute;bottom:2px;right:2px;background:${col};color:white;border-radius:3px;padding:0 3px;font-size:8px;font-weight:900;line-height:14px">${p.variant}</div>`
                     : '';
-                return `<div style="display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #334155;border-radius:9px;padding:7px 6px;min-width:72px;max-width:88px;position:relative">
-                  <div style="position:relative;width:44px;height:44px;margin-bottom:4px">
-                    ${petImgTag(p.name,'width:44px;height:44px;object-fit:contain')}
+                const removeBtn = `<button onclick="scoutRemovePet('${tradeKey}','${side}',${petIdx})"
+                  style="position:absolute;top:-5px;left:-5px;width:16px;height:16px;border-radius:50%;background:#ef4444;border:none;color:white;cursor:pointer;font-size:9px;font-weight:900;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;z-index:3"
+                  title="Remove pet">✕</button>`;
+                return `<div style="display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #334155;border-radius:9px;padding:6px 5px;min-width:${sz+28}px;max-width:${sz+44}px;position:relative">
+                  ${removeBtn}
+                  <div style="position:relative;width:${sz}px;height:${sz}px;margin-bottom:3px">
+                    ${petImgTag(p.name,'width:'+sz+'px;height:'+sz+'px;object-fit:contain')}
                     ${varBadge}
                   </div>
-                  <div style="font-size:9px;font-weight:700;color:#cbd5e1;text-align:center;line-height:1.2;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%">${p.name}</div>
-                  ${val > 0 ? `<div style="font-size:10px;font-weight:800;color:#60a5fa;margin-top:2px">${val.toFixed(2)}</div>` : ''}
-                  ${dem > 0 ? `<div style="font-size:9px;font-weight:700;color:${demColor}">Dem: ${dem}</div>` : ''}
+                  <div style="font-size:9px;font-weight:700;color:#cbd5e1;text-align:center;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%">${p.name}</div>
+                  ${val > 0 ? `<div style="font-size:10px;font-weight:800;color:#60a5fa;margin-top:1px">${val.toFixed(2)}</div>` : ''}
                 </div>`;
             }
 
-            // ── Save to pending trade board ───────────────────────────────────
             function saveScoutTrade(t, idx) {
-                // Convert scout pets to trade board format
-                // LF = what THEY want (so we offer it) = offerPets for us
-                // Offering = what THEY give (so we request it) = requestPets for us
                 const toTBPet = (p) => ({
                     n: p.name,
                     type: ['Neon','NFR','NF','NR'].includes(p.variant) ? 'neon'
@@ -5869,39 +5886,40 @@ function startLastUpdatedTicker() {
                     notes: 'From Trade Scout · ' + (t.username||'') + ' · ' + (t.time||''),
                     offerPets:   (t.lf||[]).map(toTBPet),
                     requestPets: (t.offering||[]).map(toTBPet),
-                    createdAt: Date.now(),
-                    postedAt:  Date.now(),
-                    cooldown: 120,
-                    alertFired: false,
-                    autoRepost: false,
+                    createdAt: Date.now(), postedAt: Date.now(),
+                    cooldown: 120, alertFired: false, autoRepost: false,
                 };
-                let trades = tbLoad();
-                trades.push(trade);
-                tbSave(trades);
-                tbTrades = trades;
+                let saved = tbLoad(); saved.push(trade); tbSave(saved); tbTrades = saved;
                 return true;
             }
 
-            // ── Sort & filter trades ──────────────────────────────────────────
-            const withVals = trades.map(t => {
-                const lfVal = (t.lf||[]).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
-                const ofVal = (t.offering||[]).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
-                const diff  = ofVal - lfVal;
-                const verd  = getVerdict(lfVal, ofVal);
-                return { ...t, lfVal, ofVal, diff, verd };
+            const withValsComputed = trades.map(t => {
+                const tk = (t.username||'') + (t.time||'');
+                const pm = window._scoutPetMap && window._scoutPetMap[tk];
+                const lf  = pm ? pm.lf       : (t.lf||[]);
+                const off = pm ? pm.offering  : (t.offering||[]);
+                const lfVal = lf.reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
+                const ofVal = off.reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
+                return { ...t, _lf: lf, _offering: off, lfVal, ofVal, diff: ofVal - lfVal, verd: getVerdict(lfVal, ofVal) };
             });
 
-            // Apply current sort/filter from state
-            let display = [...withVals];
+            let display = withValsComputed.filter(t => !window._scoutHidden.has(t.username + (t.time||'')));
             const sf = window._scoutSortFilter || 'all';
-            if (sf === 'winsonly')  display = display.filter(t => t.verd === 'win');
-            if (sf === 'noloss')    display = display.filter(t => t.verd !== 'loss');
-            // Always sort biggest gain first
+            if (sf === 'winsonly') display = display.filter(t => t.verd === 'win');
+            if (sf === 'noloss')   display = display.filter(t => t.verd !== 'loss');
             display.sort((a, b) => b.diff - a.diff);
 
-            // ── Sort/filter toolbar ───────────────────────────────────────────
+            const zoom = window._scoutZoom;
+            const zBtn = (z, label) => `<button onclick="window._scoutZoom=${z};renderScoutResults(window._scoutLastTrades)"
+              style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${zoom===z?'#6366f1':'#334155'};background:${zoom===z?'#6366f1':'transparent'};color:${zoom===z?'white':'#94a3b8'}">${label}</button>`;
+
             const toolbar = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-              <span style="font-weight:700;font-size:13px;color:var(--text)">${display.length} Trade${display.length===1?'':'s'} Found</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-weight:700;font-size:13px;color:var(--text)">${display.length} Trade${display.length===1?'':'s'}</span>
+                <div style="display:flex;gap:4px">
+                  ${zBtn(1,'1')}${zBtn(2,'2')}${zBtn(3,'3')}
+                </div>
+              </div>
               <div style="display:flex;gap:6px">
                 <button onclick="window._scoutSortFilter='all';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='all'?'#6366f1':'#334155'};background:${sf==='all'?'#6366f1':'transparent'};color:${sf==='all'?'white':'#94a3b8'}">All</button>
                 <button onclick="window._scoutSortFilter='noloss';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='noloss'?'#eab308':'#334155'};background:${sf==='noloss'?'#eab308':'transparent'};color:${sf==='noloss'?'#000':'#94a3b8'}">⚖️ Hide Losses</button>
@@ -5909,23 +5927,29 @@ function startLastUpdatedTicker() {
               </div>
             </div>`;
 
+            const cols = zoom === 1 ? '1fr' : zoom === 2 ? '1fr 1fr' : '1fr 1fr 1fr';
+
             el.innerHTML = toolbar +
-            `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">` +
+            `<div style="display:grid;grid-template-columns:${cols};gap:10px">` +
             display.map((t, idx) => {
                 const { lfVal, ofVal, diff, verd } = t;
                 const pct       = lfVal > 0 ? ((diff / lfVal) * 100).toFixed(1) : '?';
-                const verdictHTML = verd === 'win'
-                    ? `<span style="color:#22c55e;font-weight:800;font-size:11px">✅ WIN</span>`
-                    : verd === 'fair'
-                    ? `<span style="color:#eab308;font-weight:800;font-size:11px">⚖️ FAIR</span>`
+                const key       = t.username + (t.time||'');
+                const verdictHTML = verd==='win'  ? `<span style="color:#22c55e;font-weight:800;font-size:11px">✅ WIN</span>`
+                    : verd==='fair' ? `<span style="color:#eab308;font-weight:800;font-size:11px">⚖️ FAIR</span>`
                     : `<span style="color:#f87171;font-weight:800;font-size:11px">❌ LOSS</span>`;
-                const borderCol = verd==='win' ? '#16a34a55' : verd==='fair' ? '#ca8a0455' : '#33415555';
-                const diffCol   = diff >= 0 ? '#22c55e' : '#f87171';
+                const borderCol = verd==='win'?'#16a34a55':verd==='fair'?'#ca8a0455':'#33415555';
                 const tradeId   = 'scout_trade_' + idx;
+                const tKey      = (t.username||'') + (t.time||'');
 
-                return `<div style="background:var(--card-bg);border:1px solid ${borderCol};border-radius:12px;padding:10px">
+                return `<div style="background:var(--card-bg);border:1px solid ${borderCol};border-radius:12px;padding:10px;position:relative">
+                  <!-- Remove trade button -->
+                  <button onclick="window._scoutHidden.add('${key.replace(/'/g,"\\'")}');renderScoutResults(window._scoutLastTrades)"
+                    style="position:absolute;top:7px;right:7px;width:20px;height:20px;border-radius:50%;background:#1e293b;border:1px solid #334155;color:#64748b;cursor:pointer;font-size:11px;font-weight:900;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;z-index:2"
+                    title="Remove trade">✕</button>
+
                   <!-- Header -->
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-right:24px">
                     <div style="display:flex;align-items:center;gap:5px;min-width:0">
                       ${t.avatar ? `<img src="${t.avatar}" style="width:18px;height:18px;border-radius:50%;border:1px solid #334155;flex-shrink:0">` : ''}
                       <a href="${t.profileHref||'#'}" target="_blank" rel="noopener noreferrer"
@@ -5934,49 +5958,62 @@ function startLastUpdatedTicker() {
                     </div>
                     <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;margin-left:4px">
                       ${verdictHTML}
-                      <span style="font-size:13px;font-weight:900;color:white;background:${diff>=0?'#16a34a':'#dc2626'};border-radius:7px;padding:3px 9px;letter-spacing:0.3px;text-shadow:0 1px 3px rgba(0,0,0,.4)">${diff>=0?'+':''}${diff.toFixed(2)} (${diff>=0?'+':''}${pct}%)</span>
+                      <span style="font-size:13px;font-weight:900;color:white;background:${diff>=0?'#16a34a':'#dc2626'};border-radius:7px;padding:3px 9px;letter-spacing:0.3px;text-shadow:0 1px 3px rgba(0,0,0,.4)">${diff>=0?'+':''}${diff.toFixed(2)}<span style="font-size:9px;opacity:0.85"> (${diff>=0?'+':''}${pct}%)</span></span>
                     </div>
                   </div>
 
-                  <!-- LF pets -->
+                  <!-- LF -->
                   <div style="font-size:9px;font-weight:700;color:#60a5fa;margin-bottom:4px">🔍 LF <span style="color:#475569;font-weight:400">(${lfVal>0?lfVal.toFixed(2):'?'})</span></div>
-                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
-                    ${(t.lf||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">
+                    ${(t._lf||[]).map((p,pi) => petCard(p, zoom, tKey, 'lf', pi)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
                   </div>
+                  ${(t._lf||[]).length ? demandBar(t._lf) : ''}
 
-                  <!-- Offering pets -->
-                  <div style="font-size:9px;font-weight:700;color:#a78bfa;margin-bottom:4px">🤝 Offering <span style="color:#475569;font-weight:400">(${ofVal>0?ofVal.toFixed(2):'?'})</span></div>
-                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
-                    ${(t.offering||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
+                  <!-- Offering -->
+                  <div style="font-size:9px;font-weight:700;color:#a78bfa;margin-bottom:4px;margin-top:8px">🤝 Offering <span style="color:#475569;font-weight:400">(${(t._offering||[]).reduce((s,p)=>s+scoutGetPetVal(p.name,p.variant),0).toFixed(2)})</span></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">
+                    ${(t._offering||[]).map((p,pi) => petCard(p, zoom, tKey, 'offering', pi)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
                   </div>
+                  ${(t._offering||[]).length ? demandBar(t._offering) : ''}
 
-                  <!-- Time + save -->
-                  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px solid #1e293b">
+                  <!-- Footer -->
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;margin-top:8px;border-top:1px solid #1e293b">
                     <span style="color:#475569;font-size:9px">${t.time||''}</span>
-                    <div style="display:flex;gap:5px;align-items:center">
-                      ${t.listingId ? `<button onclick="window.elveShowLocator(${JSON.stringify(JSON.stringify(t))})"
-                        style="padding:3px 10px;border-radius:6px;background:#1e293b;border:1px solid #a78bfa44;color:#a78bfa;cursor:pointer;font-size:10px;font-weight:700">
-                        🎯 Find on Elve
-                      </button>` : ''}
-                      <button id="${tradeId}_btn" onclick="
-                        const td=${JSON.stringify(JSON.stringify(t))};
-                        if(window.saveScoutTrade(JSON.parse(td),${idx})){
-                          this.textContent='✅ Saved';
-                          this.style.background='#16a34a';
-                          this.style.color='white';
-                          this.disabled=true;
-                        }
-                      " style="padding:3px 10px;border-radius:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;cursor:pointer;font-size:10px;font-weight:700">
-                        📋 Save
-                      </button>
-                    </div>
+                    <button id="${tradeId}_btn" onclick="
+                      const td=${JSON.stringify(JSON.stringify(t))};
+                      if(window.saveScoutTrade(JSON.parse(td),${idx})){
+                        this.textContent='✅ Saved';
+                        this.style.background='#16a34a';
+                        this.style.color='white';
+                        this.disabled=true;
+                      }
+                    " style="padding:3px 10px;border-radius:6px;background:#1e293b;border:1px solid #334155;color:#94a3b8;cursor:pointer;font-size:10px;font-weight:700">
+                      📋 Save
+                    </button>
                   </div>
                 </div>`;
             }).join('') + `</div>`;
 
-            // Expose saveScoutTrade globally so inline onclick can call it
             window.saveScoutTrade = saveScoutTrade;
         }
+
+        // ── Scout: remove a pet from the pet map and re-render ──────────────
+        function scoutRemovePet(tKey, side, petIdx) {
+            const pm = window._scoutPetMap;
+            if (!pm || !pm[tKey]) return;
+            pm[tKey][side] = (pm[tKey][side] || []).filter((_,i) => i !== petIdx);
+            renderScoutResults(window._scoutLastTrades);
+        }
+        window.scoutRemovePet = scoutRemovePet;
+
+        // ── Elve: remove a pet from the elve pet map and re-render ────────────
+        function elveRemovePet(tKey, side, petIdx) {
+            const pm = window._elvePetMap;
+            if (!pm || !pm[tKey]) return;
+            pm[tKey][side] = (pm[tKey][side] || []).filter((_,i) => i !== petIdx);
+            elveRerender();
+        }
+        window.elveRemovePet = elveRemovePet;
 
         // ════════════════════════════════════════════════════════════════
         // ELVE SCOUT — script builder, accept script, paste handler
@@ -6184,19 +6221,19 @@ function startLastUpdatedTicker() {
   if(window._elveScan){clearInterval(window._elveScan);window._elveScan=null;}
   const ob=document.getElementById('_elve_scan_bar');if(ob)ob.remove();
   const bar=document.createElement('div');bar.id='_elve_scan_bar';
-  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:3px solid #a78bfa;box-shadow:0 6px 30px rgba(0,0,0,.7)';
-  bar.innerHTML=\`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;gap:12px">
-    <div style="font-weight:800;font-size:13px;color:#a78bfa;white-space:nowrap">🦌 Elve Scanner</div>
-    <div style="flex:1;background:#1e293b;border-radius:99px;height:8px;overflow:hidden"><div id="_ef" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;transition:width 0.3s"></div></div>
-    <div id="_ec" style="font-size:12px;font-weight:700;color:#cbd5e1;white-space:nowrap">0 trades</div>
-    <button id="_es" style="padding:4px 12px;background:#dc2626;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:800;font-size:12px">■ Stop</button>
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:4px solid #a78bfa;box-shadow:0 8px 40px rgba(0,0,0,.8)';
+  bar.innerHTML=\`<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;gap:16px">
+    <div style="font-weight:900;font-size:16px;color:#a78bfa;white-space:nowrap">🦌 Elve Scanner</div>
+    <div style="flex:1;background:#1e293b;border-radius:99px;height:12px;overflow:hidden;border:1px solid #334155"><div id="_ef" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:99px;transition:width 0.3s"></div></div>
+    <div id="_ec" style="font-size:15px;font-weight:900;color:#cbd5e1;white-space:nowrap">0 trades</div>
+    <button id="_es" style="padding:10px 20px;background:#dc2626;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:800;font-size:14px">■ Stop</button>
   </div>\`;
   document.body.prepend(bar);
   const fill=document.getElementById('_ef'),ctr=document.getElementById('_ec');
   document.getElementById('_es').onclick=()=>{clearInterval(window._elveScan);window._elveScan=null;finish(true);};
 
   const seen=new Map();let scrolled=0,stuckFor=0,lastSize=0;
-  const MAX=400,SPX=800,TMS=600,STUCK=8;
+  const MAX=400,SPX=1200,TMS=500,STUCK=20;
   const OFFER_FILTER=${JSON.stringify(offerPet)};
   const OFFER_VAR=${JSON.stringify(offerVar)};
   const RECV_FILTER=${JSON.stringify(recvPet)};
@@ -6258,7 +6295,17 @@ function startLastUpdatedTicker() {
     close.textContent='✕';close.style.cssText='padding:4px 10px;background:#334155;color:#94a3b8;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:12px';
     close.onclick=()=>bar.remove();
     copy.onclick=()=>{
-      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(json).then(()=>{copy.textContent='✅ Copied! Tab closing…';copy.style.background='#16a34a';setTimeout(()=>window.close(),1800);}).catch(fb);}else fb();
+      if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(json).then(()=>{
+        copy.textContent='✅ Copied! Tab closing…';
+        copy.style.background='#16a34a';
+        // Try auto-close; replace copy button with manual close fallback
+        setTimeout(()=>window.close(),800);
+        const closeBtn=document.createElement('button');
+        closeBtn.textContent='✕ Close Tab';
+        closeBtn.style.cssText='padding:4px 12px;background:#16a34a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:800;font-size:12px;white-space:nowrap';
+        closeBtn.onclick=()=>window.close();
+        copy.parentNode.insertBefore(closeBtn,copy.nextSibling);
+      }).catch(fb);}else fb();
     };
     function fb(){const ta=document.createElement('textarea');ta.value=json;ta.style.cssText='position:fixed;top:55px;left:5%;right:5%;width:90vw;height:220px;z-index:9999999;background:#0f172a;color:#e2e8f0;border:2px solid #a78bfa;border-radius:12px;padding:14px;font-size:12px;font-family:monospace;box-shadow:0 8px 40px rgba(124,58,237,.5)';document.body.appendChild(ta);ta.select();}
     const btns=document.createElement('div');btns.style.cssText='display:flex;gap:6px';btns.appendChild(copy);btns.appendChild(close);
@@ -6336,6 +6383,17 @@ function startLastUpdatedTicker() {
             const el = document.getElementById('elveResults');
             if (!el) return;
 
+            window._elveLastTrades = trades;
+            if (!window._elvePetMap || window._elvePetMap.__src !== trades) {
+                window._elvePetMap = { __src: trades };
+                trades.forEach(t => {
+                    const k = t.listingId || ((t.username||'') + (t.time||''));
+                    window._elvePetMap[k] = { lf: JSON.parse(JSON.stringify(t.lf||[])), offering: JSON.parse(JSON.stringify(t.offering||[])) };
+                });
+            }
+            if (!window._elveHidden) window._elveHidden = new Set();
+            if (!window._elveZoom)   window._elveZoom   = 2;
+
             function getVerdict(lfVal, ofVal) {
                 if (lfVal === 0 && ofVal === 0) return 'unknown';
                 const r = lfVal > 0 ? ofVal / lfVal : 1;
@@ -6344,41 +6402,60 @@ function startLastUpdatedTicker() {
                 return 'loss';
             }
 
-            function petCard(p) {
+            function demandBar(pets) {
+                const items = pets.map(p => {
+                    const d  = scoutGetPetDemand(p.name);
+                    const dl = scoutDemandLabel(d);
+                    return `<span style="display:inline-flex;align-items:center;gap:3px;background:${dl.color}22;border:1px solid ${dl.color}55;border-radius:6px;padding:2px 7px;font-size:10px;font-weight:800;color:${dl.color}">${dl.label.split(' ')[0]} ${d > 0 ? d : '?'}</span>`;
+                }).join('');
+                return `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${items}</div>`;
+            }
+
+            function petCard(p, zoom, tradeKey, side, petIdx) {
                 const val = scoutGetPetVal(p.name, p.variant);
-                const dem = scoutGetPetDemand(p.name);
                 const col = scoutVariantColor(p.variant);
-                const demColor = getDemandColor(dem);
+                const sz  = zoom === 1 ? 52 : zoom === 2 ? 44 : 38;
                 const varBadge = col && p.variant !== 'Reg'
-                    ? `<div style="position:absolute;bottom:2px;right:2px;background:${col};color:white;border-radius:3px;padding:0px 3px;font-size:8px;font-weight:900;line-height:14px">${p.variant}</div>`
+                    ? `<div style="position:absolute;bottom:2px;right:2px;background:${col};color:white;border-radius:3px;padding:0 3px;font-size:8px;font-weight:900;line-height:14px">${p.variant}</div>`
                     : '';
-                return `<div style="display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #334155;border-radius:9px;padding:6px 5px;min-width:68px;max-width:84px;position:relative">
-                  <div style="position:relative;width:42px;height:42px;margin-bottom:3px">
-                    ${petImgTag(p.name,'width:42px;height:42px;object-fit:contain')}
+                const removeBtn = `<button onclick="elveRemovePet('${tradeKey}','${side}',${petIdx})"
+                  style="position:absolute;top:-5px;left:-5px;width:16px;height:16px;border-radius:50%;background:#ef4444;border:none;color:white;cursor:pointer;font-size:9px;font-weight:900;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;z-index:3"
+                  title="Remove pet">✕</button>`;
+                return `<div style="display:flex;flex-direction:column;align-items:center;background:#0f172a;border:1px solid #334155;border-radius:9px;padding:6px 5px;min-width:${sz+28}px;max-width:${sz+44}px;position:relative">
+                  ${removeBtn}
+                  <div style="position:relative;width:${sz}px;height:${sz}px;margin-bottom:3px">
+                    ${petImgTag(p.name,'width:'+sz+'px;height:'+sz+'px;object-fit:contain')}
                     ${varBadge}
                   </div>
-                  <div style="font-size:9px;font-weight:700;color:#cbd5e1;text-align:center;line-height:1.2;max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%">${p.name}</div>
+                  <div style="font-size:9px;font-weight:700;color:#cbd5e1;text-align:center;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%">${p.name}</div>
                   ${val > 0 ? `<div style="font-size:10px;font-weight:800;color:#60a5fa;margin-top:1px">${val.toFixed(2)}</div>` : ''}
-                  ${dem > 0 ? `<div style="font-size:9px;font-weight:700;color:${demColor}">Dem: ${dem}</div>` : ''}
                 </div>`;
             }
 
             const withVals = trades.map(t => {
-                const lfVal = (t.lf||[]).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
-                const ofVal = (t.offering||[]).reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
-                return { ...t, lfVal, ofVal, diff: ofVal - lfVal, verd: getVerdict(lfVal, ofVal) };
+                const tk  = t.listingId || ((t.username||'') + (t.time||''));
+                const pm  = window._elvePetMap && window._elvePetMap[tk];
+                const lf  = pm ? pm.lf      : (t.lf||[]);
+                const off = pm ? pm.offering : (t.offering||[]);
+                const lfVal = lf.reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
+                const ofVal = off.reduce((s,p) => s + scoutGetPetVal(p.name, p.variant), 0);
+                return { ...t, _lf: lf, _offering: off, lfVal, ofVal, diff: ofVal - lfVal, verd: getVerdict(lfVal, ofVal) };
             });
 
-            let display = [...withVals];
+            let display = withVals.filter(t => !window._elveHidden.has(t.listingId || (t.username+(t.time||''))));
             const sf = window._elveSortFilter || 'all';
-            if (sf === 'winsonly') display = display.filter(t => t.verd === 'win' || t.verd === 'fair');
+            if (sf === 'winsonly')  display = display.filter(t => t.verd === 'win' || t.verd === 'fair');
             if (sf === 'strictwin') display = display.filter(t => t.verd === 'win');
             display.sort((a, b) => b.diff - a.diff);
 
+            const zoom = window._elveZoom;
+            const zBtn = (z, label) => `<button onclick="window._elveZoom=${z};elveRerender()"
+              style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${zoom===z?'#6366f1':'#334155'};background:${zoom===z?'#6366f1':'transparent'};color:${zoom===z?'white':'#94a3b8'}">${label}</button>`;
+
             const toolbar = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-              <span style="font-weight:700;font-size:13px;color:var(--text)">${display.length} Trade${display.length===1?'':'s'} Found</span>
-              <div style="display:flex;gap:6px">
-                <button onclick="window._elveSortFilter='all';renderElveResults(${JSON.stringify('__PLACEHOLDER__')})" style="display:none"></button>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-weight:700;font-size:13px;color:var(--text)">${display.length} Trade${display.length===1?'':'s'}</span>
+                <div style="display:flex;gap:4px">${zBtn(1,'1')}${zBtn(2,'2')}${zBtn(3,'3')}</div>
               </div>
               <div style="display:flex;gap:6px">
                 <button onclick="window._elveSortFilter='all';elveRerender()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='all'?'#6366f1':'#334155'};background:${sf==='all'?'#6366f1':'transparent'};color:${sf==='all'?'white':'#94a3b8'}">All</button>
@@ -6387,24 +6464,28 @@ function startLastUpdatedTicker() {
               </div>
             </div>`;
 
-            // Store trades for re-render on filter change
-            window._elveLastTrades = trades;
+            const cols = zoom === 1 ? '1fr' : zoom === 2 ? '1fr 1fr' : '1fr 1fr 1fr';
 
-            el.innerHTML = toolbar + `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">` +
+            el.innerHTML = toolbar + `<div style="display:grid;grid-template-columns:${cols};gap:10px">` +
             display.map((t, idx) => {
                 const { lfVal, ofVal, diff, verd } = t;
                 const pct       = lfVal > 0 ? ((diff / lfVal) * 100).toFixed(1) : '?';
-                const verdictHTML = verd==='win' ? `<span style="color:#22c55e;font-weight:800;font-size:11px">✅ WIN</span>`
+                const rmKey     = JSON.stringify(t.listingId || (t.username+(t.time||'')));
+                const tKey      = t.listingId || ((t.username||'') + (t.time||''));
+                const verdictHTML = verd==='win'  ? `<span style="color:#22c55e;font-weight:800;font-size:11px">✅ WIN</span>`
                     : verd==='fair' ? `<span style="color:#eab308;font-weight:800;font-size:11px">⚖️ FAIR</span>`
                     : `<span style="color:#f87171;font-weight:800;font-size:11px">❌ LOSS</span>`;
                 const borderCol = verd==='win'?'#16a34a55':verd==='fair'?'#ca8a0455':'#33415555';
+                const elveDiffStr = t.elveDiff != null ? `<span style="font-size:9px;color:#64748b;display:block">Elve diff: ${t.elveDiff>0?'+':''}${t.elveDiff}</span>` : '';
 
-                // Elve's own diff value (from scanner) vs our calc value
-                const elveDiffStr = t.elveDiff != null ? `<span style="font-size:9px;color:#64748b;display:block">Elve: ${t.elveDiff > 0 ? '+' : ''}${t.elveDiff}</span>` : '';
+                return `<div style="background:var(--card-bg);border:1px solid ${borderCol};border-radius:12px;padding:10px;position:relative">
+                  <!-- Remove -->
+                  <button onclick="window._elveHidden.add(${rmKey});elveRerender()"
+                    style="position:absolute;top:7px;right:7px;width:20px;height:20px;border-radius:50%;background:#1e293b;border:1px solid #334155;color:#64748b;cursor:pointer;font-size:11px;font-weight:900;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;z-index:2"
+                    title="Remove trade">✕</button>
 
-                return `<div style="background:var(--card-bg);border:1px solid ${borderCol};border-radius:12px;padding:10px">
                   <!-- Header -->
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-right:24px">
                     <div style="display:flex;align-items:center;gap:5px;min-width:0">
                       ${t.avatar ? `<img src="${t.avatar}" style="width:18px;height:18px;border-radius:50%;border:1px solid #334155;flex-shrink:0">` : ''}
                       <a href="${t.profileHref||'#'}" target="_blank" rel="noopener noreferrer"
@@ -6412,28 +6493,31 @@ function startLastUpdatedTicker() {
                     </div>
                     <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;margin-left:4px">
                       ${verdictHTML}
-                      <span style="font-size:13px;font-weight:900;color:white;background:${diff>=0?'#16a34a':'#dc2626'};border-radius:7px;padding:2px 8px;margin-top:2px">${diff>=0?'+':''}${diff.toFixed(2)}<span style="font-size:9px;opacity:0.85"> (${diff>=0?'+':''}${pct}%)</span></span>
+                      <span style="font-size:13px;font-weight:900;color:white;background:${diff>=0?'#16a34a':'#dc2626'};border-radius:7px;padding:3px 9px;text-shadow:0 1px 3px rgba(0,0,0,.4)">${diff>=0?'+':''}${diff.toFixed(2)}<span style="font-size:9px;opacity:0.85"> (${diff>=0?'+':''}${pct}%)</span></span>
                       ${elveDiffStr}
                     </div>
                   </div>
 
                   <!-- LF -->
                   <div style="font-size:9px;font-weight:700;color:#60a5fa;margin-bottom:4px">🔍 LF <span style="color:#475569;font-weight:400">(${lfVal>0?lfVal.toFixed(2):'?'})</span></div>
-                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
-                    ${(t.lf||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">
+                    ${(t._lf||[]).map((p,pi) => petCard(p, zoom, tKey, 'lf', pi)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
                   </div>
+                  ${(t._lf||[]).length ? demandBar(t._lf) : ''}
 
                   <!-- Offering -->
-                  <div style="font-size:9px;font-weight:700;color:#a78bfa;margin-bottom:4px">🤝 Offering <span style="color:#475569;font-weight:400">(${ofVal>0?ofVal.toFixed(2):'?'})</span></div>
-                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
-                    ${(t.offering||[]).map(p => petCard(p)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
+                  <div style="font-size:9px;font-weight:700;color:#a78bfa;margin-bottom:4px;margin-top:8px">🤝 Offering <span style="color:#475569;font-weight:400">(${(t._offering||[]).reduce((s,p)=>s+scoutGetPetVal(p.name,p.variant),0).toFixed(2)})</span></div>
+                  <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px">
+                    ${(t._offering||[]).map((p,pi) => petCard(p, zoom, tKey, 'offering', pi)).join('')||'<span style="color:#475569;font-size:10px">—</span>'}
                   </div>
+                  ${(t._offering||[]).length ? demandBar(t._offering) : ''}
 
-                  <!-- Time + Accept button -->
-                  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;border-top:1px solid #1e293b;gap:5px">
+                  <!-- Footer -->
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;margin-top:8px;border-top:1px solid #1e293b;gap:5px">
                     <span style="color:#475569;font-size:9px;flex-shrink:0">${t.time||''}</span>
-                    <button onclick="elveShowAccept(${JSON.stringify(t.listingId)})" style="flex:1;padding:5px 6px;border-radius:6px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap">
-                      ⚡ Accept This Trade
+                    <button onclick="elveShowAccept(${JSON.stringify(t.listingId)})"
+                      style="flex:1;padding:5px 6px;border-radius:6px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap">
+                      ⚡ Accept
                     </button>
                   </div>
                 </div>`;
@@ -6609,19 +6693,19 @@ function startLastUpdatedTicker() {
   // ── Bar HTML ──────────────────────────────────────────────────────────────
   const bar=document.createElement('div');
   bar.id='_amvS';
-  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:3px solid #6366f1;box-shadow:0 6px 30px rgba(0,0,0,.7)';
+  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:4px solid #6366f1;box-shadow:0 8px 40px rgba(0,0,0,.8);padding-bottom:4px';
   bar.innerHTML=\`
-    <div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+    <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px">
       <div style="flex:1;min-width:0">
-        <div id="_amvSt" style="font-size:12px;color:#94a3b8;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔄 Starting scan...</div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="flex:1;height:8px;background:#1e293b;border-radius:999px;overflow:hidden;border:1px solid #334155">
+        <div id="_amvSt" style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔄 Starting scan...</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="flex:1;height:12px;background:#1e293b;border-radius:999px;overflow:hidden;border:1px solid #334155">
             <div id="_amvBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:999px;transition:width 0.3s ease"></div>
           </div>
-          <span id="_amvNum" style="font-size:12px;font-weight:800;color:#a5b4fc;white-space:nowrap;min-width:40px;text-align:right">0/${wantCount}</span>
+          <span id="_amvNum" style="font-size:15px;font-weight:900;color:#a5b4fc;white-space:nowrap;min-width:55px;text-align:right">0/${wantCount}</span>
         </div>
       </div>
-      <button id="_amvStop" style="flex-shrink:0;padding:6px 14px;border-radius:7px;background:#ef4444;border:none;color:white;cursor:pointer;font-size:12px;font-weight:700">■ Stop</button>
+      <button id="_amvStop" style="flex-shrink:0;padding:10px 20px;border-radius:8px;background:#ef4444;border:none;color:white;cursor:pointer;font-size:14px;font-weight:800">■ Stop</button>
     </div>
   \`;
   document.body.appendChild(bar);
@@ -6684,20 +6768,20 @@ function startLastUpdatedTicker() {
     clearInterval(window._amvInt);window._amvInt=null;
     updateProgress(trades.length);
     const json=JSON.stringify(trades);
-    const doneHTML=\`
-      <div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px">
-        <div>
-          <div style="font-size:14px;font-weight:800;color:#22c55e">✅ Done! Found \${trades.length} trade\${trades.length===1?'':'s'}</div>
-          <div style="font-size:11px;color:#86efac;margin-top:2px">📋 Go back to the calc → Trade Scout tab → click <b>Paste &amp; Analyse</b></div>
-        </div>
-        <button onclick="document.getElementById('_amvS').remove()" style="flex-shrink:0;padding:6px 16px;border-radius:7px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:12px;font-weight:800">Close ✕</button>
-      </div>
-    \`;
     navigator.clipboard.writeText(json).then(()=>{
       bar.style.borderTopColor='#22c55e';
       bar.style.background='#052e16';
-      bar.innerHTML=doneHTML;
-      setTimeout(()=>window.close(),1800);
+      // Try auto-close first; show manual button as fallback
+      const closed=setTimeout(()=>window.close(),800);
+      bar.innerHTML=\`
+        <div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <div>
+            <div style="font-size:14px;font-weight:800;color:#22c55e">✅ Copied \${trades.length} trade\${trades.length===1?'':'s'}! Head back to the calc.</div>
+            <div style="font-size:11px;color:#86efac;margin-top:2px">Tab closing automatically… if not, click the button →</div>
+          </div>
+          <button onclick="clearTimeout(\${closed});window.close()" style="flex-shrink:0;padding:6px 18px;border-radius:7px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:13px;font-weight:800">✕ Close Tab</button>
+        </div>
+      \`;
     }).catch(()=>{
       // Clipboard blocked — show inline textarea fallback
       bar.style.borderTopColor='#f59e0b';
@@ -6735,15 +6819,15 @@ function startLastUpdatedTicker() {
       finish(trades);
       return;
     }
-    if(attempts>=MAX||noProgressCount>=8){
+    if(attempts>=MAX||noProgressCount>=50){
       st.textContent=attempts>=MAX?'⚠️ Reached scroll limit.':'⚠️ No more trades loading.';
       finish(trades);
       return;
     }
 
-    window.scrollBy(0,800);
+    window.scrollBy(0,2000);
     attempts++;
-  },600);
+  },500);
 
   // Run once immediately
   scrape();
