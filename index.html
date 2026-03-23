@@ -1288,9 +1288,9 @@
                     <div style="font-size:0.75em;color:var(--subtext);margin:6px 0 10px">Experimental features — may not work perfectly.</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
                         <div>
-                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Elve Auto-Accept Script</span>
+                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Elve Auto-Click Accept</span>
                             <span style="display:inline-block;margin-left:6px;padding:1px 7px;background:#7c3aed33;border:1px solid #7c3aed66;border-radius:10px;font-size:0.65em;font-weight:900;color:#a78bfa">BETA</span>
-                            <div style="font-size:0.72em;color:var(--subtext);margin-top:2px">Shows an ⚡ Accept button on Elve trade results. Script tries to auto-click Elve's accept button — may not always work.</div>
+                            <div style="font-size:0.72em;color:var(--subtext);margin-top:2px">When ON: the Accept script will try to auto-click Elve's accept button for you. When OFF (default): it still opens Elve, highlights the exact trade with a glow, and scrolls to it — you click Accept yourself.</div>
                         </div>
                         <button id="settingBetaElveAccept" onclick="toggleSetting('betaElveAccept')"
                             style="padding:5px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:800;font-size:0.78em;font-family:inherit;background:#1e293b;color:#64748b;flex-shrink:0;margin-left:12px">OFF</button>
@@ -6767,49 +6767,65 @@ function startLastUpdatedTicker() {
         // ── Build an "accept" script for a specific trade ─────────────────
         // This is pasted on Elve AFTER the user decides which trade to accept.
         // It finds the card by listing-id, draws a glowing overlay + click-to-accept button.
-        function buildElveAcceptScript(listingId) {
+        function buildElveAcceptScript(listingId, autoAccept) {
+            var AUTO = !!autoAccept;
             return `(()=>{
-  // Remove old highlight
+  var AUTO_ACCEPT=` + AUTO + `;
   const ob=document.getElementById('_elve_accept_overlay');if(ob)ob.remove();
   const obB=document.getElementById('_elve_accept_bar');if(obB)obB.remove();
 
-  // Find the card
-  const card=document.querySelector('[data-listing-id="${listingId}"]');
-  if(!card){alert('Trade #${listingId} not found on screen — scroll down to load it, then run this script again.');return;}
+  // Find the EXACT card by listing ID
+  const card=document.querySelector('[data-listing-id="` + listingId + `"]');
+  if(!card){alert('Listing #` + listingId + ` not found on this page. Scroll down to load more trades then run again.');return;}
 
-  // Scroll card into view
   card.scrollIntoView({behavior:'smooth',block:'center'});
 
-  // Pulsing glow overlay
+  // Pulsing purple glow overlay
   const ov=document.createElement('div');ov.id='_elve_accept_overlay';
-  const rect=()=>{const r=card.getBoundingClientRect();return{top:r.top+window.scrollY,left:r.left+window.scrollX,width:r.width,height:r.height};};
-  const r=rect();
-  ov.style.cssText=\`position:absolute;top:\${r.top-6}px;left:\${r.left-6}px;width:\${r.width+12}px;height:\${r.height+12}px;border-radius:18px;border:3px solid #a78bfa;box-shadow:0 0 0 4px #a78bfa44,0 0 30px 10px #7c3aed66;pointer-events:none;z-index:99998;animation:_elve_pulse 1.2s ease-in-out infinite alternate\`;
-  const style=document.createElement('style');style.textContent='@keyframes _elve_pulse{from{box-shadow:0 0 0 4px #a78bfa44,0 0 20px 8px #7c3aed44}to{box-shadow:0 0 0 8px #a78bfa88,0 0 50px 20px #7c3aed99}}';
-  document.head.appendChild(style);
-  document.body.appendChild(ov);
+  const r=card.getBoundingClientRect();
+  ov.style.cssText='position:absolute;top:'+(r.top+window.scrollY-6)+'px;left:'+(r.left+window.scrollX-6)+'px;width:'+(r.width+12)+'px;height:'+(r.height+12)+'px;border-radius:18px;border:3px solid #a78bfa;box-shadow:0 0 0 4px #a78bfa44,0 0 30px 10px #7c3aed66;pointer-events:none;z-index:99998;animation:_elve_pulse 1.2s ease-in-out infinite alternate';
+  const sty=document.createElement('style');sty.textContent='@keyframes _elve_pulse{from{box-shadow:0 0 0 4px #a78bfa44,0 0 20px 8px #7c3aed44}to{box-shadow:0 0 0 8px #a78bfa88,0 0 50px 20px #7c3aed99}}';
+  document.head.appendChild(sty);document.body.appendChild(ov);
 
-  // Top bar with accept button
+  // Top bar
   const bar=document.createElement('div');bar.id='_elve_accept_bar';
   bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;border-bottom:3px solid #a78bfa;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;font-family:system-ui,sans-serif;box-shadow:0 6px 30px rgba(0,0,0,.7)';
-  bar.innerHTML=\`
-    <div style="color:#e2e8f0;font-weight:800;font-size:13px">🦌 Trade #${listingId} highlighted ↓</div>
-    <div style="display:flex;gap:8px">
-      <button id="_elve_acc_btn" style="padding:6px 18px;background:#a78bfa;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:900;font-size:13px">✅ Accept Trade</button>
-      <button onclick="document.getElementById('_elve_accept_overlay').remove();document.getElementById('_elve_accept_bar').remove();" style="padding:6px 12px;background:#334155;color:#94a3b8;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px">✕ Cancel</button>
-    </div>
-  \`;
-  document.body.prepend(bar);
 
-  // Accept button: find and click Elve's own accept button on the card
-  document.getElementById('_elve_acc_btn').onclick=()=>{
-    const acceptBtn=card.querySelector('button.acceptButton,button[class*="accept"]');
-    if(acceptBtn){acceptBtn.click();document.getElementById('_elve_accept_bar').remove();document.getElementById('_elve_accept_overlay').remove();}
-    else{alert('Could not find the Accept button automatically — please click it manually (it\\'s inside the highlighted card).');}
-  };
+  const infoDiv=document.createElement('div');
+  infoDiv.style.cssText='color:#e2e8f0;font-weight:800;font-size:13px;display:flex;align-items:center;gap:8px';
+  infoDiv.textContent='Listing #` + listingId + ` highlighted below \u2193';
+  if(AUTO_ACCEPT){const badge=document.createElement('span');badge.textContent='BETA auto-click';badge.style.cssText='padding:1px 7px;background:#7c3aed33;border:1px solid #7c3aed66;border-radius:8px;font-size:10px;font-weight:900;color:#a78bfa';infoDiv.appendChild(badge);}
+
+  const rightDiv=document.createElement('div');
+  rightDiv.style.cssText='display:flex;align-items:center;gap:8px';
+
+  if(AUTO_ACCEPT){
+    const accBtn=document.createElement('button');
+    accBtn.textContent='Auto-Accept';
+    accBtn.style.cssText='padding:6px 18px;background:#a78bfa;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:900;font-size:13px';
+    accBtn.onclick=function(){
+      const ab=card.querySelector('button.acceptButton,button[class*="accept"]');
+      if(ab){ab.click();bar.remove();ov.remove();}
+      else{alert('Auto-accept could not find the button. Please click Accept manually inside the highlighted card.');}
+    };
+    rightDiv.appendChild(accBtn);
+  } else {
+    const hint=document.createElement('span');
+    hint.textContent='Trade highlighted \u2014 click Accept yourself';
+    hint.style.cssText='font-size:11px;color:#94a3b8;font-style:italic';
+    rightDiv.appendChild(hint);
+  }
+
+  const doneBtn=document.createElement('button');
+  doneBtn.textContent='Done';
+  doneBtn.style.cssText='padding:6px 12px;background:#334155;color:#94a3b8;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px';
+  doneBtn.onclick=function(){bar.remove();ov.remove();};
+  rightDiv.appendChild(doneBtn);
+
+  bar.appendChild(infoDiv);bar.appendChild(rightDiv);
+  document.body.prepend(bar);
 })();`;
         }
-
         // ── Elve paste & process ──────────────────────────────────────────
         function elveProcessPaste() {
             const raw = (document.getElementById('elvePasteBox') || {}).value || '';
@@ -6970,7 +6986,7 @@ function startLastUpdatedTicker() {
                   <!-- Footer -->
                   <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;margin-top:8px;border-top:1px solid #1e293b;gap:5px">
                     <span style="color:#475569;font-size:9px;flex-shrink:0">${t.time||''}</span>
-                    ${state.betaElveAccept ? '<button onclick="elveShowAccept(' + JSON.stringify(t.listingId) + ')" style="flex:1;padding:5px 6px;border-radius:6px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap">Accept</button>' : ''}
+                    <button onclick="elveShowAccept(${JSON.stringify(t.listingId)})" style="flex:1;padding:5px 6px;border-radius:6px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap">Accept</button>
                   </div>
                 </div>`;
             }).join('') + `</div>`;
@@ -6982,7 +6998,7 @@ function startLastUpdatedTicker() {
 
         // ── Show accept modal with copyable script ────────────────────────
         function elveShowAccept(listingId) {
-            var script = buildElveAcceptScript(listingId);
+            var script = buildElveAcceptScript(listingId, state.betaElveAccept);
             var existing = document.getElementById('elveAcceptModal');
             if (existing) existing.remove();
 
@@ -6999,7 +7015,9 @@ function startLastUpdatedTicker() {
 
             var desc = document.createElement('div');
             desc.style.cssText = 'font-size:12px;color:#94a3b8;margin-bottom:12px';
-            desc.textContent = 'Copy this script, open Elve in a tab, open DevTools (F12) then Console, paste and press Enter. It highlights the trade and gives you an Accept button.';
+            desc.textContent = state.betaElveAccept
+                ? 'Copy, open Elve, DevTools (F12) > Console, paste & Enter. Highlights the exact trade and tries to auto-click Accept (Beta).'
+                : 'Copy, open Elve, DevTools (F12) > Console, paste & Enter. Highlights the exact trade with a glow — you click Accept yourself.';
 
             var ta = document.createElement('textarea');
             ta.readOnly = true;
