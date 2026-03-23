@@ -6164,9 +6164,10 @@ function startLastUpdatedTicker() {
 
         // ── Variant → value key lookup ────────────────────────────────────────
         function scoutVariantKey(variant) {
+            // Elve uses short codes (M, N) — map both short and long forms
             const map = { 'Reg':'v', 'F':'f_v', 'R':'r_v', 'FR':'fr_v',
-                          'Neon':'n_v', 'NF':'n_f_v', 'NR':'n_r_v', 'NFR':'nfr_v',
-                          'Mega':'m_v', 'MF':'m_f_v', 'MR':'m_r_v', 'MFR':'mfr_v' };
+                          'N':'n_v', 'Neon':'n_v', 'NF':'n_f_v', 'NR':'n_r_v', 'NFR':'nfr_v',
+                          'M':'m_v', 'Mega':'m_v', 'MF':'m_f_v', 'MR':'m_r_v', 'MFR':'mfr_v' };
             return map[variant] || 'v';
         }
 
@@ -6779,7 +6780,25 @@ function startLastUpdatedTicker() {
       }
     };
   }
-  window.scrollTo(0,0);setTimeout(()=>{scan();window._elveScan=setInterval(scan,TMS);},500);
+  // Warm-up: sit at top for 3 ticks before scrolling so React renders the first cards
+  var _warmup=3;
+  window.scrollTo(0,0);
+  setTimeout(()=>{
+    function warmScan(){
+      scan(); // scan without scrolling
+      _warmup--;
+      if(_warmup>0){
+        const stEl=document.getElementById('_elve_status');
+        if(stEl)stEl.textContent='⏳ Loading first cards… ('+_warmup+' ticks left)';
+        setTimeout(warmScan,TMS);
+      } else {
+        // Now start the real scrolling interval
+        scan();
+        window._elveScan=setInterval(scan,TMS);
+      }
+    }
+    warmScan();
+  },1000);
 })();`;
         }
 
