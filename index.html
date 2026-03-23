@@ -6986,7 +6986,7 @@ function startLastUpdatedTicker() {
                   <!-- Footer -->
                   <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;margin-top:8px;border-top:1px solid #1e293b;gap:5px">
                     <span style="color:#475569;font-size:9px;flex-shrink:0">${t.time||''}</span>
-                    <button onclick="elveShowAccept(${JSON.stringify(t.listingId)})" style="flex:1;padding:5px 6px;border-radius:6px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap">Accept</button>
+                    ${state.betaElveAccept ? '<button onclick="elveShowAccept(\'' + (t.listingId||'') + '\')" style="flex:1;padding:5px 6px;border-radius:6px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap">Accept</button>' : ''}
                   </div>
                 </div>`;
             }).join('') + `</div>`;
