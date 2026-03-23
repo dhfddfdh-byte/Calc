@@ -6016,7 +6016,7 @@ function startLastUpdatedTicker() {
             if (stepWins) stepWins.style.display = filterWin    ? '' : 'none';
             if (stepLF)   stepLF.style.display   = lfVal.trim() ? '' : 'none';
 
-            const script = buildScoutScript(lfVal.trim(), lfVariant, offerVal.trim(), offerVar, countVal, filterWin);
+            const script = buildScoutScript(lfVal.trim(), lfVariant, offerVal.trim(), offerVar, countVal, filterWin, [...blockedUsers]);
             const box    = document.getElementById('scoutScriptBox');
             if (box) box.value = script;
 
@@ -6366,8 +6366,9 @@ function startLastUpdatedTicker() {
             const offerVar  = elveOfferVariant || 'Any';
             const recvPet   = elveReceiveSelected || (document.getElementById('elveReceiveInput')||{}).value || '';
             const recvVar   = elveReceiveVariant || 'Any';
-            const countVal  = parseInt((document.getElementById('elveCount')||{}).value) || 15;
-            const script    = buildElveScript(offerPet.trim(), offerVar, recvPet.trim(), recvVar, countVal);
+            const countVal    = parseInt((document.getElementById('elveCount')||{}).value) || 15;
+            const minOverpayV = parseFloat((document.getElementById('elveMinOverpay')||{}).value) || 0;
+            const script      = buildElveScript(offerPet.trim(), offerVar, recvPet.trim(), recvVar, countVal, minOverpayV, [...blockedUsers]);
             const box       = document.getElementById('elveScriptBox');
             if (box) box.value = script;
             const area = document.getElementById('elveScriptArea');
@@ -6492,9 +6493,10 @@ function startLastUpdatedTicker() {
         }
 
         // ── Build the Elve scanner console script ─────────────────────────
-        function buildElveScript(offerPet, offerVar, recvPet, recvVar, wantCount, minOverpay) {
+        function buildElveScript(offerPet, offerVar, recvPet, recvVar, wantCount, minOverpay, blockedList) {
             wantCount  = wantCount || 15;
             minOverpay = parseFloat(minOverpay) || 0;
+            blockedList = blockedList || [];
             offerPet = (offerPet||'').trim().toLowerCase();
             offerVar = offerVar || 'Any';
             recvPet  = (recvPet||'').trim().toLowerCase();
@@ -6528,6 +6530,7 @@ function startLastUpdatedTicker() {
   const MAX=400,SPX=2000,TMS=500,STUCK=50;
   const WANT=${JSON.stringify(wantCount)};
   const MIN_OVERPAY=${JSON.stringify(minOverpay)};
+  const BLOCKED_USERS=${JSON.stringify(blockedList.map(u=>u.toLowerCase().trim()))};
   const OFFER_FILTER=${JSON.stringify(offerPet)};
   const OFFER_VAR=${JSON.stringify(offerVar)};
   const RECV_FILTER=${JSON.stringify(recvPet)};
@@ -6556,6 +6559,8 @@ function startLastUpdatedTicker() {
       if(grids.length<2)return;
       const lf=parsePetGrid(grids[0]),off=parsePetGrid(grids[1]);
       if(!lf.length&&!off.length)return;
+      // Skip blocked users
+      if(BLOCKED_USERS.length&&uEl&&BLOCKED_USERS.includes(uEl.textContent.trim().toLowerCase()))return;
       // Apply offer filter: LF must contain ONLY the one pet you are offering
       if(OFFER_FILTER){
         const matchO=lf.some(p=>p.name.toLowerCase().includes(OFFER_FILTER)&&(OFFER_VAR==='Any'||p.variant===OFFER_VAR));
@@ -7017,7 +7022,7 @@ function startLastUpdatedTicker() {
         });
 
         // ── Build the self-contained inspect element script ───────────────────
-        function buildScoutScript(lfFilter, lfVariant, offerFilter, offerVariant, wantCount, winsOnly) {
+        function buildScoutScript(lfFilter, lfVariant, offerFilter, offerVariant, wantCount, winsOnly, blockedList) {
             return `(function(){
   // Kill any existing instance cleanly
   if(window._amvInt){clearInterval(window._amvInt);window._amvInt=null;}
@@ -7028,6 +7033,7 @@ function startLastUpdatedTicker() {
   const OFFER=${JSON.stringify((offerFilter||'').toLowerCase())};
   const OFFERVAR=${JSON.stringify(offerVariant||'')};
   const WANT=${wantCount};
+  const BLOCKED_USERS=${JSON.stringify((blockedList||[]).map(u=>(u||'').toLowerCase().trim()))};
   const MAX=300;
   let attempts=0;
   let lastCount=0;
@@ -7085,6 +7091,7 @@ function startLastUpdatedTicker() {
     bars.forEach(b=>{
       const a=b.querySelector('a[href*="/profile/"]');
       const username=a?.textContent?.trim()||'?';
+      if(BLOCKED_USERS.length&&BLOCKED_USERS.includes(username.toLowerCase()))return;
       const profileHref=a?.href||'#';
       const time=b.querySelector('p.text-xs')?.textContent?.trim()||'';
       const avatar=b.querySelector('img[src*="/api/roblox/avatar/"]')?.src||'';
