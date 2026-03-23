@@ -962,13 +962,9 @@
 
     <!-- TAB BAR -->
     <div class="tab-bar">
-        <button class="tab-btn" id="tabBtnValue" onclick="switchTab('value')">
+        <button class="tab-btn" id="tabBtnLists" onclick="switchTab('lists')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            Value List
-        </button>
-        <button class="tab-btn" id="tabBtnDemand" onclick="switchTab('demand')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-            Demand List
+            Lists
         </button>
         <button class="tab-btn active" id="tabBtnCalc" onclick="switchTab('calc')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="2" width="20" height="20" rx="3"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="14" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
@@ -984,6 +980,76 @@
         </button>
 
 
+    </div>
+
+    <!-- LISTS TAB (Value + Demand combined with mini-tabs) -->
+    <div class="tab-content" id="tabLists">
+      <div style="padding:14px;max-width:1150px;margin:0 auto">
+        <!-- Mini-tab bar -->
+        <div style="display:flex;gap:6px;margin-bottom:16px;background:#111827;border-radius:50px;padding:5px;border:1.5px solid var(--border);width:fit-content">
+          <button id="listsTabValue" onclick="switchListsTab('value')"
+            style="padding:7px 22px;border-radius:44px;border:none;font-weight:900;font-size:0.85em;cursor:pointer;background:white;color:#111;font-family:inherit">
+            📊 Value List
+          </button>
+          <button id="listsTabDemand" onclick="switchListsTab('demand')"
+            style="padding:7px 22px;border-radius:44px;border:none;font-weight:900;font-size:0.85em;cursor:pointer;background:transparent;color:var(--subtext);font-family:inherit">
+            🔥 Demand List
+          </button>
+        </div>
+
+        <!-- Value List panel -->
+        <div id="listsValuePanel">
+          <div class="vlist-container">
+            <div class="vlist-header">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%">
+                <div class="vlist-type-group">
+                  <button class="vlist-type-btn active" id="vTypeNormal" onclick="setVListType('value','normal')">Normal</button>
+                  <button class="vlist-type-btn" id="vTypeNeon"   onclick="setVListType('value','neon')">Neon</button>
+                  <button class="vlist-type-btn" id="vTypeMega"   onclick="setVListType('value','mega')">Mega</button>
+                </div>
+                <input class="vlist-search" id="valueListSearch" placeholder="Search pets..." oninput="renderValueList()">
+                <div style="display:flex;align-items:center;gap:6px;background:#0f172a;border:1.5px solid var(--accent);border-radius:8px;padding:4px 10px">
+                  <span style="font-size:0.72em;color:var(--accent);font-weight:900">🔍</span>
+                  <input type="range" id="vZoomSlider" min="28" max="80" value="46"
+                    oninput="setListZoom('value',this.value)"
+                    style="width:70px;accent-color:var(--accent);cursor:pointer">
+                  <span id="vZoomLabel" style="font-size:0.72em;color:var(--accent);font-weight:800;min-width:28px">46</span>
+                </div>
+              </div>
+            </div>
+            <div class="vlist-body" id="valueListBody"></div>
+          </div>
+        </div>
+
+        <!-- Demand List panel (hidden by default) -->
+        <div id="listsDemandPanel" style="display:none">
+          <div class="vlist-container">
+            <div class="vlist-header">
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%">
+                <div class="vlist-type-group">
+                  <button class="vlist-type-btn active" id="dTypeNormal" onclick="setVListType('demand','normal')">Normal</button>
+                  <button class="vlist-type-btn" id="dTypeNeon"   onclick="setVListType('demand','neon')">Neon</button>
+                  <button class="vlist-type-btn" id="dTypeMega"   onclick="setVListType('demand','mega')">Mega</button>
+                </div>
+                <input class="vlist-search" id="demandListSearch" placeholder="Search pets..." oninput="renderDemandList()">
+                <div style="display:flex;gap:4px;background:#0f172a;border-radius:20px;padding:3px;border:1px solid var(--border)">
+                  <button id="dInc01" class="vlist-type-btn active" onclick="setDemandIncrement(0.1)">0.1</button>
+                  <button id="dInc05" class="vlist-type-btn" onclick="setDemandIncrement(0.5)">0.5</button>
+                  <button id="dInc1"  class="vlist-type-btn" onclick="setDemandIncrement(1)">1</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;background:#0f172a;border:1.5px solid var(--accent);border-radius:8px;padding:4px 10px">
+                  <span style="font-size:0.72em;color:var(--accent);font-weight:900">🔍</span>
+                  <input type="range" id="dZoomSlider" min="28" max="80" value="46"
+                    oninput="setListZoom('demand',this.value)"
+                    style="width:70px;accent-color:var(--accent);cursor:pointer">
+                  <span id="dZoomLabel" style="font-size:0.72em;color:var(--accent);font-weight:800;min-width:28px">46</span>
+                </div>
+              </div>
+            </div>
+            <div class="vlist-body" id="demandListBody"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- TRADE SCOUT TAB -->
@@ -2647,8 +2713,12 @@
             state.target = side;
             document.getElementById('searchOverlay').classList.add('open');
             searchState.renderLimit = 50;
-            filterAndRender(document.getElementById('mainSearch').value.toLowerCase());
-            setTimeout(() => document.getElementById('mainSearch').focus(), 50);
+            document.getElementById('mainSearch').value = '';
+            document.getElementById('searchResults').innerHTML = '';
+            setTimeout(() => {
+                document.getElementById('mainSearch').focus();
+                filterAndRender('');
+            }, 30);
         }
 
         function closeSearch() { document.getElementById('searchOverlay').classList.remove('open'); }
@@ -2796,7 +2866,9 @@
             initMobileInteractions(); // set up long-press event delegation
           document.getElementById('mainSearch').addEventListener('input', (e) => {
             searchState.renderLimit = 50;
-            filterAndRender(e.target.value.toLowerCase());
+            // Debounce: defer rendering so keystrokes feel instant
+            clearTimeout(window._searchDebounce);
+            window._searchDebounce = setTimeout(() => filterAndRender(e.target.value.toLowerCase()), 60);
           });
           document.getElementById('searchResults').addEventListener('scroll', () => {
             const box = document.getElementById('searchResults');
@@ -4510,6 +4582,7 @@ function startLastUpdatedTicker() {
             });
 
             // Chain trade suggestion
+            const chainTrade = results.length < state.strategyLimit ? findChainTrade(inventory, totalInvVal * 0.9, 6, 'High Tier') : null;
             if (chainTrade) {
                 html += `<div class="ai-suggestion" style="border-left-color:#06b6d4;margin-top:4px">
                     <div style="font-size:0.7em;font-weight:900;color:#06b6d4;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">⛓️ 2-STEP CHAIN TRADE</div>
@@ -5416,14 +5489,32 @@ function startLastUpdatedTicker() {
         // Switches between the 4 main tabs: value, demand, calc, trades.
         // Hides the verdict box and fixed overlays when leaving the calc tab.
         // Triggers the relevant render function for value/demand lists and trade board.
+        let _listsSubTab = 'value';
+
+        function switchListsTab(sub) {
+            _listsSubTab = sub;
+            const vPanel = document.getElementById('listsValuePanel');
+            const dPanel = document.getElementById('listsDemandPanel');
+            const vBtn   = document.getElementById('listsTabValue');
+            const dBtn   = document.getElementById('listsTabDemand');
+            if (vPanel) vPanel.style.display = sub === 'value' ? '' : 'none';
+            if (dPanel) dPanel.style.display = sub === 'demand' ? '' : 'none';
+            if (vBtn) { vBtn.style.background = sub==='value'?'white':'transparent'; vBtn.style.color = sub==='value'?'#111':'var(--subtext)'; }
+            if (dBtn) { dBtn.style.background = sub==='demand'?'white':'transparent'; dBtn.style.color = sub==='demand'?'#111':'var(--subtext)'; }
+            if (sub === 'value'  && ALL_PETS.length > 0) renderValueList();
+            if (sub === 'demand' && ALL_PETS.length > 0) renderDemandList();
+        }
+
         function switchTab(tab) {
             currentTab = tab;
-            ['value','demand','calc','trades','scout'].forEach(t => {
+            // Map old tab names to new combined name
+            const normTab = (tab === 'value' || tab === 'demand') ? 'lists' : tab;
+            ['lists','calc','trades','scout'].forEach(t => {
                 const key = t.charAt(0).toUpperCase() + t.slice(1);
                 const tabEl = document.getElementById('tab' + key);
                 const btnEl = document.getElementById('tabBtn' + key);
-                if (tabEl) tabEl.classList.toggle('active', t === tab);
-                if (btnEl) btnEl.classList.toggle('active', t === tab);
+                if (tabEl) tabEl.classList.toggle('active', t === normTab);
+                if (btnEl) btnEl.classList.toggle('active', t === normTab);
             });
             // verdict-box and extras are position:fixed — hide on non-calc tabs
             const vb = document.querySelector('.verdict-box');
@@ -5432,14 +5523,61 @@ function startLastUpdatedTicker() {
             if (vb) vb.style.display = tab === 'calc' ? '' : 'none';
             if (ve) ve.style.display = tab === 'calc' ? '' : 'none';
             if (vl) vl.style.display = tab === 'calc' ? '' : 'none';
-            if (tab === 'value'  && ALL_PETS.length > 0) renderValueList();
-            if (tab === 'demand' && ALL_PETS.length > 0) renderDemandList();
-            if (tab === 'trends' && ALL_PETS.length > 0) renderTrendsList();
+            if (tab === 'lists') {
+                switchListsTab(_listsSubTab);
+            } else if (tab === 'value') {
+                switchTab('lists'); switchListsTab('value'); return;
+            } else if (tab === 'demand') {
+                switchTab('lists'); switchListsTab('demand'); return;
+            }
             if (tab === 'trades') { renderTradeBoard(); startTBTimers(); }
             if (tab === 'scout')  { renderScoutTab(); }
         }
 
         // ── TRADE SCOUT TAB ──────────────────────────────────────────────────
+
+        // ── Blocked usernames (persisted) ───────────────────────────────────────
+        function scoutLoadBlocklist() {
+            try { return JSON.parse(localStorage.getItem('scout_blocklist') || '[]'); } catch(e) { return []; }
+        }
+        function scoutSaveBlocklist(arr) {
+            try { localStorage.setItem('scout_blocklist', JSON.stringify(arr)); } catch(e) {}
+        }
+        let _scoutBlocklist = scoutLoadBlocklist();
+
+        function scoutAddBlock(name) {
+            name = (name || '').trim().toLowerCase();
+            if (!name) return;
+            if (!_scoutBlocklist.includes(name)) {
+                _scoutBlocklist.push(name);
+                scoutSaveBlocklist(_scoutBlocklist);
+                renderBlocklistUI();
+                // Regenerate scripts with new blocklist
+                scoutGenerateScript();
+                elveGenerateScript();
+            }
+        }
+        function scoutRemoveBlock(name) {
+            _scoutBlocklist = _scoutBlocklist.filter(n => n !== name);
+            scoutSaveBlocklist(_scoutBlocklist);
+            renderBlocklistUI();
+            scoutGenerateScript();
+            elveGenerateScript();
+        }
+        function renderBlocklistUI() {
+            const el = document.getElementById('scoutBlocklistTags');
+            if (!el) return;
+            if (_scoutBlocklist.length === 0) {
+                el.innerHTML = '<span style="font-size:11px;color:#475569">No blocked users</span>';
+                return;
+            }
+            el.innerHTML = _scoutBlocklist.map(n =>
+                `<span style="display:inline-flex;align-items:center;gap:4px;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:2px 8px;font-size:11px;color:#e2e8f0">
+                    ${n}
+                    <span onclick="scoutRemoveBlock('${n}')" style="cursor:pointer;color:#ef4444;font-weight:900;font-size:12px">✕</span>
+                </span>`
+            ).join('');
+        }
 
         // ── Persistent scout prefs ───────────────────────────────────────────
         function scoutSavePrefs() {
@@ -5464,6 +5602,47 @@ function startLastUpdatedTicker() {
         const _sp = scoutLoadPrefs();
         let scoutSite   = _sp.site   || 'amvgg';
         let scoutFilter = _sp.filter || 'all';
+
+        // ── Blocked usernames (persisted across sessions) ─────────────────────
+        function blockedUsersLoad() { try { return new Set(JSON.parse(localStorage.getItem('scout_blocked') || '[]')); } catch(e) { return new Set(); } }
+        function blockedUsersSave(s) { try { localStorage.setItem('scout_blocked', JSON.stringify([...s])); } catch(e) {} }
+        let blockedUsers = blockedUsersLoad();
+        function scoutBlockUser(username) {
+            blockedUsers.add((username||'').toLowerCase().trim());
+            blockedUsersSave(blockedUsers);
+            if (window._scoutLastTrades) renderScoutResults(window._scoutLastTrades);
+            if (window._elveLastTrades)  renderElveResults(window._elveLastTrades);
+        }
+        function scoutUnblockUser(username) {
+            blockedUsers.delete((username||'').toLowerCase().trim());
+            blockedUsersSave(blockedUsers);
+            if (window._scoutLastTrades) renderScoutResults(window._scoutLastTrades);
+            if (window._elveLastTrades)  renderElveResults(window._elveLastTrades);
+        }
+        function isUserBlocked(u) { return blockedUsers.has((u||'').toLowerCase().trim()); }
+        window.scoutBlockUser = scoutBlockUser;
+        window.scoutUnblockUser = scoutUnblockUser;
+
+        function renderBlockedList() {
+            const el = document.getElementById('amvggBlockedList');
+            if (!el) return;
+            if (blockedUsers.size === 0) {
+                el.innerHTML = '<span style="font-size:11px;color:#475569">No blocked users</span>';
+                return;
+            }
+            el.innerHTML = '';
+            [...blockedUsers].forEach(function(u) {
+                const chip = document.createElement('span');
+                chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:#1e293b;border:1px solid #ef444433;border-radius:6px;padding:3px 8px;font-size:11px';
+                chip.innerHTML = '<span style="color:#fca5a5">' + u + '</span>';
+                const x = document.createElement('span');
+                x.textContent = '✕';
+                x.style.cssText = 'cursor:pointer;color:#ef4444;font-weight:900';
+                x.onclick = function() { scoutUnblockUser(u); renderBlockedList(); };
+                chip.appendChild(x);
+                el.appendChild(chip);
+            });
+        }
 
         function renderScoutTab() {
             const inner = document.getElementById('scoutInner');
@@ -5590,6 +5769,19 @@ function startLastUpdatedTicker() {
                     </textarea>
                   </div>
 
+                  <!-- Blocked users -->
+                  <div id="amvggBlockedBox" style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:10px;display:none">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                      <span style="font-size:11px;font-weight:700;color:#f87171">🚫 Blocked Users</span>
+                      <button onclick="document.getElementById('amvggBlockedBox').style.display='none'" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:12px">✕</button>
+                    </div>
+                    <div id="amvggBlockedList" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
+                    <div style="display:flex;gap:6px">
+                      <input id="amvggBlockInput" placeholder="Username to block..." style="flex:1;background:#1e293b;border:1px solid #334155;color:var(--text);border-radius:6px;padding:5px 8px;font-size:11px;font-family:inherit">
+                      <button onclick="scoutBlockUser(document.getElementById('amvggBlockInput').value);document.getElementById('amvggBlockInput').value='';renderBlockedList()" style="padding:5px 10px;background:#ef4444;border:none;color:white;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700">Block</button>
+                    </div>
+                  </div>
+
                   <!-- Paste results -->
                   <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:10px">
                     <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--text)">📥 Paste &amp; Analyse</div>
@@ -5660,11 +5852,17 @@ function startLastUpdatedTicker() {
                   </div>
 
                   <!-- Count + filter row -->
-                  <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;margin-bottom:12px">
+                  <div style="display:grid;grid-template-columns:auto auto 1fr;gap:12px;align-items:start;margin-bottom:12px">
                     <div>
                       <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">HOW MANY TRADES</label>
                       <input id="elveCount" type="number" value="15" min="1" max="200" onchange="scoutSavePrefs()"
                         style="width:90px;box-sizing:border-box;background:var(--input-bg,#0f172a);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 9px;font-size:12px;font-family:inherit">
+                    </div>
+                    <div>
+                      <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">MIN OVERPAY <span style="color:#64748b;font-weight:500">(Elve diff)</span></label>
+                      <input id="elveMinOverpay" type="number" value="0" min="0" step="0.5" placeholder="e.g. 5"
+                        style="width:90px;box-sizing:border-box;background:var(--input-bg,#0f172a);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 9px;font-size:12px;font-family:inherit"
+                        title="Script will skip trades where Elve's calculated diff is below this value">
                     </div>
                     <div>
                       <label style="font-size:11px;color:var(--subtext);font-weight:600;display:block;margin-bottom:4px">SHOW</label>
@@ -5973,11 +6171,12 @@ function startLastUpdatedTicker() {
                 return { ...t, _lf: lf, _offering: off, lfVal, ofVal, diff: ofVal - lfVal, verd: getVerdict(lfVal, ofVal) };
             });
 
-            let display = withValsComputed.filter(t => !window._scoutHidden.has(t.username + (t.time||'')));
+            let display = withValsComputed.filter(t => !window._scoutHidden.has(t.username + (t.time||'')) && !isUserBlocked(t.username));
             const sf = window._scoutSortFilter || 'all';
             if (sf === 'winsonly') display = display.filter(t => t.verd === 'win');
             if (sf === 'noloss')   display = display.filter(t => t.verd !== 'loss');
-            display.sort((a, b) => b.diff - a.diff);
+            const scoutSortDir = window._scoutSortDir || 'desc';
+            display.sort((a, b) => scoutSortDir === 'asc' ? a.diff - b.diff : b.diff - a.diff);
 
             const zoom = window._scoutZoom;
             const zBtn = (z, label) => `<button onclick="window._scoutZoom=${z};renderScoutResults(window._scoutLastTrades)"
@@ -5986,11 +6185,16 @@ function startLastUpdatedTicker() {
             const toolbar = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
               <div style="display:flex;align-items:center;gap:8px">
                 <span style="font-weight:700;font-size:13px;color:var(--text)">${display.length} Trade${display.length===1?'':'s'}</span>
+                <button onclick="window._scoutSortDir=window._scoutSortDir==='asc'?'desc':'asc';renderScoutResults(window._scoutLastTrades)" title="Toggle sort order"
+                  style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">
+                  ${(window._scoutSortDir||'desc')==='desc'?'⬇ Highest':'⬆ Lowest'}
+                </button>
                 <div style="display:flex;gap:4px">
                   ${zBtn(1,'1')}${zBtn(2,'2')}${zBtn(3,'3')}
                 </div>
               </div>
               <div style="display:flex;gap:6px">
+                <button onclick="renderBlockedList();document.getElementById('amvggBlockedBox').style.display=document.getElementById('amvggBlockedBox').style.display==='none'?'block':'none'" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:transparent;color:#f87171">🚫 ${blockedUsers.size>0?blockedUsers.size+' blocked':''}</button>
                 <button onclick="window._scoutSortFilter='all';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='all'?'#6366f1':'#334155'};background:${sf==='all'?'#6366f1':'transparent'};color:${sf==='all'?'white':'#94a3b8'}">All</button>
                 <button onclick="window._scoutSortFilter='noloss';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='noloss'?'#eab308':'#334155'};background:${sf==='noloss'?'#eab308':'transparent'};color:${sf==='noloss'?'#000':'#94a3b8'}">⚖️ Hide Losses</button>
                 <button onclick="window._scoutSortFilter='winsonly';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='winsonly'?'#22c55e':'#334155'};background:${sf==='winsonly'?'#22c55e':'transparent'};color:${sf==='winsonly'?'white':'#94a3b8'}">✅ Wins Only</button>
@@ -6025,6 +6229,8 @@ function startLastUpdatedTicker() {
                       <a href="${t.profileHref||'#'}" target="_blank" rel="noopener noreferrer"
                         style="font-weight:700;color:#c084fc;text-decoration:none;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
                         onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${t.username||'?'}</a>
+                      <button onclick="scoutBlockUser('${(t.username||'').replace(/'/g,"\'")}');event.stopPropagation()" title="Block this user"
+                        style="padding:1px 5px;border-radius:4px;background:#1e293b;border:1px solid #334155;color:#475569;cursor:pointer;font-size:9px;font-weight:700;flex-shrink:0">🚫</button>
                     </div>
                     <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;margin-left:4px">
                       ${verdictHTML}
@@ -6286,8 +6492,9 @@ function startLastUpdatedTicker() {
         }
 
         // ── Build the Elve scanner console script ─────────────────────────
-        function buildElveScript(offerPet, offerVar, recvPet, recvVar, wantCount) {
-            wantCount = wantCount || 15;
+        function buildElveScript(offerPet, offerVar, recvPet, recvVar, wantCount, minOverpay) {
+            wantCount  = wantCount || 15;
+            minOverpay = parseFloat(minOverpay) || 0;
             offerPet = (offerPet||'').trim().toLowerCase();
             offerVar = offerVar || 'Any';
             recvPet  = (recvPet||'').trim().toLowerCase();
@@ -6320,6 +6527,7 @@ function startLastUpdatedTicker() {
   const seen=new Map();let scrolled=0,stuckFor=0,lastSize=0;
   const MAX=400,SPX=2000,TMS=500,STUCK=50;
   const WANT=${JSON.stringify(wantCount)};
+  const MIN_OVERPAY=${JSON.stringify(minOverpay)};
   const OFFER_FILTER=${JSON.stringify(offerPet)};
   const OFFER_VAR=${JSON.stringify(offerVar)};
   const RECV_FILTER=${JSON.stringify(recvPet)};
@@ -6356,6 +6564,8 @@ function startLastUpdatedTicker() {
       }
       // Apply receive filter (what you get = Offering column on Elve)
       if(RECV_FILTER){const m=off.some(p=>p.name.toLowerCase().includes(RECV_FILTER)&&(RECV_VAR==='Any'||p.variant===RECV_VAR));if(!m)return;}
+      // Minimum overpay filter (uses Elve's own diff value on the card)
+      if(MIN_OVERPAY>0&&elveDiff!=null&&elveDiff<MIN_OVERPAY)return;
       const avatarImg=card.querySelector('img[alt="Owner of Listing Roblox Image"]');
       let avatar='',profileHref='#';
       if(avatarImg){avatar=avatarImg.src;const m=avatar.match(/\\/roblox\\/(\\d+)\\.png/);if(m)profileHref='https://www.roblox.com/users/'+m[1]+'/profile';}
@@ -6567,11 +6777,12 @@ function startLastUpdatedTicker() {
                 return { ...t, _lf: lf, _offering: off, lfVal, ofVal, diff: ofVal - lfVal, verd: getVerdict(lfVal, ofVal) };
             });
 
-            let display = withVals.filter(t => !window._elveHidden.has(t.listingId || (t.username+(t.time||''))));
+            let display = withVals.filter(t => !window._elveHidden.has(t.listingId || (t.username+(t.time||''))) && !isUserBlocked(t.username));
             const sf = window._elveSortFilter || 'all';
             if (sf === 'winsonly')  display = display.filter(t => t.verd === 'win' || t.verd === 'fair');
             if (sf === 'strictwin') display = display.filter(t => t.verd === 'win');
-            display.sort((a, b) => b.diff - a.diff);
+            const elveSortDir = window._elveSortDir || 'desc';
+            display.sort((a, b) => elveSortDir === 'asc' ? a.diff - b.diff : b.diff - a.diff);
 
             const zoom = window._elveZoom;
             const zBtn = (z, label) => `<button onclick="window._elveZoom=${z};elveRerender()"
@@ -6580,6 +6791,10 @@ function startLastUpdatedTicker() {
             const toolbar = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
               <div style="display:flex;align-items:center;gap:8px">
                 <span style="font-weight:700;font-size:13px;color:var(--text)">${display.length} Trade${display.length===1?'':'s'}</span>
+                <button onclick="window._elveSortDir=window._elveSortDir==='asc'?'desc':'asc';elveRerender()" title="Toggle sort order"
+                  style="padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:#1e293b;color:#94a3b8">
+                  ${(window._elveSortDir||'desc')==='desc'?'⬇ Highest':'⬆ Lowest'}
+                </button>
                 <div style="display:flex;gap:4px">${zBtn(1,'1')}${zBtn(2,'2')}${zBtn(3,'3')}</div>
               </div>
               <div style="display:flex;gap:6px">
@@ -6615,6 +6830,8 @@ function startLastUpdatedTicker() {
                       ${t.avatar ? `<img src="${t.avatar}" style="width:18px;height:18px;border-radius:50%;border:1px solid #334155;flex-shrink:0">` : ''}
                       <a href="${t.profileHref||'#'}" target="_blank" rel="noopener noreferrer"
                         style="font-weight:700;color:#c084fc;text-decoration:none;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.username||'?'}</a>
+                      <button onclick="scoutBlockUser('${(t.username||'').replace(/'/g,"\'")}');event.stopPropagation()" title="Block this user"
+                        style="padding:1px 5px;border-radius:4px;background:#1e293b;border:1px solid #334155;color:#475569;cursor:pointer;font-size:9px;font-weight:700;flex-shrink:0">🚫</button>
                     </div>
                     <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;margin-left:4px">
                       ${verdictHTML}
@@ -7760,12 +7977,13 @@ function tbFinalizeComplete() {
     renderInventory();
 
     // Remove from pending
+    // Get the pending trade BEFORE filtering it out
+    const pendingTrade = tbPendingLoad().find(t => t.id === id) || s;
     const pending = tbPendingLoad().filter(t => t.id !== id);
     tbPendingSave(pending);
 
     // Save to completed history — includes value snapshot at trade time
     const completedArr = tbCompletedLoad();
-    const pendingTrade = tbPendingLoad().find(t => t.id === id) || s;
     const offerValNow    = s.finalOffer.reduce((sum, p) => sum + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0);
     const requestValNow  = s.finalRequest.reduce((sum, p) => sum + calculatePetVal({...ALL_PETS.find(x=>x.n===p.n)||{},...p},'value'), 0);
     completedArr.unshift({
