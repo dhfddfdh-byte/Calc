@@ -5624,24 +5624,52 @@ function startLastUpdatedTicker() {
         window.scoutUnblockUser = scoutUnblockUser;
 
         function renderBlockedList() {
-            const el = document.getElementById('amvggBlockedList');
+            const el = document.getElementById('blockedChips');
             if (!el) return;
+            el.innerHTML = '';
             if (blockedUsers.size === 0) {
-                el.innerHTML = '<span style="font-size:11px;color:#475569">No blocked users</span>';
+                el.innerHTML = '<span style="font-size:11px;color:#475569;font-style:italic">No blocked users yet</span>';
                 return;
             }
-            el.innerHTML = '';
-            [...blockedUsers].forEach(function(u) {
+            [...blockedUsers].sort().forEach(function(u) {
                 const chip = document.createElement('span');
                 chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:#1e293b;border:1px solid #ef444433;border-radius:6px;padding:3px 8px;font-size:11px';
                 chip.innerHTML = '<span style="color:#fca5a5">' + u + '</span>';
                 const x = document.createElement('span');
                 x.textContent = '✕';
-                x.style.cssText = 'cursor:pointer;color:#ef4444;font-weight:900';
-                x.onclick = function() { scoutUnblockUser(u); renderBlockedList(); };
+                x.style.cssText = 'cursor:pointer;color:#ef4444;font-weight:900;padding-left:2px';
+                x.onclick = function() { scoutUnblockUser(u); renderBlockedList(); _refreshBlockedBtns(); };
                 chip.appendChild(x);
                 el.appendChild(chip);
             });
+        }
+
+        function _refreshBlockedBtns() {
+            const count = blockedUsers.size;
+            const label = '🚫 Blocked' + (count > 0 ? ' (' + count + ')' : '');
+            const b1 = document.getElementById('scoutBlockedBtn');
+            const b2 = document.getElementById('elveBlockedBtn');
+            if (b1) b1.innerHTML = label;
+            if (b2) b2.innerHTML = label;
+        }
+
+        function toggleBlockedPopup() {
+            const popup = document.getElementById('blockedPopup');
+            if (!popup) return;
+            const open = popup.style.display !== 'none';
+            popup.style.display = open ? 'none' : '';
+            if (!open) { renderBlockedList(); document.getElementById('blockedInput').focus(); }
+        }
+
+        function addBlockedFromInput() {
+            const inp = document.getElementById('blockedInput');
+            if (!inp || !inp.value.trim()) return;
+            // Support comma-separated or newline-separated
+            const raw = inp.value.replace(/[,\n]+/g, ',').split(',');
+            raw.forEach(function(u) { const t = u.trim(); if (t) scoutBlockUser(t); });
+            inp.value = '';
+            renderBlockedList();
+            _refreshBlockedBtns();
         }
 
         function renderScoutTab() {
@@ -5722,9 +5750,26 @@ function startLastUpdatedTicker() {
                       style="padding:4px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--subtext);cursor:pointer;font-size:11px;font-weight:700">
                       ✅ Wins Only
                     </button>
+                    <button onclick="toggleBlockedPopup()" id="scoutBlockedBtn"
+                      style="padding:4px 14px;border-radius:7px;border:1px solid #334155;background:transparent;color:#f87171;cursor:pointer;font-size:11px;font-weight:700">
+                      🚫 Blocked${blockedUsers.size > 0 ? ' (' + blockedUsers.size + ')' : ''}
+                    </button>
                   </div>
                   <div id="scoutWinHint" style="display:none;margin-top:8px;font-size:11px;color:#22c55e;background:#14532d33;border:1px solid #22c55e44;border-radius:6px;padding:6px 10px">
                     💡 Wins Only selected — make sure to click <b>Hide Losses</b> on AMVGG before running the script
+                  </div>
+                  <!-- Blocked popup (shared between AMVGG + Elve) -->
+                  <div id="blockedPopup" style="display:none;margin-top:8px;background:#0f172a;border:1px solid #ef444455;border-radius:10px;padding:12px">
+                    <div style="font-size:11px;font-weight:700;color:#f87171;margin-bottom:8px">🚫 Blocked Usernames — skipped in ALL scripts</div>
+                    <div id="blockedChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:16px"></div>
+                    <div style="display:flex;gap:6px;align-items:center">
+                      <input id="blockedInput" placeholder="Type or paste usernames (one per line or comma-separated)..."
+                        style="flex:1;background:#1e293b;border:1px solid #334155;color:var(--text);border-radius:6px;padding:6px 9px;font-size:11px;font-family:inherit"
+                        onkeydown="if(event.key==='Enter'){addBlockedFromInput();event.preventDefault()}">
+                      <button onclick="addBlockedFromInput()"
+                        style="padding:6px 14px;background:#ef4444;border:none;color:white;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;flex-shrink:0">Block</button>
+                    </div>
+                    <div style="font-size:10px;color:#475569;margin-top:6px">Supports comma-separated or newline-separated lists. Click ✕ on a chip to unblock.</div>
                   </div>
                 </div>
 
@@ -5767,19 +5812,6 @@ function startLastUpdatedTicker() {
                     <textarea id="scoutScriptBox" readonly
                       style="width:100%;box-sizing:border-box;height:130px;background:transparent;border:none;color:#a5b4fc;font-size:10px;font-family:monospace;resize:none;outline:none;line-height:1.5">
                     </textarea>
-                  </div>
-
-                  <!-- Blocked users -->
-                  <div id="amvggBlockedBox" style="background:#0f172a;border:1px solid #334155;border-radius:10px;padding:10px;margin-bottom:10px;display:none">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                      <span style="font-size:11px;font-weight:700;color:#f87171">🚫 Blocked Users</span>
-                      <button onclick="document.getElementById('amvggBlockedBox').style.display='none'" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:12px">✕</button>
-                    </div>
-                    <div id="amvggBlockedList" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
-                    <div style="display:flex;gap:6px">
-                      <input id="amvggBlockInput" placeholder="Username to block..." style="flex:1;background:#1e293b;border:1px solid #334155;color:var(--text);border-radius:6px;padding:5px 8px;font-size:11px;font-family:inherit">
-                      <button onclick="scoutBlockUser(document.getElementById('amvggBlockInput').value);document.getElementById('amvggBlockInput').value='';renderBlockedList()" style="padding:5px 10px;background:#ef4444;border:none;color:white;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700">Block</button>
-                    </div>
                   </div>
 
                   <!-- Paste results -->
@@ -5873,6 +5905,10 @@ function startLastUpdatedTicker() {
                           style="padding:4px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--subtext);cursor:pointer;font-size:11px;font-weight:700">⚖️ Hide Losses</button>
                         <button id="elveFiltStrict" onclick="elveSetResultFilter('strictwin')"
                           style="padding:4px 14px;border-radius:7px;border:1px solid var(--border);background:transparent;color:var(--subtext);cursor:pointer;font-size:11px;font-weight:700">✅ Wins Only</button>
+                        <button onclick="toggleBlockedPopup()" id="elveBlockedBtn"
+                          style="padding:4px 14px;border-radius:7px;border:1px solid #334155;background:transparent;color:#f87171;cursor:pointer;font-size:11px;font-weight:700">
+                          🚫 Blocked${blockedUsers.size > 0 ? ' (' + blockedUsers.size + ')' : ''}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -6194,7 +6230,6 @@ function startLastUpdatedTicker() {
                 </div>
               </div>
               <div style="display:flex;gap:6px">
-                <button onclick="renderBlockedList();document.getElementById('amvggBlockedBox').style.display=document.getElementById('amvggBlockedBox').style.display==='none'?'block':'none'" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid #334155;background:transparent;color:#f87171">🚫 ${blockedUsers.size>0?blockedUsers.size+' blocked':''}</button>
                 <button onclick="window._scoutSortFilter='all';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='all'?'#6366f1':'#334155'};background:${sf==='all'?'#6366f1':'transparent'};color:${sf==='all'?'white':'#94a3b8'}">All</button>
                 <button onclick="window._scoutSortFilter='noloss';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='noloss'?'#eab308':'#334155'};background:${sf==='noloss'?'#eab308':'transparent'};color:${sf==='noloss'?'#000':'#94a3b8'}">⚖️ Hide Losses</button>
                 <button onclick="window._scoutSortFilter='winsonly';scoutProcessPaste()" style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid ${sf==='winsonly'?'#22c55e':'#334155'};background:${sf==='winsonly'?'#22c55e':'transparent'};color:${sf==='winsonly'?'white':'#94a3b8'}">✅ Wins Only</button>
