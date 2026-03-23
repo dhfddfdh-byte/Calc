@@ -6773,63 +6773,69 @@ function startLastUpdatedTicker() {
         // It finds the card by listing-id, draws a glowing overlay + click-to-accept button.
         function buildElveAcceptScript(listingId, autoAccept) {
             var AUTO = !!autoAccept;
-            return `(()=>{
-  var AUTO_ACCEPT=` + AUTO + `;
-  const ob=document.getElementById('_elve_accept_overlay');if(ob)ob.remove();
-  const obB=document.getElementById('_elve_accept_bar');if(obB)obB.remove();
-
-  // Find the EXACT card by listing ID
-  const card=document.querySelector('[data-listing-id="` + listingId + `"]');
-  if(!card){alert('Listing #` + listingId + ` not found on this page. Scroll down to load more trades then run again.');return;}
-
-  card.scrollIntoView({behavior:'smooth',block:'center'});
-
-  // Pulsing purple glow overlay
-  const ov=document.createElement('div');ov.id='_elve_accept_overlay';
-  const r=card.getBoundingClientRect();
-  ov.style.cssText='position:absolute;top:'+(r.top+window.scrollY-6)+'px;left:'+(r.left+window.scrollX-6)+'px;width:'+(r.width+12)+'px;height:'+(r.height+12)+'px;border-radius:18px;border:3px solid #a78bfa;box-shadow:0 0 0 4px #a78bfa44,0 0 30px 10px #7c3aed66;pointer-events:none;z-index:99998;animation:_elve_pulse 1.2s ease-in-out infinite alternate';
-  const sty=document.createElement('style');sty.textContent='@keyframes _elve_pulse{from{box-shadow:0 0 0 4px #a78bfa44,0 0 20px 8px #7c3aed44}to{box-shadow:0 0 0 8px #a78bfa88,0 0 50px 20px #7c3aed99}}';
-  document.head.appendChild(sty);document.body.appendChild(ov);
-
-  // Top bar
-  const bar=document.createElement('div');bar.id='_elve_accept_bar';
-  bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;border-bottom:3px solid #a78bfa;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;font-family:system-ui,sans-serif;box-shadow:0 6px 30px rgba(0,0,0,.7)';
-
-  const infoDiv=document.createElement('div');
-  infoDiv.style.cssText='color:#e2e8f0;font-weight:800;font-size:13px;display:flex;align-items:center;gap:8px';
-  infoDiv.textContent='Listing #` + listingId + ` highlighted below \u2193';
-  if(AUTO_ACCEPT){const badge=document.createElement('span');badge.textContent='BETA auto-click';badge.style.cssText='padding:1px 7px;background:#7c3aed33;border:1px solid #7c3aed66;border-radius:8px;font-size:10px;font-weight:900;color:#a78bfa';infoDiv.appendChild(badge);}
-
-  const rightDiv=document.createElement('div');
-  rightDiv.style.cssText='display:flex;align-items:center;gap:8px';
-
-  if(AUTO_ACCEPT){
-    const accBtn=document.createElement('button');
-    accBtn.textContent='Auto-Accept';
-    accBtn.style.cssText='padding:6px 18px;background:#a78bfa;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:900;font-size:13px';
-    accBtn.onclick=function(){
-      const ab=card.querySelector('button.acceptButton,button[class*="accept"]');
-      if(ab){ab.click();bar.remove();ov.remove();}
-      else{alert('Auto-accept could not find the button. Please click Accept manually inside the highlighted card.');}
-    };
-    rightDiv.appendChild(accBtn);
-  } else {
-    const hint=document.createElement('span');
-    hint.textContent='Trade highlighted \u2014 click Accept yourself';
-    hint.style.cssText='font-size:11px;color:#94a3b8;font-style:italic';
-    rightDiv.appendChild(hint);
-  }
-
-  const doneBtn=document.createElement('button');
-  doneBtn.textContent='Done';
-  doneBtn.style.cssText='padding:6px 12px;background:#334155;color:#94a3b8;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px';
-  doneBtn.onclick=function(){bar.remove();ov.remove();};
-  rightDiv.appendChild(doneBtn);
-
-  bar.appendChild(infoDiv);bar.appendChild(rightDiv);
-  document.body.prepend(bar);
-})();`;
+            var lid  = String(listingId);
+            var s = '(()=>{';
+            s += 'var AUTO_ACCEPT=' + AUTO + ';';
+            s += 'var LID="' + lid + '";';
+            s += 'var ob=document.getElementById("_elve_accept_overlay");if(ob)ob.remove();';
+            s += 'var obB=document.getElementById("_elve_accept_bar");if(obB)obB.remove();';
+            s += 'var bar=document.createElement("div");bar.id="_elve_accept_bar";';
+            s += 'bar.style.cssText="position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;border-bottom:3px solid #a78bfa;padding:10px 16px;display:flex;justify-content:space-between;align-items:center;font-family:system-ui,sans-serif;box-shadow:0 6px 30px rgba(0,0,0,.7)";';
+            s += 'var statusDiv=document.createElement("div");';
+            s += 'statusDiv.style.cssText="color:#e2e8f0;font-weight:800;font-size:13px;display:flex;align-items:center;gap:8px";';
+            s += 'statusDiv.textContent="Searching for listing #' + lid + '...";';
+            s += 'if(AUTO_ACCEPT){var badge=document.createElement("span");badge.textContent="BETA";badge.style.cssText="padding:1px 7px;background:#7c3aed33;border:1px solid #7c3aed66;border-radius:8px;font-size:10px;font-weight:900;color:#a78bfa";statusDiv.appendChild(badge);}';
+            s += 'var stopBtn=document.createElement("button");';
+            s += 'stopBtn.textContent="Stop";';
+            s += 'stopBtn.style.cssText="padding:6px 12px;background:#334155;color:#94a3b8;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px";';
+            s += 'var stopped=false;stopBtn.onclick=function(){stopped=true;bar.remove();};';
+            s += 'bar.appendChild(statusDiv);bar.appendChild(stopBtn);document.body.prepend(bar);';
+            s += 'var scrolled=0;var MAX_SCROLL=50000;var STEP=800;var TICK=300;';
+            s += 'function scrollAndFind(){';
+            s +=   'if(stopped)return;';
+            s +=   "var card=document.querySelector('[data-listing-id=\"'  +LID+  '\"]');";
+            s +=   'if(card){found(card);return;}';
+            s +=   'var atBottom=(window.innerHeight+window.scrollY)>=document.body.scrollHeight-100;';
+            s +=   'if(scrolled>=MAX_SCROLL||atBottom){';
+            s +=     'statusDiv.textContent="Listing #' + lid + ' not found — may have expired.";';
+            s +=     'stopBtn.textContent="Close";return;';
+            s +=   '}';
+            s +=   'window.scrollBy(0,STEP);scrolled+=STEP;';
+            s +=   'setTimeout(scrollAndFind,TICK);';
+            s += '}';
+            s += 'function found(card){';
+            s +=   'card.scrollIntoView({behavior:"smooth",block:"center"});';
+            s +=   'var sty=document.createElement("style");sty.textContent="@keyframes _ep{from{box-shadow:0 0 0 4px #a78bfa44,0 0 20px 8px #7c3aed44}to{box-shadow:0 0 0 8px #a78bfa88,0 0 50px 20px #7c3aed99}}";';
+            s +=   'document.head.appendChild(sty);';
+            s +=   'setTimeout(function(){';
+            s +=     'var ov=document.createElement("div");ov.id="_elve_accept_overlay";';
+            s +=     'var r=card.getBoundingClientRect();';
+            s +=     'ov.style.cssText="position:absolute;top:"+(r.top+window.scrollY-6)+"px;left:"+(r.left+window.scrollX-6)+"px;width:"+(r.width+12)+"px;height:"+(r.height+12)+"px;border-radius:18px;border:3px solid #a78bfa;pointer-events:none;z-index:99998;animation:_ep 1.2s ease-in-out infinite alternate";';
+            s +=     'document.body.appendChild(ov);';
+            s +=     'statusDiv.textContent="Found! Listing #' + lid + ' highlighted ↓";';
+            s +=     'bar.removeChild(stopBtn);';
+            s +=     'var rightDiv=document.createElement("div");rightDiv.style.cssText="display:flex;gap:8px";';
+            s +=     'if(AUTO_ACCEPT){';
+            s +=       'var accBtn=document.createElement("button");';
+            s +=       'accBtn.textContent="Auto-Accept";';
+            s +=       'accBtn.style.cssText="padding:6px 18px;background:#a78bfa;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:900;font-size:13px";';
+            s +=       'accBtn.onclick=function(){var ab=card.querySelector("button[class*=accept],button[class*=Accept]");if(ab){ab.click();bar.remove();ov.remove();}else{alert("Could not auto-click — please click Accept inside the highlighted card.");}};';
+            s +=       'rightDiv.appendChild(accBtn);';
+            s +=     '} else {';
+            s +=       'var hint=document.createElement("span");hint.textContent="Highlighted — click Accept yourself";hint.style.cssText="font-size:11px;color:#94a3b8;font-style:italic";rightDiv.appendChild(hint);';
+            s +=     '}';
+            s +=     'var doneBtn=document.createElement("button");';
+            s +=     'doneBtn.textContent="Done";';
+            s +=     'doneBtn.style.cssText="padding:6px 12px;background:#334155;color:#94a3b8;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px";';
+            s +=     'doneBtn.onclick=function(){bar.remove();ov.remove();};';
+            s +=     'rightDiv.appendChild(doneBtn);bar.appendChild(rightDiv);';
+            s +=   '},400);';
+            s += '}';
+            s += 'window.scrollTo(0,0);setTimeout(scrollAndFind,200);';
+            s += '})();';
+            return s;
         }
+
         // ── Elve paste & process ──────────────────────────────────────────
         function elveProcessPaste() {
             const raw = (document.getElementById('elvePasteBox') || {}).value || '';
