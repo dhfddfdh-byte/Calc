@@ -5421,6 +5421,10 @@ function startLastUpdatedTicker() {
             state[key] = !state[key];
             saveTrade();
             refreshSettingBtns();
+            // Re-render Elve results live when beta accept is toggled
+            if (key === 'betaElveAccept' && window._elveLastTrades) {
+                renderElveResults(window._elveLastTrades);
+            }
         }
 
         function refreshSettingBtns() {
@@ -7031,7 +7035,7 @@ function startLastUpdatedTicker() {
             copyBtn.style.cssText = 'flex:1;padding:10px;background:#7c3aed;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:800;font-size:13px';
             copyBtn.textContent = 'Copy Script & Open Elve';
             copyBtn.addEventListener('click', function() {
-                var url = 'https://www.elvebredd.com/trade-center?listing=' + listingId;
+                var url = 'https://elvebredd.com/trade-center?listing=' + listingId;
                 function markCopied() {
                     copyBtn.textContent = 'Copied! Paste in Elve console';
                     copyBtn.style.background = '#16a34a';
