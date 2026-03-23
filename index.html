@@ -6639,7 +6639,7 @@ function startLastUpdatedTicker() {
   document.getElementById('_es').onclick=()=>{clearInterval(window._elveScan);window._elveScan=null;finish(true);};
 
   const seen=new Map();let scrolled=0,stuckFor=0,lastSize=0;
-  const MAX=400,SPX=2000,TMS=500,STUCK=50;
+  const MAX=400,SPX=2000,TMS=500,STUCK=150;
   const WANT=${JSON.stringify(wantCount)};
   const MIN_OVERPAY=${JSON.stringify(minOverpay)};
   const BLOCKED_USERS=${JSON.stringify(blockedList.map(u=>u.toLowerCase().trim()))};
@@ -6663,11 +6663,24 @@ function startLastUpdatedTicker() {
     return pets;
   }
 
+  function findPetGrids(card){
+    // Try the known selector first
+    let gs=card.querySelectorAll('[style*="grid-template-columns"][style*="auto-fill"]');
+    if(gs.length>=2)return gs;
+    // Fallback 1: any grid-template-columns div
+    gs=card.querySelectorAll('[style*="grid-template-columns"]');
+    if(gs.length>=2)return gs;
+    // Fallback 2: any div that directly contains span.relative pet slots
+    const divs=[...card.querySelectorAll('div')].filter(d=>d.querySelector('span.relative'));
+    if(divs.length>=2)return divs;
+    return [];
+  }
+
   function scan(){
     document.querySelectorAll('[data-listing-id]').forEach(card=>{
       const lid=card.getAttribute('data-listing-id');
       if(!lid||seen.has(lid))return;
-      const grids=card.querySelectorAll('[style*="grid-template-columns"][style*="auto-fill"]');
+      const grids=findPetGrids(card);
       if(grids.length<2)return;
       const lf=parsePetGrid(grids[0]),off=parsePetGrid(grids[1]);
       if(!lf.length&&!off.length)return;
@@ -6685,7 +6698,7 @@ function startLastUpdatedTicker() {
       if(OFFER_FILTER){
         const matchO=lf.some(p=>p.name.toLowerCase().includes(OFFER_FILTER)&&(OFFER_VAR==='Any'||p.variant===OFFER_VAR));
         if(!matchO)return;
-        if(lf.length>1)return;
+        // Allow bundles — they want your pet + adds, that's fine
       }
       // Apply receive filter (what you get = Offering column on Elve)
       if(RECV_FILTER){const m=off.some(p=>p.name.toLowerCase().includes(RECV_FILTER)&&(RECV_VAR==='Any'||p.variant===RECV_VAR));if(!m)return;}
@@ -6697,8 +6710,9 @@ function startLastUpdatedTicker() {
     const wantPct=WANT>0?Math.min(100,Math.round((tot/WANT)*100)):Math.min(100,Math.round(scrolled/MAX*100));
     fill.style.width=wantPct+'%';
     ctr.textContent=tot+(WANT>0?'/'+WANT:'')+ ' trades';
-    const stEl=document.getElementById('_elve_status');if(stEl)stEl.textContent='🔄 Scanning… scroll '+scrolled+'/'+MAX+(WANT>0?' · need '+WANT+' trades':'');
-    if(tot===lastSize)stuckFor++;else{stuckFor=0;lastSize=tot;}
+    const domCards=document.querySelectorAll('[data-listing-id]').length;
+    const stEl=document.getElementById('_elve_status');if(stEl)stEl.textContent='🔄 Scanning… '+domCards+' cards seen, '+tot+' matched'+(WANT>0?' / need '+WANT:'');
+    if(domCards===lastSize)stuckFor++;else{stuckFor=0;lastSize=domCards;}
     if((WANT>0&&tot>=WANT)||stuckFor>=STUCK||scrolled>=MAX){clearInterval(window._elveScan);window._elveScan=null;finish(false);return;}
     window.scrollBy(0,SPX);scrolled++;
   }
@@ -7274,7 +7288,7 @@ function startLastUpdatedTicker() {
       if(OFFER){
         const matchO=lf.some(p=>p.name.toLowerCase().includes(OFFER));
         if(!matchO)return;
-        if(lf.length>1)return;
+        // Allow bundles
         if(OFFERVAR&&OFFERVAR!=='Any'&&!lf.some(p=>p.name.toLowerCase().includes(OFFER)&&p.variant===OFFERVAR))return;
       }
       allFound.set(key,{username,profileHref,avatar,time,lf,offering});
