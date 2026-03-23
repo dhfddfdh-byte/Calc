@@ -1254,6 +1254,49 @@
                     <button class="nav-btn" style="width:100%;font-size:0.8em" onclick="addKeybind()">+ Add New Keybind</button>
                 </div>
 
+                <!-- Default Pet Options -->
+                <div class="settings-section">
+                    <div class="settings-section-title">🐾 Default Pet Options</div>
+                    <div style="font-size:0.75em;color:var(--subtext);margin:6px 0 10px">When you add a pet to a trade, these will be pre-selected.</div>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Default Fly</span>
+                            <button id="settingDefaultFly" onclick="toggleSetting('defaultFly')"
+                                style="padding:5px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:800;font-size:0.78em;font-family:inherit;background:#1e293b;color:#64748b">OFF</button>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Default Ride</span>
+                            <button id="settingDefaultRide" onclick="toggleSetting('defaultRide')"
+                                style="padding:5px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:800;font-size:0.78em;font-family:inherit;background:#1e293b;color:#64748b">OFF</button>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Default Neon</span>
+                            <button id="settingDefaultNeon" onclick="toggleSetting('defaultNeon')"
+                                style="padding:5px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:800;font-size:0.78em;font-family:inherit;background:#1e293b;color:#64748b">OFF</button>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between">
+                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Default Mega</span>
+                            <button id="settingDefaultMega" onclick="toggleSetting('defaultMega')"
+                                style="padding:5px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:800;font-size:0.78em;font-family:inherit;background:#1e293b;color:#64748b">OFF</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Beta Features -->
+                <div class="settings-section">
+                    <div class="settings-section-title">🧪 Beta Features</div>
+                    <div style="font-size:0.75em;color:var(--subtext);margin:6px 0 10px">Experimental features — may not work perfectly.</div>
+                    <div style="display:flex;align-items:center;justify-content:space-between">
+                        <div>
+                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Elve Auto-Accept Script</span>
+                            <span style="display:inline-block;margin-left:6px;padding:1px 7px;background:#7c3aed33;border:1px solid #7c3aed66;border-radius:10px;font-size:0.65em;font-weight:900;color:#a78bfa">BETA</span>
+                            <div style="font-size:0.72em;color:var(--subtext);margin-top:2px">Shows an ⚡ Accept button on Elve trade results. Script tries to auto-click Elve's accept button — may not always work.</div>
+                        </div>
+                        <button id="settingBetaElveAccept" onclick="toggleSetting('betaElveAccept')"
+                            style="padding:5px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:800;font-size:0.78em;font-family:inherit;background:#1e293b;color:#64748b;flex-shrink:0;margin-left:12px">OFF</button>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -1436,7 +1479,7 @@
         //   aiTargetPets: manually pinned target pets for AI suggestions
         //   keybinds   : hotkeys that quick-add specific pets
         //   uiScale    : zoom level for the overall UI (0.8–1.3)
-        let state = { mode: 'value', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null, keybinds: [], uiScale: 1.0 };
+        let state = { mode: 'value', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null, keybinds: [], uiScale: 1.0, defaultFly: false, defaultRide: false, defaultNeon: false, defaultMega: false, betaElveAccept: false };
         // Pet names locked from AI suggestions (persisted separately)
         const lockedPets = new Set(JSON.parse(localStorage.getItem('lockedPets') || '[]'));
         // Locked pets are excluded from AI trade suggestions.
@@ -2612,7 +2655,12 @@
                 keybinds:      state.keybinds || [],
                 uiScale:       Math.round((state.uiScale || 1.0) * 100), // store as integer percent
                 aiMode:        state.aiMode   || 'normal',
-                strategyLimit: state.strategyLimit || 10
+                strategyLimit: state.strategyLimit || 10,
+                defaultFly:    !!state.defaultFly,
+                defaultRide:   !!state.defaultRide,
+                defaultNeon:   !!state.defaultNeon,
+                defaultMega:   !!state.defaultMega,
+                betaElveAccept: !!state.betaElveAccept
             };
             localStorage.setItem('tradeData', JSON.stringify(simplifiedState));
         }
@@ -2631,6 +2679,11 @@
                 state.B = (parsed.B || []).map(hydrate).filter(x => x);
                 state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
                 if (parsed.keybinds)      state.keybinds      = parsed.keybinds;
+                if (parsed.defaultFly     !== undefined) state.defaultFly     = !!parsed.defaultFly;
+                if (parsed.defaultRide    !== undefined) state.defaultRide    = !!parsed.defaultRide;
+                if (parsed.defaultNeon    !== undefined) state.defaultNeon    = !!parsed.defaultNeon;
+                if (parsed.defaultMega    !== undefined) state.defaultMega    = !!parsed.defaultMega;
+                if (parsed.betaElveAccept !== undefined) state.betaElveAccept = !!parsed.betaElveAccept;
                 // Restore zoom: old saves stored decimal (1.0), new stores int (100).
                 // If value is clearly bad (< 10 means decimal), convert it.
                 // Clamp to 80–130 so a corrupt value never makes text invisible.
@@ -3000,7 +3053,8 @@
             if (!pet) return;
             pushState();
             for (let i = 0; i < quantity; i++) {
-                const newPet = { ...pet, uid: Math.random(), type: 'reg', f_st: false, r_st: false };
+                const _defType = state.defaultMega ? 'mega' : (state.defaultNeon ? 'neon' : 'reg');
+                const newPet = { ...pet, uid: Math.random(), type: _defType, f_st: !!state.defaultFly, r_st: !!state.defaultRide };
                 if (state.target === 'tbOffer')    { tbOfferPets.push({...newPet, uid: Math.random()}); }
                 else if (state.target === 'tbRequest') { tbRequestPets.push({...newPet, uid: Math.random()}); }
                 else if (state.target === 'tbComplete') {
@@ -5363,11 +5417,30 @@ function startLastUpdatedTicker() {
             }
         }
 
+        function toggleSetting(key) {
+            state[key] = !state[key];
+            saveTrade();
+            refreshSettingBtns();
+        }
+
+        function refreshSettingBtns() {
+            ['defaultFly','defaultRide','defaultNeon','defaultMega','betaElveAccept'].forEach(function(key) {
+                var id = 'setting' + key.charAt(0).toUpperCase() + key.slice(1);
+                var btn = document.getElementById(id);
+                if (!btn) return;
+                var on = !!state[key];
+                btn.textContent = on ? 'ON' : 'OFF';
+                btn.style.background = on ? 'var(--accent)' : '#1e293b';
+                btn.style.color = on ? 'white' : '#64748b';
+            });
+        }
+
         function openSettings() {
             document.getElementById('settingsOverlay').style.display = 'flex';
             renderKeybindList();
             document.getElementById('uiScaleSlider').value = Math.round(state.uiScale * 100);
             document.getElementById('uiScaleLabel').textContent = Math.round(state.uiScale * 100) + '%';
+            refreshSettingBtns();
         }
 
         function closeSettings() {
@@ -6897,10 +6970,7 @@ function startLastUpdatedTicker() {
                   <!-- Footer -->
                   <div style="display:flex;justify-content:space-between;align-items:center;padding-top:7px;margin-top:8px;border-top:1px solid #1e293b;gap:5px">
                     <span style="color:#475569;font-size:9px;flex-shrink:0">${t.time||''}</span>
-                    <button onclick="elveShowAccept(${JSON.stringify(t.listingId)})"
-                      style="flex:1;padding:5px 6px;border-radius:6px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap">
-                      ⚡ Accept
-                    </button>
+                    ${state.betaElveAccept ? '<button onclick="elveShowAccept(' + JSON.stringify(t.listingId) + ')" style="flex:1;padding:5px 6px;border-radius:6px;background:#7c3aed;border:none;color:white;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap">Accept</button>' : ''}
                   </div>
                 </div>`;
             }).join('') + `</div>`;
@@ -6912,35 +6982,65 @@ function startLastUpdatedTicker() {
 
         // ── Show accept modal with copyable script ────────────────────────
         function elveShowAccept(listingId) {
-            const script = buildElveAcceptScript(listingId);
-            const existing = document.getElementById('elveAcceptModal');
+            var script = buildElveAcceptScript(listingId);
+            var existing = document.getElementById('elveAcceptModal');
             if (existing) existing.remove();
 
-            const modal = document.createElement('div');
+            var modal = document.createElement('div');
             modal.id = 'elveAcceptModal';
             modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
-            modal.innerHTML = `
-              <div style="background:#0f172a;border:1px solid #a78bfa;border-radius:14px;padding:20px;max-width:480px;width:100%;box-shadow:0 0 60px rgba(124,58,237,.5)">
-                <div style="font-weight:800;font-size:15px;color:#e2e8f0;margin-bottom:6px">⚡ Accept Trade #${listingId}</div>
-                <div style="font-size:12px;color:#94a3b8;margin-bottom:12px">Copy this script, switch to Elve tab, open DevTools (F12) → Console, paste it and press Enter. It will highlight and help you accept the trade.</div>
-                <textarea readonly style="width:100%;height:90px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#a78bfa;font-size:10px;padding:8px;box-sizing:border-box;resize:none;font-family:monospace">${script.replace(/</g,'&lt;')}</textarea>
-                <div style="display:flex;gap:8px;margin-top:12px">
-                  <button id="elveAcceptCopyBtn" onclick="
-                    navigator.clipboard.writeText(${JSON.stringify(script)}).then(()=>{
-                      this.textContent='✅ Copied! Switch to Elve tab';
-                      this.style.background='#16a34a';
+
+            var box = document.createElement('div');
+            box.style.cssText = 'background:#0f172a;border:1px solid #a78bfa;border-radius:14px;padding:20px;max-width:480px;width:100%;box-shadow:0 0 60px rgba(124,58,237,.5)';
+
+            var title = document.createElement('div');
+            title.style.cssText = 'font-weight:800;font-size:15px;color:#e2e8f0;margin-bottom:6px';
+            title.textContent = 'Accept Trade #' + listingId;
+
+            var desc = document.createElement('div');
+            desc.style.cssText = 'font-size:12px;color:#94a3b8;margin-bottom:12px';
+            desc.textContent = 'Copy this script, open Elve in a tab, open DevTools (F12) then Console, paste and press Enter. It highlights the trade and gives you an Accept button.';
+
+            var ta = document.createElement('textarea');
+            ta.readOnly = true;
+            ta.value = script;
+            ta.style.cssText = 'width:100%;height:90px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#a78bfa;font-size:10px;padding:8px;box-sizing:border-box;resize:none;font-family:monospace';
+
+            var btns = document.createElement('div');
+            btns.style.cssText = 'display:flex;gap:8px;margin-top:12px';
+
+            var copyBtn = document.createElement('button');
+            copyBtn.style.cssText = 'flex:1;padding:10px;background:#7c3aed;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:800;font-size:13px';
+            copyBtn.textContent = 'Copy Script & Open Elve';
+            copyBtn.addEventListener('click', function() {
+                var url = 'https://www.elvebredd.com/trade-center?listing=' + listingId;
+                function markCopied() {
+                    copyBtn.textContent = 'Copied! Paste in Elve console';
+                    copyBtn.style.background = '#16a34a';
+                }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(script).then(markCopied).catch(function() {
+                        ta.select(); document.execCommand('copy'); markCopied();
                     });
-                    window.open('https://www.elvebredd.com/trade-center?listing=${listingId}','_blank');
-                  " style="flex:1;padding:10px;background:#7c3aed;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:800;font-size:13px">
-                    📋 Copy & Open Elve
-                  </button>
-                  <button onclick="document.getElementById('elveAcceptModal').remove()" style="padding:10px 16px;background:#334155;color:#94a3b8;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px">
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            `;
-            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+                } else {
+                    ta.select(); document.execCommand('copy'); markCopied();
+                }
+                window.open(url, '_blank');
+            });
+
+            var cancelBtn = document.createElement('button');
+            cancelBtn.style.cssText = 'padding:10px 16px;background:#334155;color:#94a3b8;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px';
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.addEventListener('click', function() { modal.remove(); });
+
+            btns.appendChild(copyBtn);
+            btns.appendChild(cancelBtn);
+            box.appendChild(title);
+            box.appendChild(desc);
+            box.appendChild(ta);
+            box.appendChild(btns);
+            modal.appendChild(box);
+            modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
             document.body.appendChild(modal);
         }
         window.elveShowAccept = elveShowAccept;
