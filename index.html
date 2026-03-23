@@ -6671,6 +6671,14 @@ function startLastUpdatedTicker() {
       if(grids.length<2)return;
       const lf=parsePetGrid(grids[0]),off=parsePetGrid(grids[1]);
       if(!lf.length&&!off.length)return;
+      // Parse card metadata FIRST (needed by filters below)
+      const uEl=card.querySelector('span.whitespace-nowrap');
+      const tEl=card.querySelector('span.font-normal');
+      const avatarImg=card.querySelector('img[alt="Owner of Listing Roblox Image"]');
+      let avatar='',profileHref='#';
+      if(avatarImg){avatar=avatarImg.src;const m=avatar.match(/\\/roblox\\/(\\d+)\\.png/);if(m)profileHref='https://www.roblox.com/users/'+m[1]+'/profile';}
+      let elveDiff=null;
+      card.querySelectorAll('span').forEach(sp=>{const t=sp.textContent.trim();if(/^\\d+(\\.\\d+)?$/.test(t)&&!sp.children.length)elveDiff=parseFloat(t);});
       // Skip blocked users
       if(BLOCKED_USERS.length&&uEl&&BLOCKED_USERS.includes(uEl.textContent.trim().toLowerCase()))return;
       // Apply offer filter: LF must contain ONLY the one pet you are offering
@@ -6683,13 +6691,6 @@ function startLastUpdatedTicker() {
       if(RECV_FILTER){const m=off.some(p=>p.name.toLowerCase().includes(RECV_FILTER)&&(RECV_VAR==='Any'||p.variant===RECV_VAR));if(!m)return;}
       // Minimum overpay filter (uses Elve's own diff value on the card)
       if(MIN_OVERPAY>0&&elveDiff!=null&&elveDiff<MIN_OVERPAY)return;
-      const avatarImg=card.querySelector('img[alt="Owner of Listing Roblox Image"]');
-      let avatar='',profileHref='#';
-      if(avatarImg){avatar=avatarImg.src;const m=avatar.match(/\\/roblox\\/(\\d+)\\.png/);if(m)profileHref='https://www.roblox.com/users/'+m[1]+'/profile';}
-      const uEl=card.querySelector('span.whitespace-nowrap');
-      const tEl=card.querySelector('span.font-normal');
-      let elveDiff=null;
-      card.querySelectorAll('span').forEach(sp=>{const t=sp.textContent.trim();if(/^\\d+(\\.\\d+)?$/.test(t)&&!sp.children.length)elveDiff=parseFloat(t);});
       seen.set(lid,{listingId:lid,username:uEl?uEl.textContent.trim():'?',avatar,profileHref,time:tEl?tEl.textContent.trim():'',elveDiff,lf,offering:off,listingHref:location.origin+'/trade-center?listing='+lid});
     });
     const tot=seen.size;
