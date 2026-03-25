@@ -7286,7 +7286,7 @@ function startLastUpdatedTicker() {
                 }
             }
             let sel = await poll(()=>findBtn('Select'), 2000);
-            sel.click(); await wait(1000);
+            sel.click(); await wait(1200);
         }
         if(WINSONLY) {
             await wait(400);
@@ -7295,29 +7295,16 @@ function startLastUpdatedTicker() {
                 for(let i=0;i<bs.length;i++){let t=bs[i].textContent.trim();if(t==='Hide Losses'||t.indexOf('Hide Loss')>=0)return bs[i];}
                 return null;
             }, 3000);
-            if(hlB) { hlB.click(); await wait(600); }
+            if(hlB) { hlB.click(); await wait(800); }
         }
-    } catch(e){console.warn('Filter logic incomplete:', e.message);}
+    } catch(e){console.warn('Automation paused:', e.message);}
     finally { _isFiltering = false; }
   }
 
   const bar=document.createElement('div');
   bar.id='_amvS';
   bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:4px solid #6366f1;box-shadow:0 8px 40px rgba(0,0,0,.8);padding-bottom:4px';
-  bar.innerHTML=\`
-    <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px">
-      <div style="flex:1;min-width:0">
-        <div id="_amvSt" style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔄 Starting scan...</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="flex:1;height:12px;background:#1e293b;border-radius:999px;overflow:hidden;border:1px solid #334155">
-            <div id="_amvBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:999px;transition:width 0.3s ease"></div>
-          </div>
-          <span id="_amvNum" style="font-size:15px;font-weight:900;color:#a5b4fc;white-space:nowrap;min-width:55px;text-align:right">0/\\\${WANT}</span>
-        </div>
-      </div>
-      <button id="_amvStop" style="flex-shrink:0;padding:10px 20px;border-radius:8px;background:#ef4444;border:none;color:white;cursor:pointer;font-size:14px;font-weight:800">■ Stop</button>
-    </div>
-  \`;
+  bar.innerHTML='<div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px"><div style="flex:1;min-width:0"><div id="_amvSt" style="font-size:14px;font-weight:700;color:#e2e8f0;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🔄 Starting scan...</div><div style="display:flex;align-items:center;gap:10px"><div style="flex:1;height:12px;background:#1e293b;border-radius:999px;overflow:hidden;border:1px solid #334155"><div id="_amvBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:999px;transition:width 0.3s ease"></div></div><span id="_amvNum" style="font-size:15px;font-weight:900;color:#a5b4fc;white-space:nowrap;min-width:55px;text-align:right">0/' + WANT + '</span></div></div><button id="_amvStop" style="flex-shrink:0;padding:10px 20px;border-radius:8px;background:#ef4444;border:none;color:white;cursor:pointer;font-size:14px;font-weight:800">■ Stop</button></div>';
   document.body.appendChild(bar);
   document.getElementById('_amvStop').onclick=()=>{ clearInterval(window._amvInt);window._amvInt=null;bar.remove(); };
   const st=document.getElementById('_amvSt'), progressBar=document.getElementById('_amvBar'), numEl=document.getElementById('_amvNum');
@@ -7365,24 +7352,10 @@ function startLastUpdatedTicker() {
     navigator.clipboard.writeText(json).then(()=>{
       bar.style.borderTopColor='#22c55e'; bar.style.background='#052e16';
       const closed=setTimeout(()=>window.close(),800);
-      bar.innerHTML=\`
-        <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px">
-          <div>
-            <div style="font-size:16px;font-weight:900;color:#22c55e">✅ Copied \\\${trades.length} trade\\\${trades.length===1?'':'s'}!</div>
-            <div style="font-size:12px;color:#86efac;margin-top:3px">Head back to the calc tab → Trade Scout → Paste & Analyse</div>
-            <div style="font-size:11px;color:#64748b;margin-top:2px">Tab will close automatically…</div>
-          </div>
-          <button onclick="clearTimeout(\\\${closed});window.close()" style="flex-shrink:0;padding:10px 24px;border-radius:9px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:15px;font-weight:900">✕ Close Tab</button>
-        </div>\`;
+      bar.innerHTML = '<div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px"><div><div style="font-size:16px;font-weight:900;color:#22c55e">✅ Copied ' + trades.length + ' trades!</div><div style="font-size:12px;color:#86efac;margin-top:3px">Head back to the calc tab → Trade Scout → Paste & Analyse</div><div style="font-size:11px;color:#64748b;margin-top:2px">Tab will close automatically…</div></div><button onclick="window.close()" style="flex-shrink:0;padding:10px 24px;border-radius:9px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:15px;font-weight:900">✕ Close Tab</button></div>';
     }).catch(()=>{
       bar.style.borderTopColor='#f59e0b';
-      bar.innerHTML=\`
-        <div style="padding:10px 16px">
-          <div style="font-size:13px;color:#fbbf24;font-weight:700;margin-bottom:6px">⚠️ Clipboard blocked — manually copy the text below:</div>
-          <textarea id="_amvJson" style="width:100%;height:180px;font-size:12px;color:#e2e8f0;background:#0f172a;border:2px solid #f59e0b;resize:vertical;border-radius:10px;padding:12px;box-sizing:border-box;font-family:monospace">\\\${json}</textarea>
-          <button onclick="document.getElementById('_amvJson').select();document.execCommand('copy');this.textContent='✅ Copied!'" style="margin-top:6px;padding:8px 18px;border-radius:7px;background:#f59e0b;border:none;cursor:pointer;font-weight:800;font-size:13px">📋 Copy All</button>
-          <button onclick="window.close()||document.getElementById('_amvS').remove()" style="margin-top:8px;margin-left:8px;padding:8px 18px;border-radius:7px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:13px;font-weight:700">✕ Close Tab</button>
-        </div>\`;
+      bar.innerHTML = '<div style="padding:10px 16px"><div style="font-size:13px;color:#fbbf24;font-weight:700;margin-bottom:6px">⚠️ Clipboard blocked — manually copy the text below:</div><textarea id="_amvJson" style="width:100%;height:180px;font-size:12px;color:#e2e8f0;background:#0f172a;border:2px solid #f59e0b;resize:vertical;border-radius:10px;padding:12px;box-sizing:border-box;font-family:monospace">' + json + '</textarea><button onclick="document.getElementById(\'_amvJson\').select();document.execCommand(\'copy\');this.textContent=\'✅ Copied!\'" style="margin-top:6px;padding:8px 18px;border-radius:7px;background:#f59e0b;border:none;cursor:pointer;font-weight:800;font-size:13px">📋 Copy All</button><button onclick="window.close()" style="margin-top:8px;margin-left:8px;padding:8px 18px;border-radius:7px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:13px;font-weight:700">✕ Close Tab</button></div>';
     });
   }
 
