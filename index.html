@@ -7230,12 +7230,80 @@ function startLastUpdatedTicker() {
   const OFFER=${JSON.stringify((offerFilter||'').toLowerCase())};
   const OFFERVAR=${JSON.stringify(offerVariant||'')};
   const WANT=${wantCount};
+  const WINSONLY=${!!winsOnly};
   const BLOCKED_USERS=${JSON.stringify((blockedList||[]).map(u=>(u||'').toLowerCase().trim()))};
   const MAX=300;
   let attempts=0;
   let lastCount=0;
   let noProgressCount=0;
   const allFound=new Map();
+
+  // ── AMVGG Filter Helpers ──────────────────────────────────────────────────
+  function findByText(t){const a=document.querySelectorAll('*');for(let i=0;i<a.length;i++){let e=a[i];if(e.childElementCount===0&&e.textContent.trim()===t)return e;}return null;}
+  function findBtn(t){const b=document.querySelectorAll('button');for(let i=0;i<b.length;i++){if(b[i].textContent.trim()===t)return b[i];}return null;}
+  function findInput(p){const i=document.querySelectorAll('input');for(let k=0;k<i.length;k++){let ph=(i[k].getAttribute('placeholder')||'').toLowerCase();for(let j=0;j<p.length;j++){if(ph.indexOf(p[j].toLowerCase())>=0)return i[k];}}return null;}
+  function setInpVal(i,v){let s=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value');if(s&&s.set)s.set.call(i,v);else i.value=v;i.dispatchEvent(new Event('input',{bubbles:true}));i.dispatchEvent(new Event('change',{bubbles:true}));}
+  function poll(f,t){return new Promise((r,j)=>{let s=Date.now();function c(){let x=f();if(x){r(x);return;}if(Date.now()-s>t){j(new Error('Timeout'));return;}setTimeout(c,100);}c();});}
+  const wait=m=>new Promise(r=>setTimeout(r,m));
+
+  async function _applyAmvFilters(){
+    try {
+        if(OFFER) {
+            let open = findInput(['search','enter search','find pet','enter a pet']);
+            if(!open) {
+                let lfT=findByText('Looking For');
+                if(lfT){
+                    let fBtn=null,el=lfT;
+                    for(let d=0;d<6&&el;d++){if(el.className&&typeof el.className==='string'&&el.className.indexOf('cursor-pointer')>=0){fBtn=el;break;}el=el.parentElement;}
+                    if(!fBtn)fBtn=lfT.parentElement;
+                    if(fBtn){fBtn.click(); await wait(800);}
+                }
+            }
+            let sEl = await poll(()=>findInput(['search','enter search','find pet','enter a pet','pet name']), 4000);
+            setInpVal(sEl, OFFER);
+            await wait(700);
+            let pEl = await poll(()=>{
+                let imgs=document.querySelectorAll('img[alt]');
+                for(let i=0;i<imgs.length;i++){if(imgs[i].alt.toLowerCase().indexOf(OFFER)>=0){let c=imgs[i].closest('button')||imgs[i].closest('[role="button"]')||imgs[i].parentElement;if(c&&c.getBoundingClientRect().width>5)return c;}}
+                return null;
+            }, 5000);
+            pEl.click();
+            await wait(700);
+            let fBtn=await poll(()=>{let bs=document.querySelectorAll('button');for(let i=0;i<bs.length;i++){if(bs[i].textContent.trim()==='F'&&bs[i].getBoundingClientRect().width>5)return bs[i];}return null;}, 3000);
+            let vS = OFFERVAR.toUpperCase();
+            if(!vS.includes('F')) { fBtn.click(); await wait(200); }
+            let allB = document.querySelectorAll('button');
+            let rB=null,nB=null,mB=null;
+            for(let i=0;i<allB.length;i++){
+                let txt=allB[i].textContent.trim();
+                if(txt==='R')rB=allB[i]; else if(txt==='N')nB=allB[i]; else if(txt==='M')mB=allB[i];
+            }
+            if(rB && !vS.includes('R')) { rB.click(); await wait(200); }
+            if(nB && vS.includes('N')) { nB.click(); await wait(200); }
+            if(mB && vS.includes('M')) { mB.click(); await wait(200); }
+            let els=document.querySelectorAll('*');
+            for(let i=0;i<els.length;i++){
+                if(els[i].childElementCount===0 && els[i].textContent.trim()==='Only this item'){
+                    let t=els[i].parentElement.querySelector('button[role="switch"]')||els[i].parentElement.querySelector('input[type="checkbox"]')||els[i].previousElementSibling;
+                    if(t){ if(t.tagName==='INPUT'){if(!t.checked)t.click();}else{t.click();} await wait(300); }
+                    break;
+                }
+            }
+            let sel = await poll(()=>findBtn('Select'), 2000);
+            sel.click();
+            await wait(700);
+        }
+        if(WINSONLY) {
+            await wait(400);
+            let hlB = await poll(()=>{
+                let bs=document.querySelectorAll('button,[role="button"]');
+                for(let i=0;i<bs.length;i++){let t=bs[i].textContent.trim();if(t==='Hide Losses'||t.indexOf('Hide Loss')>=0)return bs[i];}
+                return null;
+            }, 3000);
+            if(hlB) hlB.click();
+        }
+    } catch(e){console.warn('Filter logic skipped or failed:', e.message);}
+  }
 
   // ── Bar HTML ──────────────────────────────────────────────────────────────
   const bar=document.createElement('div');
@@ -7249,7 +7317,7 @@ function startLastUpdatedTicker() {
           <div style="flex:1;height:12px;background:#1e293b;border-radius:999px;overflow:hidden;border:1px solid #334155">
             <div id="_amvBar" style="height:100%;width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6);border-radius:999px;transition:width 0.3s ease"></div>
           </div>
-          <span id="_amvNum" style="font-size:15px;font-weight:900;color:#a5b4fc;white-space:nowrap;min-width:55px;text-align:right">0/${wantCount}</span>
+          <span id="_amvNum" style="font-size:15px;font-weight:900;color:#a5b4fc;white-space:nowrap;min-width:55px;text-align:right">0/\\${WANT}</span>
         </div>
       </div>
       <button id="_amvStop" style="flex-shrink:0;padding:10px 20px;border-radius:8px;background:#ef4444;border:none;color:white;cursor:pointer;font-size:14px;font-weight:800">■ Stop</button>
@@ -7273,7 +7341,6 @@ function startLastUpdatedTicker() {
     }
   }
 
-  // ── Variant detector ──────────────────────────────────────────────────────
   function getV(cell){
     const ps=[...cell.querySelectorAll('p')].map(p=>p.textContent.trim()).filter(t=>['F','R','N','M'].includes(t));
     const N=ps.includes('N'),M=ps.includes('M'),F=ps.includes('F'),R=ps.includes('R');
@@ -7282,7 +7349,6 @@ function startLastUpdatedTicker() {
     if(F&&R)return'FR';if(F)return'F';if(R)return'R';return'Reg';
   }
 
-  // ── Scrape — accumulates into allFound map so nothing is lost ─────────────
   function scrape(){
     const bars=document.querySelectorAll('div.flex.flex-row.w-full.bg-\\\\[\\\\#212020\\\\]');
     bars.forEach(b=>{
@@ -7300,14 +7366,11 @@ function startLastUpdatedTicker() {
         return{name:img.alt.trim(),variant:getV(c)};
       }).filter(Boolean);
       const lf=parse(grids[0]);const offering=parse(grids[1]);
-      // Filter: pet you want to RECEIVE must appear in offering column
       if(LF&&!offering.some(p=>p.name.toLowerCase().includes(LF)))return;
       if(LF&&LFVARIANT&&LFVARIANT!=='Any'&&!offering.some(p=>p.name.toLowerCase().includes(LF)&&p.variant===LFVARIANT))return;
-      // Filter: OFFERING pet - LF must contain ONLY this pet (exact, no bundles)
       if(OFFER){
         const matchO=lf.some(p=>p.name.toLowerCase().includes(OFFER));
         if(!matchO)return;
-        // Allow bundles
         if(OFFERVAR&&OFFERVAR!=='Any'&&!lf.some(p=>p.name.toLowerCase().includes(OFFER)&&p.variant===OFFERVAR))return;
       }
       allFound.set(key,{username,profileHref,avatar,time,lf,offering});
@@ -7315,7 +7378,6 @@ function startLastUpdatedTicker() {
     return [...allFound.values()];
   }
 
-  // ── Finish — write to clipboard then show done state ──────────────────────
   function finish(trades){
     clearInterval(window._amvInt);window._amvInt=null;
     updateProgress(trades.length);
@@ -7323,7 +7385,6 @@ function startLastUpdatedTicker() {
     navigator.clipboard.writeText(json).then(()=>{
       bar.style.borderTopColor='#22c55e';
       bar.style.background='#052e16';
-      // Try auto-close first; show manual button as fallback
       const closed=setTimeout(()=>window.close(),800);
       bar.innerHTML=\`
         <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px">
@@ -7332,16 +7393,15 @@ function startLastUpdatedTicker() {
             <div style="font-size:12px;color:#86efac;margin-top:3px">Head back to the calc tab → Trade Scout → Paste & Analyse</div>
             <div style="font-size:11px;color:#64748b;margin-top:2px">Tab will close automatically…</div>
           </div>
-          <button onclick="clearTimeout(\${closed});window.close()" style="flex-shrink:0;padding:10px 24px;border-radius:9px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:15px;font-weight:900">✕ Close Tab</button>
+          <button onclick="clearTimeout(\\${closed});window.close()" style="flex-shrink:0;padding:10px 24px;border-radius:9px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:15px;font-weight:900">✕ Close Tab</button>
         </div>
       \`;
     }).catch(()=>{
-      // Clipboard blocked — show inline textarea fallback
       bar.style.borderTopColor='#f59e0b';
       bar.innerHTML=\`
         <div style="padding:10px 16px">
           <div style="font-size:13px;color:#fbbf24;font-weight:700;margin-bottom:6px">⚠️ Clipboard blocked — manually copy the text below:</div>
-          <textarea id="_amvJson" style="width:100%;height:180px;font-size:12px;color:#e2e8f0;background:#0f172a;border:2px solid #f59e0b;resize:vertical;border-radius:10px;padding:12px;box-sizing:border-box;font-family:monospace">\${json}</textarea>
+          <textarea id="_amvJson" style="width:100%;height:180px;font-size:12px;color:#e2e8f0;background:#0f172a;border:2px solid #f59e0b;resize:vertical;border-radius:10px;padding:12px;box-sizing:border-box;font-family:monospace">\\${json}</textarea>
           <button onclick="document.getElementById('_amvJson').select();document.execCommand('copy');this.textContent='✅ Copied!'" style="margin-top:6px;padding:8px 18px;border-radius:7px;background:#f59e0b;border:none;cursor:pointer;font-weight:800;font-size:13px">📋 Copy All</button>
           <button onclick="window.close()||document.getElementById('_amvS').remove()" style="margin-top:8px;margin-left:8px;padding:8px 18px;border-radius:7px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:13px;font-weight:700">✕ Close Tab</button>
         </div>
@@ -7349,40 +7409,23 @@ function startLastUpdatedTicker() {
     });
   }
 
-  // ── Main loop ─────────────────────────────────────────────────────────────
   const varLabel=LFVARIANT&&LFVARIANT!=='Any'?' ['+LFVARIANT+']':'';
   const searching=LF?(LF+varLabel):'all trades';
+
+  // START FILTERS IN BACKGROUND
+  _applyAmvFilters();
 
   window._amvInt=setInterval(()=>{
     const trades=scrape();
     updateProgress(trades.length);
     st.textContent='🔄 Searching for '+searching+' · scrolling page...';
-
-    // Check if we are stuck (page can't load more)
-    if(trades.length===lastCount){
-      noProgressCount++;
-    } else {
-      noProgressCount=0;
-      lastCount=trades.length;
-    }
-
-    // Done conditions: hit target, hit max attempts, or stuck for 5 ticks
-    if(trades.length>=WANT){
-      st.textContent='✅ Found enough trades!';
-      finish(trades);
-      return;
-    }
-    if(attempts>=MAX||noProgressCount>=50){
-      st.textContent=attempts>=MAX?'⚠️ Reached scroll limit.':'⚠️ No more trades loading.';
-      finish(trades);
-      return;
-    }
-
+    if(trades.length===lastCount) noProgressCount++; else { noProgressCount=0; lastCount=trades.length; }
+    if(trades.length>=WANT){ finish(trades); return; }
+    if(attempts>=MAX||noProgressCount>=50){ finish(trades); return; }
     window.scrollBy(0,2000);
     attempts++;
   },500);
 
-  // Run once immediately
   scrape();
 })();`;
         }
