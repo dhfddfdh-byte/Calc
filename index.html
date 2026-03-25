@@ -7221,7 +7221,6 @@ function startLastUpdatedTicker() {
         // ── Build the self-contained inspect element script ───────────────────
         function buildScoutScript(lfFilter, lfVariant, offerFilter, offerVariant, wantCount, winsOnly, blockedList) {
             return `(function(){
-  // Kill any existing instance cleanly
   if(window._amvInt){clearInterval(window._amvInt);window._amvInt=null;}
   const old=document.getElementById('_amvS');if(old)old.remove();
 
@@ -7233,13 +7232,10 @@ function startLastUpdatedTicker() {
   const WINSONLY=${!!winsOnly};
   const BLOCKED_USERS=${JSON.stringify((blockedList||[]).map(u=>(u||'').toLowerCase().trim()))};
   const MAX=300;
-  let attempts=0;
-  let lastCount=0;
-  let noProgressCount=0;
-  let _isFiltering = (OFFER || WINSONLY); // Flag to prevent premature scraping
+  let attempts=0, lastCount=0, noProgressCount=0;
+  let _isFiltering = (OFFER || WINSONLY); 
   const allFound=new Map();
 
-  // ── AMVGG Filter Helpers ──────────────────────────────────────────────────
   function findByText(t){const a=document.querySelectorAll('*');for(let i=0;i<a.length;i++){let e=a[i];if(e.childElementCount===0&&e.textContent.trim()===t)return e;}return null;}
   function findBtn(t){const b=document.querySelectorAll('button');for(let i=0;i<b.length;i++){if(b[i].textContent.trim()===t)return b[i];}return null;}
   function findInput(p){const i=document.querySelectorAll('input');for(let k=0;k<i.length;k++){let ph=(i[k].getAttribute('placeholder')||'').toLowerCase();for(let j=0;j<p.length;j++){if(ph.indexOf(p[j].toLowerCase())>=0)return i[k];}}return null;}
@@ -7268,8 +7264,7 @@ function startLastUpdatedTicker() {
                 for(let i=0;i<imgs.length;i++){if(imgs[i].alt.toLowerCase().indexOf(OFFER)>=0){let c=imgs[i].closest('button')||imgs[i].closest('[role="button"]')||imgs[i].parentElement;if(c&&c.getBoundingClientRect().width>5)return c;}}
                 return null;
             }, 5000);
-            pEl.click();
-            await wait(700);
+            pEl.click(); await wait(700);
             let fBtn=await poll(()=>{let bs=document.querySelectorAll('button');for(let i=0;i<bs.length;i++){if(bs[i].textContent.trim()==='F'&&bs[i].getBoundingClientRect().width>5)return bs[i];}return null;}, 3000);
             let vS = OFFERVAR.toUpperCase();
             if(!vS.includes('F')) { fBtn.click(); await wait(200); }
@@ -7291,8 +7286,7 @@ function startLastUpdatedTicker() {
                 }
             }
             let sel = await poll(()=>findBtn('Select'), 2000);
-            sel.click();
-            await wait(1000); // Allow results to load after selection
+            sel.click(); await wait(1000);
         }
         if(WINSONLY) {
             await wait(400);
@@ -7303,11 +7297,10 @@ function startLastUpdatedTicker() {
             }, 3000);
             if(hlB) { hlB.click(); await wait(600); }
         }
-    } catch(e){console.warn('Filter logic skipped or failed:', e.message);}
-    _isFiltering = false; // Final Step: Unlock the scraper
+    } catch(e){console.warn('Filter logic incomplete:', e.message);}
+    finally { _isFiltering = false; }
   }
 
-  // ── Bar HTML ──────────────────────────────────────────────────────────────
   const bar=document.createElement('div');
   bar.id='_amvS';
   bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:999999;background:#0f172a;color:#e2e8f0;font-family:system-ui,sans-serif;border-bottom:4px solid #6366f1;box-shadow:0 8px 40px rgba(0,0,0,.8);padding-bottom:4px';
@@ -7326,21 +7319,13 @@ function startLastUpdatedTicker() {
     </div>
   \`;
   document.body.appendChild(bar);
-  document.getElementById('_amvStop').onclick=()=>{
-    clearInterval(window._amvInt);window._amvInt=null;bar.remove();
-  };
-  const st=document.getElementById('_amvSt');
-  const progressBar=document.getElementById('_amvBar');
-  const numEl=document.getElementById('_amvNum');
+  document.getElementById('_amvStop').onclick=()=>{ clearInterval(window._amvInt);window._amvInt=null;bar.remove(); };
+  const st=document.getElementById('_amvSt'), progressBar=document.getElementById('_amvBar'), numEl=document.getElementById('_amvNum');
 
   function updateProgress(count){
     const pct=Math.min(100,Math.round((count/WANT)*100));
-    progressBar.style.width=pct+'%';
-    numEl.textContent=count+'/'+WANT;
-    if(pct>=100){
-      progressBar.style.background='linear-gradient(90deg,#22c55e,#16a34a)';
-      numEl.style.color='#22c55e';
-    }
+    progressBar.style.width=pct+'%'; numEl.textContent=count+'/'+WANT;
+    if(pct>=100){ progressBar.style.background='linear-gradient(90deg,#22c55e,#16a34a)'; numEl.style.color='#22c55e'; }
   }
 
   function getV(cell){
@@ -7354,25 +7339,18 @@ function startLastUpdatedTicker() {
   function scrape(){
     const bars=document.querySelectorAll('div.flex.flex-row.w-full.bg-\\\\[\\\\#212020\\\\]');
     bars.forEach(b=>{
-      const a=b.querySelector('a[href*="/profile/"]');
-      const username=a?.textContent?.trim()||'?';
+      const a=b.querySelector('a[href*="/profile/"]'), username=a?.textContent?.trim()||'?', profileHref=a?.href||'#', time=b.querySelector('p.text-xs')?.textContent?.trim()||'', avatar=b.querySelector('img[src*="/api/roblox/avatar/"]')?.src||'', row=b.previousElementSibling;
       if(BLOCKED_USERS.length&&BLOCKED_USERS.includes(username.toLowerCase()))return;
-      const profileHref=a?.href||'#';
-      const time=b.querySelector('p.text-xs')?.textContent?.trim()||'';
-      const avatar=b.querySelector('img[src*="/api/roblox/avatar/"]')?.src||'';
-      const row=b.previousElementSibling;if(!row)return;
-      const grids=row.querySelectorAll('.grid.grid-cols-3');if(grids.length<2)return;
-      const key=username+'|'+time;if(allFound.has(key))return;
+      if(!row)return; const grids=row.querySelectorAll('.grid.grid-cols-3'); if(grids.length<2)return;
+      const key=username+'|'+time; if(allFound.has(key))return;
       const parse=g=>[...g.querySelectorAll('.relative.my-0\\\\.5')].map(c=>{
-        const img=c.querySelector('img[alt]');if(!img||!img.alt)return null;
-        return{name:img.alt.trim(),variant:getV(c)};
+        const img=c.querySelector('img[alt]');if(!img||!img.alt)return null; return{name:img.alt.trim(),variant:getV(c)};
       }).filter(Boolean);
-      const lf=parse(grids[0]);const offering=parse(grids[1]);
+      const lf=parse(grids[0]), offering=parse(grids[1]);
       if(LF&&!offering.some(p=>p.name.toLowerCase().includes(LF)))return;
       if(LF&&LFVARIANT&&LFVARIANT!=='Any'&&!offering.some(p=>p.name.toLowerCase().includes(LF)&&p.variant===LFVARIANT))return;
       if(OFFER){
-        const matchO=lf.some(p=>p.name.toLowerCase().includes(OFFER));
-        if(!matchO)return;
+        if(!lf.some(p=>p.name.toLowerCase().includes(OFFER)))return;
         if(OFFERVAR&&OFFERVAR!=='Any'&&!lf.some(p=>p.name.toLowerCase().includes(OFFER)&&p.variant===OFFERVAR))return;
       }
       allFound.set(key,{username,profileHref,avatar,time,lf,offering});
@@ -7385,42 +7363,36 @@ function startLastUpdatedTicker() {
     updateProgress(trades.length);
     const json=JSON.stringify(trades);
     navigator.clipboard.writeText(json).then(()=>{
-      bar.style.borderTopColor='#22c55e';
-      bar.style.background='#052e16';
+      bar.style.borderTopColor='#22c55e'; bar.style.background='#052e16';
       const closed=setTimeout(()=>window.close(),800);
       bar.innerHTML=\`
         <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px">
           <div>
-            <div style="font-size:16px;font-weight:900;color:#22c55e">✅ Copied \\\${trades.length} trade\\\${trades.length===1?'':'s'}!</div>
+            <div style="font-size:16px;font-weight:900;color:#22c55e">✅ Copied \\\\\${trades.length} trade\\\\\${trades.length===1?'':'s'}!</div>
             <div style="font-size:12px;color:#86efac;margin-top:3px">Head back to the calc tab → Trade Scout → Paste & Analyse</div>
             <div style="font-size:11px;color:#64748b;margin-top:2px">Tab will close automatically…</div>
           </div>
-          <button onclick="clearTimeout(\\\${closed});window.close()" style="flex-shrink:0;padding:10px 24px;border-radius:9px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:15px;font-weight:900">✕ Close Tab</button>
-        </div>
-      \`;
+          <button onclick="clearTimeout(\\\\\${closed});window.close()" style="flex-shrink:0;padding:10px 24px;border-radius:9px;background:#22c55e;border:none;color:#052e16;cursor:pointer;font-size:15px;font-weight:900">✕ Close Tab</button>
+        </div>\`;
     }).catch(()=>{
       bar.style.borderTopColor='#f59e0b';
       bar.innerHTML=\`
         <div style="padding:10px 16px">
           <div style="font-size:13px;color:#fbbf24;font-weight:700;margin-bottom:6px">⚠️ Clipboard blocked — manually copy the text below:</div>
-          <textarea id="_amvJson" style="width:100%;height:180px;font-size:12px;color:#e2e8f0;background:#0f172a;border:2px solid #f59e0b;resize:vertical;border-radius:10px;padding:12px;box-sizing:border-box;font-family:monospace">\\\${json}</textarea>
+          <textarea id="_amvJson" style="width:100%;height:180px;font-size:12px;color:#e2e8f0;background:#0f172a;border:2px solid #f59e0b;resize:vertical;border-radius:10px;padding:12px;box-sizing:border-box;font-family:monospace">\\\\\${json}</textarea>
           <button onclick="document.getElementById('_amvJson').select();document.execCommand('copy');this.textContent='✅ Copied!'" style="margin-top:6px;padding:8px 18px;border-radius:7px;background:#f59e0b;border:none;cursor:pointer;font-weight:800;font-size:13px">📋 Copy All</button>
           <button onclick="window.close()||document.getElementById('_amvS').remove()" style="margin-top:8px;margin-left:8px;padding:8px 18px;border-radius:7px;background:#334155;border:none;color:#e2e8f0;cursor:pointer;font-size:13px;font-weight:700">✕ Close Tab</button>
-        </div>
-      \`;
+        </div>\`;
     });
   }
 
   const varLabel=LFVARIANT&&LFVARIANT!=='Any'?' ['+LFVARIANT+']':'';
   const searching=LF?(LF+varLabel):'all trades';
 
-  _applyAmvFilters(); // START AUTOMATION
+  _applyAmvFilters();
 
   window._amvInt=setInterval(()=>{
-    if(_isFiltering) {
-        st.textContent='⚙️ Setting up filters...';
-        return; // Guard clause: Scraper loop runs, but does nothing until unlocked
-    }
+    if(_isFiltering) { st.textContent='⚙️ Setting up filters...'; return; }
     const trades=scrape();
     updateProgress(trades.length);
     st.textContent='🔄 Searching for '+searching+' · scrolling page...';
