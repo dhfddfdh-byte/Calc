@@ -7236,6 +7236,7 @@ function startLastUpdatedTicker() {
   let attempts=0;
   let lastCount=0;
   let noProgressCount=0;
+  let _isFiltering = (OFFER || WINSONLY); // Flag to prevent premature scraping
   const allFound=new Map();
 
   // ── AMVGG Filter Helpers ──────────────────────────────────────────────────
@@ -7274,7 +7275,7 @@ function startLastUpdatedTicker() {
             if(!vS.includes('F')) { fBtn.click(); await wait(200); }
             let allB = document.querySelectorAll('button');
             let rB=null,nB=null,mB=null;
-            for(let i=0;i<allB.length;i++){
+            for(let i=0; i<allB.length;i++){
                 let txt=allB[i].textContent.trim();
                 if(txt==='R')rB=allB[i]; else if(txt==='N')nB=allB[i]; else if(txt==='M')mB=allB[i];
             }
@@ -7291,7 +7292,7 @@ function startLastUpdatedTicker() {
             }
             let sel = await poll(()=>findBtn('Select'), 2000);
             sel.click();
-            await wait(700);
+            await wait(1000); // Allow results to load after selection
         }
         if(WINSONLY) {
             await wait(400);
@@ -7300,9 +7301,10 @@ function startLastUpdatedTicker() {
                 for(let i=0;i<bs.length;i++){let t=bs[i].textContent.trim();if(t==='Hide Losses'||t.indexOf('Hide Loss')>=0)return bs[i];}
                 return null;
             }, 3000);
-            if(hlB) hlB.click();
+            if(hlB) { hlB.click(); await wait(600); }
         }
     } catch(e){console.warn('Filter logic skipped or failed:', e.message);}
+    _isFiltering = false; // Final Step: Unlock the scraper
   }
 
   // ── Bar HTML ──────────────────────────────────────────────────────────────
@@ -7412,10 +7414,13 @@ function startLastUpdatedTicker() {
   const varLabel=LFVARIANT&&LFVARIANT!=='Any'?' ['+LFVARIANT+']':'';
   const searching=LF?(LF+varLabel):'all trades';
 
-  // START FILTERS IN BACKGROUND
-  _applyAmvFilters();
+  _applyAmvFilters(); // START AUTOMATION
 
   window._amvInt=setInterval(()=>{
+    if(_isFiltering) {
+        st.textContent='⚙️ Setting up filters...';
+        return; // Guard clause: Scraper loop runs, but does nothing until unlocked
+    }
     const trades=scrape();
     updateProgress(trades.length);
     st.textContent='🔄 Searching for '+searching+' · scrolling page...';
