@@ -1027,11 +1027,17 @@
             <div class="vlist-header">
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%">
                 <div class="vlist-type-group">
-                  <button class="vlist-type-btn active" id="dTypeNormal" onclick="setVListType('demand','normal')">Normal</button>
-                  <button class="vlist-type-btn" id="dTypeNeon"   onclick="setVListType('demand','neon')">Neon</button>
-                  <button class="vlist-type-btn" id="dTypeMega"   onclick="setVListType('demand','mega')">Mega</button>
+                  <button class="vlist-type-btn active" id="vTypeNormal" onclick="setVListType('value','normal')">Normal</button>
+                  <button class="vlist-type-btn" id="vTypeNeon"   onclick="setVListType('value','neon')">Neon</button>
+                  <button class="vlist-type-btn" id="vTypeMega"   onclick="setVListType('value','mega')">Mega</button>
                 </div>
-                <input class="vlist-search" id="demandListSearch" placeholder="Search pets..." oninput="renderDemandList()">
+                <div class="vlist-type-group">
+                  <button class="vlist-type-btn active" id="vPotNONE" onclick="setVListPotion('value','none')">No Potion</button>
+                  <button class="vlist-type-btn" id="vPotF"  onclick="setVListPotion('value','f')">Fly</button>
+                  <button class="vlist-type-btn" id="vPotR"  onclick="setVListPotion('value','r')">Ride</button>
+                  <button class="vlist-type-btn" id="vPotFR" onclick="setVListPotion('value','fr')">FR</button>
+                </div>
+                <input class="vlist-search" id="valueListSearch" placeholder="Search pets..." oninput="renderValueList()">
                 <div style="display:flex;gap:4px;background:#0f172a;border-radius:20px;padding:3px;border:1px solid var(--border)">
                   <button id="dInc01" class="vlist-type-btn active" onclick="setDemandIncrement(0.1)">0.1</button>
                   <button id="dInc05" class="vlist-type-btn" onclick="setDemandIncrement(0.5)">0.5</button>
@@ -1357,8 +1363,9 @@
                             <option value="8">Demand 8+</option>
                             <option value="9">Demand 9+</option>
                         </select>
-                        <button id="advisorNeonToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e3a1e;color:#34d399;border-color:#34d39933" onclick="toggleAdvisorVariant('neon')">✅ Neons</button>
+                        <button id="advisorNeonToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e3a1e;color:#34d399;border-color:#34d39933" onclick="toggleAdvisorVariant('neon')">✅ Neons (NFR)</button>
                         <button id="advisorMegaToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e293b;color:#64748b;border-color:#1e293b" onclick="toggleAdvisorVariant('mega')">☐ Megas</button>
+                        <button id="advisorMFRToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e293b;color:#64748b;border-color:#1e293b" onclick="toggleAdvisorVariant('mfr')">☐ MFRs</button>
                         <select class="advisor-filter-select" id="advisorCatFilter" onchange="refreshAdvisorTargets()">
                             <option value="all">All Categories</option>
                             <option value="high tier">High Tier</option>
@@ -4966,23 +4973,32 @@ function startLastUpdatedTicker() {
         // ================================================================
         let advisorOfferPets = [];
         let advisorShowNeon = true;
-        let advisorShowMega = false;
+        let advisorShowMega = true;
+        let advisorShowMFR  = true;
+        let advisorShowNFR  = true; 
 
         function toggleAdvisorVariant(type) {
             if (type === 'neon') {
                 advisorShowNeon = !advisorShowNeon;
                 const btn = document.getElementById('advisorNeonToggle');
-                btn.textContent = (advisorShowNeon ? '✅' : '☐') + ' Neons';
+                btn.textContent = (advisorShowNeon ? '✅' : '☐') + ' Neons (NFR)';
                 btn.style.background = advisorShowNeon ? '#1e3a1e' : '#1e293b';
                 btn.style.color = advisorShowNeon ? '#34d399' : '#64748b';
                 btn.style.borderColor = advisorShowNeon ? '#34d39933' : '#1e293b';
-            } else {
+            } else if (type === 'mega') {
                 advisorShowMega = !advisorShowMega;
                 const btn = document.getElementById('advisorMegaToggle');
                 btn.textContent = (advisorShowMega ? '✅' : '☐') + ' Megas';
                 btn.style.background = advisorShowMega ? '#2d1a4a' : '#1e293b';
                 btn.style.color = advisorShowMega ? '#a855f7' : '#64748b';
                 btn.style.borderColor = advisorShowMega ? '#a855f733' : '#1e293b';
+            } else if (type === 'mfr') {
+                advisorShowMFR = !advisorShowMFR;
+                const btn = document.getElementById('advisorMFRToggle');
+                btn.textContent = (advisorShowMFR ? '✅' : '☐') + ' MFRs';
+                btn.style.background = advisorShowMFR ? '#2d1a0a' : '#1e293b';
+                btn.style.color = advisorShowMFR ? '#f97316' : '#64748b';
+                btn.style.borderColor = advisorShowMFR ? '#f9731633' : '#1e293b';
             }
             refreshAdvisorTargets();
         }
@@ -5050,7 +5066,7 @@ function startLastUpdatedTicker() {
         }
 
         function advisorAddPet(name, type, f_st, r_st) {
-            if (advisorOfferPets.length >= 6) return;
+            if (advisorOfferPets.length >= 18) return;
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
             advisorOfferPets.push({ ...pet, type: type || 'reg', f_st: !!f_st, r_st: !!r_st, uid: Math.random() });
@@ -5086,25 +5102,25 @@ function startLastUpdatedTicker() {
                 </div>`;
             });
             // Empty slots
-            for (let i = advisorOfferPets.length; i < 6; i++) {
-                html += `<div class="advisor-add-slot" onclick="advisorFocusInv()">+</div>`;
-            }
-            slotsEl.innerHTML = html;
-
-            if (advisorOfferPets.length === 0) {
-                statsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);font-size:0.82em">Add pets from below to build your offer</div>';
-                return;
-            }
-            const totalVal = advisorOfferPets.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
-            const avgDem = advisorOfferPets.reduce((s,p) => s + (p.d||0), 0) / advisorOfferPets.length;
-            const demTier = avgDem >= 7 ? '<span style="color:#34d399">High</span>' : avgDem >= 4 ? '<span style="color:#fbbf24">Mid</span>' : '<span style="color:#f87171">Low</span>';
-            const bundleWarn = advisorOfferPets.length > 4 ? '<div style="color:var(--trap);font-size:0.8em;margin-top:4px">⚠️ 5+ pet bundles are hard to accept</div>' : '';
-            statsEl.innerHTML = `
-                <div class="advisor-stat-row"><span class="advisor-stat-label">Total Value</span><span class="advisor-stat-val">${totalVal.toFixed(2)}</span></div>
-                <div class="advisor-stat-row"><span class="advisor-stat-label">Avg Demand</span><span class="advisor-stat-val">${avgDem.toFixed(1)} (${demTier} tier)</span></div>
-                <div class="advisor-stat-row"><span class="advisor-stat-label">Pets in Offer</span><span class="advisor-stat-val">${advisorOfferPets.length}/6</span></div>
-                ${bundleWarn}`;
+            const emptySlots = Math.min(3, 18 - advisorOfferPets.length);
+        for (let i = 0; i < emptySlots; i++) {
+            html += `<div class="advisor-add-slot" onclick="advisorFocusInv()">+</div>`;
         }
+        slotsEl.innerHTML = html;
+
+        if (advisorOfferPets.length === 0) {
+            statsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);font-size:0.82em">Add pets from below to build your offer</div>';
+            return;
+        }
+        const totalVal = advisorOfferPets.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
+        const avgDem = advisorOfferPets.reduce((s,p) => s + (p.d||0), 0) / advisorOfferPets.length;
+        const demTier = avgDem >= 7 ? '<span style="color:#34d399">High</span>' : avgDem >= 4 ? '<span style="color:#fbbf24">Mid</span>' : '<span style="color:#f87171">Low</span>';
+        const bundleWarn = advisorOfferPets.length > 4 ? '<div style="color:var(--trap);font-size:0.8em;margin-top:4px">⚠️ 5+ pet bundles are hard to accept</div>' : '';
+        statsEl.innerHTML = `
+            <div class="advisor-stat-row"><span class="advisor-stat-label">Total Value</span><span class="advisor-stat-val">${totalVal.toFixed(2)}</span></div>
+            <div class="advisor-stat-row"><span class="advisor-stat-label">Avg Demand</span><span class="advisor-stat-val">${avgDem.toFixed(1)} (${demTier} tier)</span></div>
+            <div class="advisor-stat-row"><span class="advisor-stat-label">Pets in Offer</span><span class="advisor-stat-val">${advisorOfferPets.length}/18</span></div>
+            ${bundleWarn}`;
 
         function advisorFocusInv() {
             document.getElementById('advisorInvGrid').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -5200,8 +5216,9 @@ function startLastUpdatedTicker() {
                                     state.inv.some(p => p.n === t.n);
 
                 const variants = [{ type:'reg', f_st:false, r_st:false }];
-                if (advisorShowNeon) variants.push({ type:'neon', f_st:false, r_st:false });
+                if (advisorShowNeon) variants.push({ type:'neon', f_st:true,  r_st:true  }); // NFR
                 if (advisorShowMega) variants.push({ type:'mega', f_st:false, r_st:false });
+                if (advisorShowMFR)  variants.push({ type:'mega', f_st:true,  r_st:true  }); // MFR
 
                 variants.forEach(v => {
                     const candidate = { ...t, ...v };
@@ -5265,7 +5282,15 @@ function startLastUpdatedTicker() {
                 const reason = buildReasonText(t, offerVal, offerAvgD);
                 const tVal = calculatePetVal(t, 'value');
                 const acceptPct = getAcceptanceProbability(offerVal, offerAvgD, t, advisorOfferPets);
-                const variantLabel = t.type === 'neon' ? '<span style="color:#34d399;font-size:0.7em;font-weight:900;background:#1e3a1e;border-radius:5px;padding:1px 6px">NEON</span>' : t.type === 'mega' ? '<span style="color:#a855f7;font-size:0.7em;font-weight:900;background:#2d1a4a;border-radius:5px;padding:1px 6px">MEGA</span>' : '';
+                const variantLabel = t.type === 'neon'
+                    ? (t.f_st && t.r_st
+                        ? '<span style="color:#34d399;font-size:0.7em;font-weight:900;background:#1e3a1e;border-radius:5px;padding:1px 6px">NFR</span>'
+                        : '<span style="color:#34d399;font-size:0.7em;font-weight:900;background:#1e3a1e;border-radius:5px;padding:1px 6px">NEON</span>')
+                    : t.type === 'mega'
+                    ? (t.f_st && t.r_st
+                        ? '<span style="color:#f97316;font-size:0.7em;font-weight:900;background:#2d1a0a;border-radius:5px;padding:1px 6px">MFR</span>'
+                        : '<span style="color:#a855f7;font-size:0.7em;font-weight:900;background:#2d1a4a;border-radius:5px;padding:1px 6px">MEGA</span>')
+                    : '';
 
                 return `<div class="target-card">
                     ${petImgTag(t.n, "width:58px;height:58px;object-fit:contain;border-radius:10px;background:#0f172a")}
@@ -7382,7 +7407,7 @@ function startLastUpdatedTicker() {
         }
         // List state — type and zoom are independent per list
         const listState = {
-            value:  { type: 'normal', zoom: 46 },
+            value:  { type: 'normal', zoom: 46, potion: 'none' },
             demand: { type: 'normal', zoom: 46, increment: 0.1 }
         };
 
@@ -7394,6 +7419,17 @@ function startLastUpdatedTicker() {
                 const id = prefix + 'Type' + t;
                 const el = document.getElementById(id);
                 if (el) el.classList.toggle('active', t.toLowerCase() === type || (t === 'Mega' && type === 'mega'));
+            });
+            if (list === 'value') renderValueList();
+            else renderDemandList();
+        }
+
+        function setVListPotion(list, val) {
+            listState[list].potion = val;
+            const prefix = list === 'value' ? 'v' : 'd';
+            ['none','f','r','fr'].forEach(p => {
+                const el = document.getElementById(prefix + 'Pot' + p.toUpperCase());
+                if (el) el.classList.toggle('active', p === val);
             });
             if (list === 'value') renderValueList();
             else renderDemandList();
@@ -7415,9 +7451,23 @@ function startLastUpdatedTicker() {
         }
 
         // Get the correct value for a pet based on list type
-        function getPetListValue(p, type) {
-            if (type === 'neon')  return parseFloat(p.nfr_v || p.n_v || p.v) || 0;
-            if (type === 'mega')  return parseFloat(p.mfr_v || p.m_v || p.v) || 0;
+        function getPetListValue(p, type, potion) {
+            potion = potion || 'none';
+            if (type === 'neon') {
+                if (potion === 'fr') return parseFloat(p.nfr_v || p.n_v || p.v) || 0;
+                if (potion === 'f')  return parseFloat(p.n_f_v || p.n_v || p.v) || 0;
+                if (potion === 'r')  return parseFloat(p.n_r_v || p.n_v || p.v) || 0;
+                return parseFloat(p.n_v || p.v) || 0;
+            }
+            if (type === 'mega') {
+                if (potion === 'fr') return parseFloat(p.mfr_v || p.m_v || p.v) || 0;
+                if (potion === 'f')  return parseFloat(p.m_f_v || p.m_v || p.v) || 0;
+                if (potion === 'r')  return parseFloat(p.m_r_v || p.m_v || p.v) || 0;
+                return parseFloat(p.m_v || p.v) || 0;
+            }
+            if (potion === 'fr') return parseFloat(p.fr_v || p.v) || 0;
+            if (potion === 'f')  return parseFloat(p.f_v  || p.v) || 0;
+            if (potion === 'r')  return parseFloat(p.r_v  || p.v) || 0;
             return parseFloat(p.v) || 0;
         }
 
@@ -7437,25 +7487,26 @@ function startLastUpdatedTicker() {
         // Renders the full sortable/filterable Value List tab.
         // Supports zoom, search, rarity filter, and type toggle (normal/neon/mega).
         // Each row shows: pet image, name, value, demand, trends, rarity badge.
-        function renderValueList() {
+       function renderValueList() {
             const body = document.getElementById('valueListBody');
             const search = (document.getElementById('valueListSearch').value || '').toLowerCase();
             if (ALL_PETS.length === 0) { body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">Loading data...</div>'; return; }
 
-            const { type, zoom } = listState.value;
+            const { type, zoom, potion } = listState.value;
+            const pot = potion || 'none';
             const imgSize = zoom;
             const tileSize = zoom + 10;
             const typeLabel = getTypeLabel(type);
+            const potLabel = pot === 'fr' ? 'FR ' : pot === 'f' ? 'F ' : pot === 'r' ? 'R ' : '';
 
             let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
 
-            // For neon/mega, filter out pets with no value for that type AND eggs (eggs don't have neon/mega)
             if (type === 'neon')  pets = pets.filter(p => !isEgg(p.n) && parseFloat(p.nfr_v || p.n_v) > 0);
             if (type === 'mega')  pets = pets.filter(p => !isEgg(p.n) && parseFloat(p.mfr_v || p.m_v) > 0);
 
             const groups = {};
             pets.forEach(p => {
-                const v = getPetListValue(p, type);
+                const v = getPetListValue(p, type, pot);
                 if (v <= 0) return;
                 let tier;
                 if (v >= 1000) tier = Math.round(v / 100) * 100;
@@ -7478,12 +7529,12 @@ function startLastUpdatedTicker() {
                 <div class="vlist-tier-row">
                     <div class="vlist-tier-label">${g.tier >= 1 ? g.tier : g.tier.toFixed(2)}</div>
                     <div class="vlist-pets">
-                        ${g.pets.sort((a,b) => getPetListValue(b,type) - getPetListValue(a,type)).map(p => {
-                            const val = getPetListValue(p, type);
+                        ${g.pets.sort((a,b) => getPetListValue(b,type,pot) - getPetListValue(a,type,pot)).map(p => {
+                            const val = getPetListValue(p, type, pot);
                             const safeN = p.n.replace(/'/g,"\'");
                             return `<div class="vlist-pet" style="width:${tileSize}px;height:${tileSize}px" onclick="quickAddFromList('${safeN}','${type}')">
                                 ${petImgTag(p.n, 'width:'+imgSize+'px;height:'+imgSize+'px;object-fit:contain')}
-                                <div class="vlist-pet-tooltip">${typeLabel ? typeLabel+' ' : ''}${p.n} · ${val}</div>
+                                <div class="vlist-pet-tooltip">${potLabel}${typeLabel ? typeLabel+' ' : ''}${p.n} · ${val}</div>
                             </div>`;
                         }).join('')}
                     </div>
@@ -8309,7 +8360,6 @@ function tbRequestNotifPerms() {
 // Returns: label, color, offerVal, requestVal, diff.
 function tbGetVerdict(trade) {
     if (trade.site !== 'elvebredd') return null;
-    // Hydrate pets from ALL_PETS
     const hydrate = arr => arr.map(p => {
         const base = ALL_PETS.find(x => x.n === p.n);
         return base ? {...base, ...p} : null;
@@ -8320,12 +8370,9 @@ function tbGetVerdict(trade) {
     const offerVal   = offerPets.reduce((s,p)   => s + calculatePetVal(p,'value'), 0);
     const requestVal = requestPets.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
     const diff = requestVal - offerVal;
-    const pDiff = offerVal > 0 ? diff / offerVal : 0;
-    if (Math.abs(pDiff) < 0.03) return { label: 'FAIR', color: '#94a3b8', offerVal, requestVal, diff };
-    if (pDiff >= 0.15) return { label: 'BIG W', color: '#34d399', offerVal, requestVal, diff };
-    if (pDiff > 0)     return { label: 'W',     color: '#86efac', offerVal, requestVal, diff };
-    if (pDiff <= -0.15)return { label: 'BIG L', color: '#f87171', offerVal, requestVal, diff };
-    return               { label: 'L',     color: '#fca5a5', offerVal, requestVal, diff };
+    if (diff > 0) return { label: 'WIN',  color: '#34d399', offerVal, requestVal, diff };
+    if (diff < 0) return { label: 'LOSE', color: '#f87171', offerVal, requestVal, diff };
+    return              { label: 'FAIR', color: '#94a3b8', offerVal, requestVal, diff };
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────
@@ -8591,8 +8638,8 @@ function renderTradeBoard() {
         // ── Stats — use historical/snapshot values where available ──
         const totalTrades = completed.length;
         const tradeVals = completed.map(t => getTradeEffectiveVals(t));
-        const wins   = tradeVals.filter(v => v.requestVal > v.offerVal * 1.03).length;
-        const losses = tradeVals.filter(v => v.offerVal  > v.requestVal * 1.03).length;
+        const wins   = tradeVals.filter(v => v.requestVal > v.offerVal).length;
+        const losses = tradeVals.filter(v => v.offerVal  > v.requestVal).length;
         const fairs  = totalTrades - wins - losses;
         const winRate  = totalTrades > 0 ? Math.round((wins / totalTrades) * 100) : 0;
         const avgGain  = totalTrades > 0 ? tradeVals.reduce((s,v) => s + (v.requestVal - v.offerVal), 0) / totalTrades : 0;
@@ -8703,8 +8750,8 @@ function renderTradeBoard() {
             const requestChips = renderTBPetChips(t.requestPets, 'request', false);
             const effVals = getTradeEffectiveVals(t);
             const diff = effVals.requestVal - effVals.offerVal;
-            const isW = diff > effVals.offerVal * 0.03;
-            const isL = diff < -(effVals.offerVal * 0.03);
+            const isW = diff > 0;
+            const isL = diff < 0;
             const resultLabel = isW ? 'W' : isL ? 'L' : 'FAIR';
             const resultColor = isW ? '#34d399' : isL ? '#f87171' : '#94a3b8';
             const valSource = effVals.source === 'historical' ? 'at trade date' : effVals.source === 'snapshot' ? 'at log time' : 'current';
