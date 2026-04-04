@@ -1027,9 +1027,9 @@
             <div class="vlist-header">
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%">
                 <div class="vlist-type-group">
-                  <button class="vlist-type-btn active" id="vTypeNormal" onclick="setVListType('value','normal')">Normal</button>
-                  <button class="vlist-type-btn" id="vTypeNeon"   onclick="setVListType('value','neon')">Neon</button>
-                  <button class="vlist-type-btn" id="vTypeMega"   onclick="setVListType('value','mega')">Mega</button>
+                  <button class="vlist-type-btn active" id="dTypeNormal" onclick="setVListType('value','normal')">Normal</button>
+                  <button class="vlist-type-btn" id="dTypeNeon"   onclick="setVListType('value','neon')">Neon</button>
+                  <button class="vlist-type-btn" id="dTypeMega"   onclick="setVListType('value','mega')">Mega</button>
                 </div>
                 <div class="vlist-type-group">
                   <button class="vlist-type-btn active" id="vPotNONE" onclick="setVListPotion('value','none')">No Potion</button>
@@ -1037,7 +1037,7 @@
                   <button class="vlist-type-btn" id="vPotR"  onclick="setVListPotion('value','r')">Ride</button>
                   <button class="vlist-type-btn" id="vPotFR" onclick="setVListPotion('value','fr')">FR</button>
                 </div>
-                <input class="vlist-search" id="valueListSearch" placeholder="Search pets..." oninput="renderValueList()">
+                <input class="vlist-search" id="demandListSearch" placeholder="Search pets..." oninput="renderValueList()">
                 <div style="display:flex;gap:4px;background:#0f172a;border-radius:20px;padding:3px;border:1px solid var(--border)">
                   <button id="dInc01" class="vlist-type-btn active" onclick="setDemandIncrement(0.1)">0.1</button>
                   <button id="dInc05" class="vlist-type-btn" onclick="setDemandIncrement(0.5)">0.5</button>
@@ -2758,7 +2758,6 @@
                 // Render lists if already on those tabs
                 if (currentTab === 'value') renderValueList();
                 if (currentTab === 'demand') renderDemandList();
-                if (currentTab === 'trends') renderTrendsList();
                 if (currentTab === 'trades') { renderTradeBoard(); startTBTimers(); }
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -3085,11 +3084,12 @@
                 closeSearch(); return;
             }
             if (state.target === 'inv') {
-                renderInventory();
-                if (element) {
-                    element.classList.add('added');
-                    setTimeout(() => element.classList.remove('added'), 500);
-                }
+    renderInventory();
+    if (element && element.classList) { // Added safety check
+        element.classList.add('added');
+        setTimeout(() => element.classList.remove('added'), 500);
+    }
+}
             } else if (state.target === 'dream') {
                 renderInventory();
                 closeSearch();
@@ -6200,7 +6200,8 @@ function startLastUpdatedTicker() {
             const p = ALL_PETS.find(x => x.n.toLowerCase() === petName.toLowerCase());
             if (!p) return 0;
             const key = scoutVariantKey(variant || 'Reg');
-            return parseFloat(p[key]) || parseFloat(p.v) || 0;
+            const finalVal = parseFloat(p[key]) || parseFloat(p.v) || 0;
+return isNaN(finalVal) ? 0 : finalVal;
         }
 
         function scoutGetPetDemand(petName) {
@@ -7867,8 +7868,7 @@ function tbCloseCreate() {
 }
 
 function tbAddPetToSide(side) {
-    state.target = side === 'offer' ? 'tbOffer' : 'tbRequest';
-    openSearch('tbOffer'); // reuse search, intercept add
+    tbAddPetSide(side);
 }
 
 function tbRemovePet(side, uid) {
@@ -8408,23 +8408,20 @@ function renderTBPetChips(pets, side, editable) {
         chip += '<div>';
         chip += '<div style="font-size:0.78em;font-weight:800;color:white">' + label + '</div>';
         chip += '<div style="font-size:0.68em;color:#64748b">' + (val > 0 ? val.toFixed(2) : '?') + '</div>';
-        if (editable) {
-            const nBg = p.type === 'neon' ? '#3b82f6' : '#0f172a';
-            const mBg = p.type === 'mega' ? '#a855f7' : '#0f172a';
-            const fBg = p.f_st ? '#06b6d4' : '#0f172a';
-            const rBg = p.r_st ? '#10b981' : '#0f172a';
-            const nCol = p.type === 'neon' ? 'white' : '#475569';
-            const mCol = p.type === 'mega' ? 'white' : '#475569';
-            const fCol = p.f_st ? 'white' : '#475569';
-            const rCol = p.r_st ? 'white' : '#475569';
-            const s = side; // closure-safe alias
-            const tbtn = 'width:18px;height:18px;border-radius:3px;font-size:0.6em;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;';
-            chip += '<div style="display:flex;gap:2px;margin-top:3px">';
-            chip += '<div onclick="tbTogglePet(\'' + s + '\',' + uidStr + ',\'n\')" style="' + tbtn + 'background:' + nBg + ';color:' + nCol + ';border:1px solid ' + (p.type==='neon'?'#3b82f6':'#334155') + '">N</div>';
-            chip += '<div onclick="tbTogglePet(\'' + s + '\',' + uidStr + ',\'m\')" style="' + tbtn + 'background:' + mBg + ';color:' + mCol + ';border:1px solid ' + (p.type==='mega'?'#a855f7':'#334155') + '">M</div>';
-            chip += '<div onclick="tbTogglePet(\'' + s + '\',' + uidStr + ',\'f\')" style="' + tbtn + 'background:' + fBg + ';color:' + fCol + ';border:1px solid ' + (p.f_st?'#06b6d4':'#334155') + '">F</div>';
-            chip += '<div onclick="tbTogglePet(\'' + s + '\',' + uidStr + ',\'r\')" style="' + tbtn + 'background:' + rBg + ';color:' + rCol + ';border:1px solid ' + (p.r_st?'#10b981':'#334155') + '">R</div>';
-            chip += '</div>';
+       if (editable) {
+    const nBg = p.type === 'neon' ? '#3b82f6' : '#0f172a';
+    const mBg = p.type === 'mega' ? '#a855f7' : '#0f172a';
+    const fBg = p.f_st ? '#06b6d4' : '#0f172a';
+    const rBg = p.r_st ? '#10b981' : '#0f172a';
+    const tbtn = 'width:18px;height:18px;border-radius:3px;font-size:0.6em;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+    
+    chip += `<div style="display:flex;gap:2px;margin-top:3px">
+        <div onclick="tbTogglePet('${side}', ${p.uid}, 'n')" style="${tbtn} background:${nBg}; border:1px solid #334155">N</div>
+        <div onclick="tbTogglePet('${side}', ${p.uid}, 'm')" style="${tbtn} background:${mBg}; border:1px solid #334155">M</div>
+        <div onclick="tbTogglePet('${side}', ${p.uid}, 'f')" style="${tbtn} background:${fBg}; border:1px solid #334155">F</div>
+        <div onclick="tbTogglePet('${side}', ${p.uid}, 'r')" style="${tbtn} background:${rBg}; border:1px solid #334155">R</div>
+    </div>`;
+}
         }
         chip += '</div>';
         if (editable) {
