@@ -544,7 +544,7 @@
         .advisor-filter-select:hover { border-color: var(--accent); color: white; }
         .advisor-results { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         .advisor-insight-bar { padding: 12px 18px; background: rgba(99,102,241,0.07); border-top: 1px solid var(--border); font-size: 0.78em; color: #94a3b8; line-height: 1.5; flex-shrink: 0; }
-        .advisor-offer-slot { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 15px; }
+        .advisor-offer-slot { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; }
         .advisor-pet-chip { background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; position: relative; font-size: 0.7em; cursor: pointer; transition: 0.2s; }
         .advisor-pet-chip:hover { border-color: #ef4444; }
         .advisor-pet-chip img { width: 44px; height: 44px; object-fit: contain; margin-bottom: 3px; }
@@ -1003,11 +1003,17 @@
             <div class="vlist-header">
               <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%">
                 <div class="vlist-type-group">
-                  <button class="vlist-type-btn active" id="vTypeNormal" onclick="setVListType('value','normal')">Normal</button>
-                  <button class="vlist-type-btn" id="vTypeNeon"   onclick="setVListType('value','neon')">Neon</button>
-                  <button class="vlist-type-btn" id="vTypeMega"   onclick="setVListType('value','mega')">Mega</button>
-                </div>
-                <input class="vlist-search" id="valueListSearch" placeholder="Search pets..." oninput="renderValueList()">
+  <button class="vlist-type-btn active" id="vTypeNormal" onclick="setVListType('value','normal')">Normal</button>
+  <button class="vlist-type-btn" id="vTypeNeon"   onclick="setVListType('value','neon')">Neon</button>
+  <button class="vlist-type-btn" id="vTypeMega"   onclick="setVListType('value','mega')">Mega</button>
+</div>
+<div class="vlist-type-group" id="vVariantGroup">
+  <button class="vlist-type-btn active" id="vVarNone" onclick="setVListVariant('value','none')">Base</button>
+  <button class="vlist-type-btn" id="vVarF"    onclick="setVListVariant('value','f')">F</button>
+  <button class="vlist-type-btn" id="vVarR"    onclick="setVListVariant('value','r')">R</button>
+  <button class="vlist-type-btn" id="vVarFR"   onclick="setVListVariant('value','fr')">FR</button>
+</div>
+<input class="vlist-search" id="valueListSearch" placeholder="Search pets..." oninput="renderValueList()">
                 <div style="display:flex;align-items:center;gap:6px;background:#0f172a;border:1.5px solid var(--accent);border-radius:8px;padding:4px 10px">
                   <span style="font-size:0.72em;color:var(--accent);font-weight:900">🔍</span>
                   <input type="range" id="vZoomSlider" min="28" max="80" value="46"
@@ -1324,7 +1330,7 @@
             <div class="advisor-header">
                 <div>
                     <span style="font-weight:900; font-size:1.1em; color:white;">🎯 TRADE ADVISOR</span>
-                    <span style="font-size:0.75em; color:var(--subtext); margin-left:10px;">Build your offer → see what you should be targeting</span>
+                    <span style="font-size:0.75em; color:var(--subtext); margin-left:10px;">Build your offer (up to 18 pets) → see what you should be targeting</span>
                 </div>
                 <button class="nav-btn" onclick="closeTradeAdvisor()">Close</button>
             </div>
@@ -1357,8 +1363,8 @@
                             <option value="8">Demand 8+</option>
                             <option value="9">Demand 9+</option>
                         </select>
-                        <button id="advisorNeonToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e3a1e;color:#34d399;border-color:#34d39933" onclick="toggleAdvisorVariant('neon')">✅ Neons</button>
-                        <button id="advisorMegaToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e293b;color:#64748b;border-color:#1e293b" onclick="toggleAdvisorVariant('mega')">☐ Megas</button>
+                        <button id="advisorNeonToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e3a1e;color:#34d399;border-color:#34d39933" onclick="toggleAdvisorVariant('neon')">✅ Neons+NFR</button>
+                        <button id="advisorMegaToggle" class="advisor-filter-select" style="cursor:pointer;font-weight:900;background:#1e293b;color:#64748b;border-color:#1e293b" onclick="toggleAdvisorVariant('mega')">☐ Megas+MFR</button>
                         <select class="advisor-filter-select" id="advisorCatFilter" onchange="refreshAdvisorTargets()">
                             <option value="all">All Categories</option>
                             <option value="high tier">High Tier</option>
@@ -4979,7 +4985,7 @@ function startLastUpdatedTicker() {
             } else {
                 advisorShowMega = !advisorShowMega;
                 const btn = document.getElementById('advisorMegaToggle');
-                btn.textContent = (advisorShowMega ? '✅' : '☐') + ' Megas';
+                btn.textContent = (advisorShowMega ? '✅' : '☐') + ' Megas+MFR';
                 btn.style.background = advisorShowMega ? '#2d1a4a' : '#1e293b';
                 btn.style.color = advisorShowMega ? '#a855f7' : '#64748b';
                 btn.style.borderColor = advisorShowMega ? '#a855f733' : '#1e293b';
@@ -5050,7 +5056,7 @@ function startLastUpdatedTicker() {
         }
 
         function advisorAddPet(name, type, f_st, r_st) {
-            if (advisorOfferPets.length >= 6) return;
+            if (advisorOfferPets.length >= 18) return;
             const pet = ALL_PETS.find(x => x.n === name);
             if (!pet) return;
             advisorOfferPets.push({ ...pet, type: type || 'reg', f_st: !!f_st, r_st: !!r_st, uid: Math.random() });
@@ -5086,25 +5092,24 @@ function startLastUpdatedTicker() {
                 </div>`;
             });
             // Empty slots
-            for (let i = advisorOfferPets.length; i < 6; i++) {
+            for (let i = advisorOfferPets.length; i < 18; i++) {
                 html += `<div class="advisor-add-slot" onclick="advisorFocusInv()">+</div>`;
             }
             slotsEl.innerHTML = html;
 
             if (advisorOfferPets.length === 0) {
-                statsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);font-size:0.82em">Add pets from below to build your offer</div>';
-                return;
-            }
-            const totalVal = advisorOfferPets.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
-            const avgDem = advisorOfferPets.reduce((s,p) => s + (p.d||0), 0) / advisorOfferPets.length;
-            const demTier = avgDem >= 7 ? '<span style="color:#34d399">High</span>' : avgDem >= 4 ? '<span style="color:#fbbf24">Mid</span>' : '<span style="color:#f87171">Low</span>';
-            const bundleWarn = advisorOfferPets.length > 4 ? '<div style="color:var(--trap);font-size:0.8em;margin-top:4px">⚠️ 5+ pet bundles are hard to accept</div>' : '';
-            statsEl.innerHTML = `
-                <div class="advisor-stat-row"><span class="advisor-stat-label">Total Value</span><span class="advisor-stat-val">${totalVal.toFixed(2)}</span></div>
-                <div class="advisor-stat-row"><span class="advisor-stat-label">Avg Demand</span><span class="advisor-stat-val">${avgDem.toFixed(1)} (${demTier} tier)</span></div>
-                <div class="advisor-stat-row"><span class="advisor-stat-label">Pets in Offer</span><span class="advisor-stat-val">${advisorOfferPets.length}/6</span></div>
-                ${bundleWarn}`;
-        }
+    statsEl.innerHTML = '<div style="text-align:center;color:var(--subtext);font-size:0.85em;">Add pets from below to build your offer</div>';
+    return;
+}
+const totalVal = advisorOfferPets.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
+const avgDem = advisorOfferPets.reduce((s,p) => s + (p.d||0), 0) / advisorOfferPets.length;
+const demTier = avgDem >= 7 ? '<span style="color:#34d399">High</span>' : avgDem >= 4 ? '<span style="color:#fbbf24">Mid</span>' : '<span style="color:#f87171">Low</span>';
+const bundleWarn = advisorOfferPets.length > 4 ? '<div style="color:var(--trap);font-size:0.8em;margin-top:4px">⚠️ ' + advisorOfferPets.length + ' pet bundle — harder to get accepted</div>' : '';
+statsEl.innerHTML = `
+    <div class="advisor-stat-row"><span class="advisor-stat-label">Total Value</span><span class="advisor-stat-val">${totalVal.toFixed(2)}</span></div>
+    <div class="advisor-stat-row"><span class="advisor-stat-label">Avg Demand</span><span class="advisor-stat-val">${avgDem.toFixed(1)} (${demTier} tier)</span></div>
+    <div class="advisor-stat-row"><span class="advisor-stat-label">Pets in Offer</span><span class="advisor-stat-val">${advisorOfferPets.length}/18</span></div>
+    ${bundleWarn}`;
 
         function advisorFocusInv() {
             document.getElementById('advisorInvGrid').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -5200,8 +5205,14 @@ function startLastUpdatedTicker() {
                                     state.inv.some(p => p.n === t.n);
 
                 const variants = [{ type:'reg', f_st:false, r_st:false }];
-                if (advisorShowNeon) variants.push({ type:'neon', f_st:false, r_st:false });
-                if (advisorShowMega) variants.push({ type:'mega', f_st:false, r_st:false });
+if (advisorShowNeon) {
+    variants.push({ type:'neon', f_st:false, r_st:false });
+    variants.push({ type:'neon', f_st:true,  r_st:true  }); // NFR
+}
+if (advisorShowMega) {
+    variants.push({ type:'mega', f_st:false, r_st:false });
+    variants.push({ type:'mega', f_st:true,  r_st:true  }); // MFR
+}
 
                 variants.forEach(v => {
                     const candidate = { ...t, ...v };
@@ -7382,22 +7393,30 @@ function startLastUpdatedTicker() {
         }
         // List state — type and zoom are independent per list
         const listState = {
-            value:  { type: 'normal', zoom: 46 },
-            demand: { type: 'normal', zoom: 46, increment: 0.1 }
-        };
+    value:  { type: 'normal', zoom: 46, variant: 'none' },
+    demand: { type: 'normal', zoom: 46, increment: 0.1 }
+};
 
         function setVListType(list, type) {
-            listState[list].type = type;
-            // Update toggle buttons
-            const prefix = list === 'value' ? 'v' : 'd';
-            ['Normal','Neon','Mega'].forEach(t => {
-                const id = prefix + 'Type' + t;
-                const el = document.getElementById(id);
-                if (el) el.classList.toggle('active', t.toLowerCase() === type || (t === 'Mega' && type === 'mega'));
-            });
-            if (list === 'value') renderValueList();
-            else renderDemandList();
-        }
+    listState[list].type = type;
+    const prefix = list === 'value' ? 'v' : 'd';
+    ['Normal','Neon','Mega'].forEach(t => {
+        const id = prefix + 'Type' + t;
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('active', t.toLowerCase() === type);
+    });
+    if (list === 'value') renderValueList();
+    else renderDemandList();
+}
+
+function setVListVariant(list, variant) {
+    listState[list].variant = variant;
+    ['None','F','R','FR'].forEach(v => {
+        const el = document.getElementById('vVar' + (v === 'None' ? 'None' : v));
+        if (el) el.classList.toggle('active', v.toLowerCase() === variant);
+    });
+    if (list === 'value') renderValueList();
+}
 
         function setListZoom(list, val) {
             listState[list].zoom = parseInt(val);
@@ -7415,11 +7434,26 @@ function startLastUpdatedTicker() {
         }
 
         // Get the correct value for a pet based on list type
-        function getPetListValue(p, type) {
-            if (type === 'neon')  return parseFloat(p.nfr_v || p.n_v || p.v) || 0;
-            if (type === 'mega')  return parseFloat(p.mfr_v || p.m_v || p.v) || 0;
-            return parseFloat(p.v) || 0;
-        }
+        function getPetListValue(p, type, variant) {
+    variant = variant || 'none';
+    if (type === 'neon') {
+        if (variant === 'fr') return parseFloat(p.nfr_v || p.n_v || p.v) || 0;
+        if (variant === 'f')  return parseFloat(p.n_f_v || p.n_v || p.v) || 0;
+        if (variant === 'r')  return parseFloat(p.n_r_v || p.n_v || p.v) || 0;
+        return parseFloat(p.n_v || p.v) || 0;
+    }
+    if (type === 'mega') {
+        if (variant === 'fr') return parseFloat(p.mfr_v || p.m_v || p.v) || 0;
+        if (variant === 'f')  return parseFloat(p.m_f_v || p.m_v || p.v) || 0;
+        if (variant === 'r')  return parseFloat(p.m_r_v || p.m_v || p.v) || 0;
+        return parseFloat(p.m_v || p.v) || 0;
+    }
+    // Normal type
+    if (variant === 'fr') return parseFloat(p.fr_v || p.v) || 0;
+    if (variant === 'f')  return parseFloat(p.f_v  || p.v) || 0;
+    if (variant === 'r')  return parseFloat(p.r_v  || p.v) || 0;
+    return parseFloat(p.v) || 0;
+}
 
         // Get demand for a pet based on type
         function getPetListDemand(p, type) {
@@ -7442,7 +7476,7 @@ function startLastUpdatedTicker() {
             const search = (document.getElementById('valueListSearch').value || '').toLowerCase();
             if (ALL_PETS.length === 0) { body.innerHTML = '<div style="text-align:center;color:var(--subtext);padding:40px">Loading data...</div>'; return; }
 
-            const { type, zoom } = listState.value;
+            const { type, zoom, variant } = listState.value;
             const imgSize = zoom;
             const tileSize = zoom + 10;
             const typeLabel = getTypeLabel(type);
@@ -7455,7 +7489,7 @@ function startLastUpdatedTicker() {
 
             const groups = {};
             pets.forEach(p => {
-                const v = getPetListValue(p, type);
+                const v = getPetListValue(p, type, variant);
                 if (v <= 0) return;
                 let tier;
                 if (v >= 1000) tier = Math.round(v / 100) * 100;
@@ -7479,11 +7513,11 @@ function startLastUpdatedTicker() {
                     <div class="vlist-tier-label">${g.tier >= 1 ? g.tier : g.tier.toFixed(2)}</div>
                     <div class="vlist-pets">
                         ${g.pets.sort((a,b) => getPetListValue(b,type) - getPetListValue(a,type)).map(p => {
-                            const val = getPetListValue(p, type);
+                            const val = getPetListValue(p, type, variant);
                             const safeN = p.n.replace(/'/g,"\'");
                             return `<div class="vlist-pet" style="width:${tileSize}px;height:${tileSize}px" onclick="quickAddFromList('${safeN}','${type}')">
                                 ${petImgTag(p.n, 'width:'+imgSize+'px;height:'+imgSize+'px;object-fit:contain')}
-                                <div class="vlist-pet-tooltip">${typeLabel ? typeLabel+' ' : ''}${p.n} · ${val}</div>
+                                <div class="vlist-pet-tooltip">${typeLabel ? typeLabel+' ' : ''}${variant !== 'none' ? variant.toUpperCase()+' ' : ''}${p.n} · ${val}</div>
                             </div>`;
                         }).join('')}
                     </div>
@@ -8308,24 +8342,23 @@ function tbRequestNotifPerms() {
 // Only runs for Elvebredd trades (AMVGG values are not in our dataset).
 // Returns: label, color, offerVal, requestVal, diff.
 function tbGetVerdict(trade) {
-    if (trade.site !== 'elvebredd') return null;
-    // Hydrate pets from ALL_PETS
     const hydrate = arr => arr.map(p => {
         const base = ALL_PETS.find(x => x.n === p.n);
         return base ? {...base, ...p} : null;
     }).filter(Boolean);
-    const offerPets   = hydrate(trade.offerPets);
-    const requestPets = hydrate(trade.requestPets);
-    if (offerPets.length === 0 || requestPets.length === 0) return { label: '?', color: '#94a3b8', sub: 'Could not load pet values' };
+    const offerPets   = hydrate(trade.offerPets || []);
+    const requestPets = hydrate(trade.requestPets || []);
+    if (offerPets.length === 0 || requestPets.length === 0) return { label: '?', color: '#94a3b8', pct: 0, offerVal: 0, requestVal: 0, diff: 0 };
     const offerVal   = offerPets.reduce((s,p)   => s + calculatePetVal(p,'value'), 0);
     const requestVal = requestPets.reduce((s,p) => s + calculatePetVal(p,'value'), 0);
-    const diff = requestVal - offerVal;
+    const diff  = requestVal - offerVal;
     const pDiff = offerVal > 0 ? diff / offerVal : 0;
-    if (Math.abs(pDiff) < 0.03) return { label: 'FAIR', color: '#94a3b8', offerVal, requestVal, diff };
-    if (pDiff >= 0.15) return { label: 'BIG W', color: '#34d399', offerVal, requestVal, diff };
-    if (pDiff > 0)     return { label: 'W',     color: '#86efac', offerVal, requestVal, diff };
-    if (pDiff <= -0.15)return { label: 'BIG L', color: '#f87171', offerVal, requestVal, diff };
-    return               { label: 'L',     color: '#fca5a5', offerVal, requestVal, diff };
+    const pct   = parseFloat((pDiff * 100).toFixed(1));
+    if (Math.abs(pDiff) < 0.03) return { label: 'FAIR',  color: '#94a3b8', pct, offerVal, requestVal, diff };
+    if (pDiff >= 0.15)          return { label: 'BIG W', color: '#34d399', pct, offerVal, requestVal, diff };
+    if (pDiff > 0)              return { label: 'W',     color: '#86efac', pct, offerVal, requestVal, diff };
+    if (pDiff <= -0.15)         return { label: 'BIG L', color: '#f87171', pct, offerVal, requestVal, diff };
+    return                             { label: 'L',     color: '#fca5a5', pct, offerVal, requestVal, diff };
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────
@@ -8703,10 +8736,14 @@ function renderTradeBoard() {
             const requestChips = renderTBPetChips(t.requestPets, 'request', false);
             const effVals = getTradeEffectiveVals(t);
             const diff = effVals.requestVal - effVals.offerVal;
-            const isW = diff > effVals.offerVal * 0.03;
-            const isL = diff < -(effVals.offerVal * 0.03);
-            const resultLabel = isW ? 'W' : isL ? 'L' : 'FAIR';
-            const resultColor = isW ? '#34d399' : isL ? '#f87171' : '#94a3b8';
+            const pDiffCompleted = effVals.offerVal > 0 ? diff / effVals.offerVal : 0;
+const pctCompleted   = parseFloat((pDiffCompleted * 100).toFixed(1));
+const isW    = pDiffCompleted >= 0.03;
+const isL    = pDiffCompleted <= -0.03;
+const isBigW = pDiffCompleted >= 0.15;
+const isBigL = pDiffCompleted <= -0.15;
+const resultLabel = isBigW ? 'BIG W' : isW ? 'W' : isBigL ? 'BIG L' : isL ? 'L' : 'FAIR';
+const resultColor = (isW) ? '#34d399' : (isL) ? '#f87171' : '#94a3b8';
             const valSource = effVals.source === 'historical' ? 'at trade date' : effVals.source === 'snapshot' ? 'at log time' : 'current';
             const dateStr = new Date(t.completedAt).toLocaleDateString();
             const siteColor = t.site === 'elvebredd' ? '#a855f7' : '#38bdf8';
@@ -8718,7 +8755,7 @@ function renderTradeBoard() {
                         '<span style="font-size:0.68em;color:#475569">' + dateStr + '</span>' +
                         (t.tradeDate ? '<span style="font-size:0.62em;color:#a855f7;background:#a855f722;border-radius:4px;padding:1px 5px">📅 ' + t.tradeDate + '</span>' : '') +
                         '<span style="font-size:0.82em;font-weight:900;color:' + resultColor + ';background:' + resultColor + '18;border-radius:5px;padding:2px 8px">' + resultLabel + '</span>' +
-                        (diff !== 0 ? '<span style="font-size:0.72em;color:' + resultColor + ';font-weight:800">' + (diff > 0 ? '+' : '') + diff.toFixed(2) + ' <span style="color:#475569;font-weight:500">(' + valSource + ')</span></span>' : '') +
+                        (diff !== 0 ? '<span style="font-size:0.72em;color:' + resultColor + ';font-weight:800">' + (diff > 0 ? '+' : '') + diff.toFixed(2) + ' <span style="color:' + resultColor + '">(' + (pctCompleted >= 0 ? '+' : '') + pctCompleted + '%)</span> <span style="color:#475569;font-weight:500">' + valSource + '</span></span>' : '') +
                     '</div>' +
                     '<div style="display:flex;gap:4px">' +
                         '<button onclick="tbEditTradeDate(\'' + t.id + '\')" title="Set when this trade happened" style="background:transparent;border:none;color:#475569;font-size:11px;cursor:pointer;padding:2px 5px;transition:0.15s" onmouseover="this.style.color=\'#a855f7\'" onmouseout="this.style.color=\'#475569\'">📅</button>' +
@@ -8827,12 +8864,13 @@ function renderTBCard(t) {
     const siteUrl   = t.site === 'elvebredd' ? 'https://elvebredd.com/trade-center' : 'https://amvgg.com/trade';
 
     let verdictHtml = '';
-    if (verdict) {
-        verdictHtml = `<span style="font-weight:900;color:${verdict.color};font-size:1em;margin-left:8px">${verdict.label}</span>
-            <span style="font-size:0.72em;color:#64748b;margin-left:6px">${verdict.offerVal?.toFixed(2)} → ${verdict.requestVal?.toFixed(2)}</span>`;
-    } else if (t.site === 'amvgg') {
-        verdictHtml = `<span style="font-size:0.72em;color:#64748b;margin-left:8px">AMVGG values — <a href="${siteUrl}" target="_blank" style="color:#38bdf8">view on site</a></span>`;
-    }
+if (verdict && verdict.label !== '?') {
+    verdictHtml = `<span style="font-weight:900;color:${verdict.color};font-size:1em;margin-left:8px">${verdict.label}</span>
+        <span style="font-size:0.72em;color:${verdict.color};margin-left:5px;font-weight:800">${verdict.pct >= 0 ? '+' : ''}${verdict.pct}%</span>
+        <span style="font-size:0.68em;color:#64748b;margin-left:5px">${verdict.offerVal?.toFixed(2)} → ${verdict.requestVal?.toFixed(2)}</span>`;
+} else {
+    verdictHtml = `<span style="font-size:0.72em;color:#64748b;margin-left:8px">Values loading... <a href="${siteUrl}" target="_blank" style="color:#38bdf8">view on site</a></span>`;
+}
 
     return `<div style="background:#0f172a;border:1.5px solid #1e293b;border-radius:14px;padding:14px;margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:10px">
