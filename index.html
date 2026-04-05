@@ -5109,7 +5109,8 @@ statsEl.innerHTML = `
     <div class="advisor-stat-row"><span class="advisor-stat-label">Total Value</span><span class="advisor-stat-val">${totalVal.toFixed(2)}</span></div>
     <div class="advisor-stat-row"><span class="advisor-stat-label">Avg Demand</span><span class="advisor-stat-val">${avgDem.toFixed(1)} (${demTier} tier)</span></div>
     <div class="advisor-stat-row"><span class="advisor-stat-label">Pets in Offer</span><span class="advisor-stat-val">${advisorOfferPets.length}/18</span></div>
-    ${bundleWarn}`;
+   ${bundleWarn}`;
+}
 
         function advisorFocusInv() {
             document.getElementById('advisorInvGrid').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
