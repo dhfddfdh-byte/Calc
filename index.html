@@ -3009,7 +3009,7 @@
             resultsEl.innerHTML = chunk.map(p => {
                 const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
                 const imgTag = petImgTag(p.n, 'width:100%;height:100%;object-fit:contain');
-                const val = calculatePetVal(p, 'value'); 
+                const val = calculatePetVal(p, state.mode); 
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(p.d);
                 return `
@@ -3404,23 +3404,25 @@ function startLastUpdatedTicker() {
         // (f_v, r_v, fr_v, n_v, nfr_v, m_v, mfr_v).
         // Falls back to base value (p.v) if a variant field is missing.
         function calculatePetVal(p, mode) {
-            let val = 0;
             const isBaseless = mode === 'baseless';
+            // Helper: pick baseless field if available (non-zero), else fall back to elve field, else base v
+            const b = (aField, eField, base) => (isBaseless && aField) ? aField : (eField || base || 0);
+            let val = 0;
             if (p.type === 'neon') {
-                if (p.f_st && p.r_st) val = isBaseless ? (p.anfr_v || p.an_v || p.nfr_v || p.n_v || p.v) : (p.nfr_v || p.n_v || p.v);
-                else if (p.f_st)      val = isBaseless ? (p.an_f_v || p.an_v || p.n_f_v || p.n_v || p.v) : (p.n_f_v || p.n_v || p.v);
-                else if (p.r_st)      val = isBaseless ? (p.an_r_v || p.an_v || p.n_r_v || p.n_v || p.v) : (p.n_r_v || p.n_v || p.v);
-                else                  val = isBaseless ? (p.an_v   || p.n_v  || p.v)                      : (p.n_v || p.v);
+                if (p.f_st && p.r_st) val = b(p.anfr_v, p.nfr_v,  p.n_v || p.v);
+                else if (p.f_st)      val = b(p.an_f_v, p.n_f_v,  p.n_v || p.v);
+                else if (p.r_st)      val = b(p.an_r_v, p.n_r_v,  p.n_v || p.v);
+                else                  val = b(p.an_v,   p.n_v,    p.v);
             } else if (p.type === 'mega') {
-                if (p.f_st && p.r_st) val = isBaseless ? (p.amfr_v || p.am_v || p.mfr_v || p.m_v || p.v) : (p.mfr_v || p.m_v || p.v);
-                else if (p.f_st)      val = isBaseless ? (p.am_f_v || p.am_v || p.m_f_v || p.m_v || p.v) : (p.m_f_v || p.m_v || p.v);
-                else if (p.r_st)      val = isBaseless ? (p.am_r_v || p.am_v || p.m_r_v || p.m_v || p.v) : (p.m_r_v || p.m_v || p.v);
-                else                  val = isBaseless ? (p.am_v   || p.m_v  || p.v)                      : (p.m_v || p.v);
+                if (p.f_st && p.r_st) val = b(p.amfr_v, p.mfr_v, p.m_v || p.v);
+                else if (p.f_st)      val = b(p.am_f_v, p.m_f_v, p.m_v || p.v);
+                else if (p.r_st)      val = b(p.am_r_v, p.m_r_v, p.m_v || p.v);
+                else                  val = b(p.am_v,   p.m_v,   p.v);
             } else {
-                if (p.f_st && p.r_st) val = isBaseless ? (p.afrl_v || p.av  || p.fr_v || p.v) : (p.fr_v || p.v);
-                else if (p.f_st)      val = isBaseless ? (p.af_v   || p.av  || p.f_v  || p.v) : (p.f_v  || p.v);
-                else if (p.r_st)      val = isBaseless ? (p.ar_v   || p.av  || p.r_v  || p.v) : (p.r_v  || p.v);
-                else                  val = isBaseless ? (p.av     || p.v)                     : p.v;
+                if (p.f_st && p.r_st) val = b(p.afrl_v, p.fr_v,  p.v);
+                else if (p.f_st)      val = b(p.af_v,   p.f_v,   p.v);
+                else if (p.r_st)      val = b(p.ar_v,   p.r_v,   p.v);
+                else                  val = isBaseless ? (p.av || p.v) : p.v;
             }
             return val || 0;
         }
@@ -3438,13 +3440,13 @@ function startLastUpdatedTicker() {
                 const key = `${p.n}|${p.type}|${p.f_st}|${p.r_st}`;
                 if (!groups[key]) groups[key] = [];
                 groups[key].push(p);
-                totalV += calculatePetVal(p, 'value');
+                totalV += calculatePetVal(p, state.mode);
                 totalD += p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
             });
             Object.entries(groups).forEach(([key, stack]) => {
                 const p = stack[0], count = stack.length;
                 const currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-                const valTotal = calculatePetVal(p, 'value') * count;
+                const valTotal = calculatePetVal(p, state.mode) * count;
                 const stackUidsString = JSON.stringify(stack.map(item => item.uid));
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(currentDemand);
