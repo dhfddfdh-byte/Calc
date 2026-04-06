@@ -1454,6 +1454,7 @@
         <div id="verdictMobileInfo" class="verdict-mobile-info"></div>
         <div class="switches">
             <button class="sw-btn active" id="btnValue" onclick="setMode('value')">Value</button>
+            <button class="sw-btn" id="btnBaseless" onclick="setMode('baseless')">Baseless</button>
             <button class="save-trade-btn" onclick="logCurrentTrade()">Save to History</button>
         </div>
     </div>  <!-- end tabCalc -->
@@ -2742,6 +2743,19 @@
                     mfr_v: row.mfr_v || 0,
                     nfr_f: row.nfr_f || 0,
                     mfr_f: row.mfr_f || 0,
+                    // AMVGG baseless values
+                    av:      row.av      || 0,
+                    af_v:    row.af_v    || 0,
+                    ar_v:    row.ar_v    || 0,
+                    afrl_v:  row.afrl_v  || 0,
+                    an_v:    row.an_v    || 0,
+                    an_f_v:  row.an_f_v  || 0,
+                    an_r_v:  row.an_r_v  || 0,
+                    anfr_v:  row.anfr_v  || 0,
+                    am_v:    row.am_v    || 0,
+                    am_f_v:  row.am_f_v  || 0,
+                    am_r_v:  row.am_r_v  || 0,
+                    amfr_v:  row.amfr_v  || 0,
                     cat: (row.categories || row.rarity || '').toLowerCase(),
                     vt: row['value trend'] || row['vt'] || '', 
                     dt: row['demand trend'] || row['dt'] || ''
@@ -3390,23 +3404,23 @@ function startLastUpdatedTicker() {
         // (f_v, r_v, fr_v, n_v, nfr_v, m_v, mfr_v).
         // Falls back to base value (p.v) if a variant field is missing.
         function calculatePetVal(p, mode) {
-            // Always uses value mode - frost values removed
             let val = 0;
+            const isBaseless = mode === 'baseless';
             if (p.type === 'neon') {
-                if (p.f_st && p.r_st) val = p.nfr_v || p.n_v || p.v;
-                else if (p.f_st) val = p.n_f_v || p.n_v || p.v;
-                else if (p.r_st) val = p.n_r_v || p.n_v || p.v;
-                else val = p.n_v || p.v;
+                if (p.f_st && p.r_st) val = isBaseless ? (p.anfr_v || p.an_v || p.nfr_v || p.n_v || p.v) : (p.nfr_v || p.n_v || p.v);
+                else if (p.f_st)      val = isBaseless ? (p.an_f_v || p.an_v || p.n_f_v || p.n_v || p.v) : (p.n_f_v || p.n_v || p.v);
+                else if (p.r_st)      val = isBaseless ? (p.an_r_v || p.an_v || p.n_r_v || p.n_v || p.v) : (p.n_r_v || p.n_v || p.v);
+                else                  val = isBaseless ? (p.an_v   || p.n_v  || p.v)                      : (p.n_v || p.v);
             } else if (p.type === 'mega') {
-                if (p.f_st && p.r_st) val = p.mfr_v || p.m_v || p.v;
-                else if (p.f_st) val = p.m_f_v || p.m_v || p.v;
-                else if (p.r_st) val = p.m_r_v || p.m_v || p.v;
-                else val = p.m_v || p.v;
+                if (p.f_st && p.r_st) val = isBaseless ? (p.amfr_v || p.am_v || p.mfr_v || p.m_v || p.v) : (p.mfr_v || p.m_v || p.v);
+                else if (p.f_st)      val = isBaseless ? (p.am_f_v || p.am_v || p.m_f_v || p.m_v || p.v) : (p.m_f_v || p.m_v || p.v);
+                else if (p.r_st)      val = isBaseless ? (p.am_r_v || p.am_v || p.m_r_v || p.m_v || p.v) : (p.m_r_v || p.m_v || p.v);
+                else                  val = isBaseless ? (p.am_v   || p.m_v  || p.v)                      : (p.m_v || p.v);
             } else {
-                if (p.f_st && p.r_st) val = p.fr_v || p.v;
-                else if (p.f_st) val = p.f_v || p.v;
-                else if (p.r_st) val = p.r_v || p.v;
-                else val = p.v;
+                if (p.f_st && p.r_st) val = isBaseless ? (p.afrl_v || p.av  || p.fr_v || p.v) : (p.fr_v || p.v);
+                else if (p.f_st)      val = isBaseless ? (p.af_v   || p.av  || p.f_v  || p.v) : (p.f_v  || p.v);
+                else if (p.r_st)      val = isBaseless ? (p.ar_v   || p.av  || p.r_v  || p.v) : (p.r_v  || p.v);
+                else                  val = isBaseless ? (p.av     || p.v)                     : p.v;
             }
             return val || 0;
         }
@@ -4763,7 +4777,12 @@ function startLastUpdatedTicker() {
         // Repaints both trade panels (A = You Give, B = You Get),
         // recalculates the verdict, and updates the trade speed suggestions.
         function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
-        function setMode(m) { state.mode = 'value'; document.getElementById('btnValue').classList.add('active'); render(); }
+        function setMode(m) {
+            state.mode = m;
+            document.getElementById('btnValue').classList.toggle('active', m === 'value');
+            document.getElementById('btnBaseless').classList.toggle('active', m === 'baseless');
+            render();
+        }
         function tog(s, uid, type) {
             pushState(); const p = state[s].find(x => x.uid === uid);
             if (!p) return;
