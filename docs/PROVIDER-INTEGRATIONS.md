@@ -1,17 +1,17 @@
 # Provider integration contract
 
-Public web pages are reference URLs, not verified API endpoints. The owner reports authorization to use provider APIs. Before enabling a job, configure the actual authorized endpoint, response mapping, allowed request rate, authentication method, and scope (read values, read listings, write listings, redistribution).
+Public web pages are reference URLs, not verified API endpoints. Provider authorization has not been verified. Before enabling a job, configure the actual authorized endpoint, response mapping, allowed request rate, authentication method, and scope (read values, read listings, write listings, redistribution).
 
 | Provider | Public reference pages | Intended feeds |
 |---|---|---|
 | AMVGG | https://amvgg.com/values/pets ; https://amvgg.com/trades | exact-variant values, normal/neon/mega demand stars, changes, listings |
 | Elvebredd | https://elvebredd.com/adopt-me-calculator ; https://elvebredd.com/value-updates ; https://elvebredd.com/trade-center | exact-variant values, changes, listings; direct demand only if documented |
-| AMTV | https://adoptmetradingvalues.com/pet-value-list.php ; https://adoptmetradingvalues.com/rising-and-falling-values.php ; https://adoptmetradingvalues.com/pet-demand-list.php ; https://adoptmetradingvalues.com/exotic-pet-list.php | values in RP, period-specific changes, active-offer demand ranks, exotic classification |
+| AMTV | https://adoptmetradingvalues.com/pet-demand-list.php | active-offer demand ranks only (normal, neon, mega) |
 
 Use a provider-approved service identity, HTTPS, backend secret storage, documented rate limits, conditional requests where supported, and backoff on 429/503. Stop on authorization errors. No session-cookie reuse, disguised clients, or access-control workarounds.
 
 ## Normalized feed
-Market records: {source, petId, variant, value, unit, demand, observedAt}. Missing fields are null; variant is one of R0/RF/RR/RFR/N0/NF/NR/NFR/M0/MF/MR/MFR. Keep source-native star ratings and demand rank/window/denominator separately; do not invent potion-specific values if a feed only supplies growth forms.
+Market records: {source, petId, variant, value, unit, demand, observedAt}. AMTV records must have null value; combined values use only Elvebredd and AMVGG. Missing fields are null; variant is one of R0/RF/RR/RFR/N0/NF/NR/NFR/M0/MF/MR/MFR. Keep source-native star ratings and demand rank/window/denominator separately; do not invent potion-specific values if a feed only supplies growth forms.
 
 Changes: {source, petId, variant, oldValue, newValue, unit, periodStart, periodEnd}. Preserve source-reported timeframe and do not fabricate daily history from summary changes.
 
