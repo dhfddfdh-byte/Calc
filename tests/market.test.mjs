@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {variantKey,rankDemand,starDemand,normalizeFactor,makeMarket,resolveMetric,evaluateTrade,findBundles} from '../src/v2/market.mjs';
+test("variant exact",()=>assert.ok((()=>variantKey("mega",true,true)==="MFR")()));
+test("rank invalid",()=>assert.ok((()=>rankDemand(0,100)===null&&rankDemand(1,100)===10)()));
+test("stars preserve missing",()=>assert.ok((()=>starDemand(null)===null&&starDemand(3)===10)()));
+test("anchors",()=>assert.ok((()=>normalizeFactor(Array.from({length:5},(_,i)=>({source:i+1,reference:(i+1)*2})))===2)()));
+test("unknown variant",()=>assert.ok((()=>resolveMetric(makeMarket([]),"pet","MFR","elve","value").value===null)()));
+test("combined unit and coverage",()=>assert.ok((()=>{const r=makeMarket([{source:"elve",petId:"pet",variant:"RFR",value:10,demand:8,unit:"shark",observedAt:"2026-11-24T00:00:00Z"},{source:"amvgg",petId:"pet",variant:"RFR",value:2,demand:9,unit:"base",observedAt:"2026-11-24T00:00:00Z"}]);return resolveMetric(r,"pet","RFR","combined","value",{now:Date.parse("2026-11-25"),factors:{elve:{shark:1},amvgg:{base:5}}}).value===10&&resolveMetric(r,"pet","RFR","combined","value").value===null})()));
+test("trade mismatch",()=>assert.ok((()=>evaluateTrade([{value:10,unit:"shark"}],[{value:12,unit:"rp"}]).verdict==="unknown")()));
+test("fair threshold",()=>assert.ok((()=>evaluateTrade([{value:100,unit:"rp"}],[{value:102,unit:"rp"}]).verdict==="fair")()));
+test("locked inventory",()=>assert.ok((()=>{const b=findBundles([{id:"a",value:6},{id:"b",value:4},{id:"locked",value:10,locked:true}],10);return b[0].total===10&&b[0].ids.length===2&&!b[0].ids.includes("locked")})()));
+test("no duplicate IDs",()=>assert.ok((()=>{try{findBundles([{id:"a",value:5},{id:"a",value:5}],10);return false}catch{return true}})()));
