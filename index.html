@@ -5677,16 +5677,27 @@ if (advisorShowMega) {
         function renderBlocklistUI() {
             const el = document.getElementById('scoutBlocklistTags');
             if (!el) return;
-            if (_scoutBlocklist.length === 0) {
-                el.innerHTML = '<span style="font-size:11px;color:#475569">No blocked users</span>';
+            el.replaceChildren();
+            if (!_scoutBlocklist.length) {
+                const empty = document.createElement('span');
+                empty.style.cssText = 'font-size:11px;color:#475569';
+                empty.textContent = 'No blocked users';
+                el.append(empty);
                 return;
             }
-            el.innerHTML = _scoutBlocklist.map(n =>
-                `<span style="display:inline-flex;align-items:center;gap:4px;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:2px 8px;font-size:11px;color:#e2e8f0">
-                    ${n}
-                    <span onclick="scoutRemoveBlock('${n}')" style="cursor:pointer;color:#ef4444;font-weight:900;font-size:12px">✕</span>
-                </span>`
-            ).join('');
+            for (const n of _scoutBlocklist) {
+                const tag = document.createElement('span');
+                tag.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:2px 8px;font-size:11px;color:#e2e8f0';
+                tag.append(document.createTextNode(String(n)));
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.style.cssText = 'cursor:pointer;color:#ef4444;font-weight:900;font-size:12px;background:none;border:0';
+                remove.textContent = '✕';
+                remove.setAttribute('aria-label', 'Remove ' + n);
+                remove.addEventListener('click', () => scoutRemoveBlock(n));
+                tag.append(remove);
+                el.append(tag);
+            }
         }
 
         // ── Persistent scout prefs ───────────────────────────────────────────
@@ -8200,31 +8211,36 @@ function tbFinalizeComplete() {
     if (!s) return;
     const id = s.id;
 
-    // Remove offered pets from inventory (one at a time, respecting quantity)
-    s.finalOffer.forEach(offeredPet => {
-        const base = ALL_PETS.find(x => x.n === offeredPet.n);
-        if (!base) return;
-        // Find matching pet in inventory (same name, same type/fly/ride)
-        const idx = state.inv.findIndex(ip =>
-            ip.n === offeredPet.n &&
-            (ip.type || 'reg') === (offeredPet.type || 'reg') &&
-            !!ip.f_st === !!offeredPet.f_st &&
-            !!ip.r_st === !!offeredPet.r_st
-        );
-        if (idx >= 0) state.inv.splice(idx, 1);
-        // If no exact match, try just by name
-        else {
-            const fallback = state.inv.findIndex(ip => ip.n === offeredPet.n);
-            if (fallback >= 0) state.inv.splice(fallback, 1);
+    // Validate the entire exchange before mutating inventory.
+    if (!Array.isArray(s.finalOffer) || !Array.isArray(s.finalRequest) ||
+        !s.finalOffer.length || !s.finalRequest.length ||
+        !tbPendingLoad().some(t => t.id === id) || tbCompletedLoad().some(t => t.id === id)) {
+        showTBToast('Trade is missing, invalid, or already completed.', '#f87171');
+        return;
+    }
+    const catalog = new Map(ALL_PETS.map(p => [p.n, p]));
+    const remaining = [...state.inv];
+    const sameVariant = (a,b) => a.n === b.n &&
+        (a.type || 'reg') === (b.type || 'reg') &&
+        !!a.f_st === !!b.f_st && !!a.r_st === !!b.r_st;
+    for (const offered of s.finalOffer) {
+        const idx = remaining.findIndex(p => sameVariant(p, offered));
+        if (idx < 0) {
+            showTBToast('Missing exact pet variant or quantity. Inventory unchanged.', '#f87171');
+            return;
         }
-    });
-
-    // Add received pets to inventory
-    s.finalRequest.forEach(receivedPet => {
-        const base = ALL_PETS.find(x => x.n === receivedPet.n);
-        if (!base) return;
-        state.inv.push({ ...base, ...receivedPet, uid: Math.random() });
-    });
+        remaining.splice(idx, 1);
+    }
+    const received = [];
+    for (const pet of s.finalRequest) {
+        const base = catalog.get(pet.n);
+        if (!base) {
+            showTBToast('Received pet not found in catalog. Inventory unchanged.', '#f87171');
+            return;
+        }
+        received.push({...base, ...pet, uid: Math.random()});
+    }
+    state.inv = [...remaining, ...received];
 
     saveTrade();
     renderInventory();
