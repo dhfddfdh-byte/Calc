@@ -59,7 +59,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adopt Me Trade Calculator</title>
     <!-- Feature: Chart.js for History Graphs -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg: #0b1120;
@@ -2689,6 +2689,7 @@
             localStorage.setItem('tradeData', JSON.stringify(simplifiedState));
         }
 
+        function escapeCalcHTML(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
         function safeLegacyPet(item, keepUnknown=true) {
             if(!item||typeof item.n!=='string'||!item.n.trim()||item.n.length>120||/[<>&"\x00-\x1f\\]/.test(item.n))return null;
             const type=item.type||'reg';
@@ -2707,7 +2708,7 @@
                 state.A=restoreSide('A').slice(0,18);state.B=restoreSide('B').slice(0,18);state.inv=restoreSide('inv');
                 if(['value','baseless','combined'].includes(parsed.mode))state.mode=parsed.mode;
                 syncSourceButtons();
-                if (parsed.keybinds)      state.keybinds      = parsed.keybinds;
+                if(Array.isArray(parsed.keybinds))state.keybinds=parsed.keybinds.filter(b=>b&&typeof b.key==='string'&&b.key.length<=30&&['inv','all'].includes(b.source)&&typeof b.petName==='string').slice(0,100).map(b=>({key:b.key,source:b.source,petName:b.petName}));
                 if (parsed.defaultFly     !== undefined) state.defaultFly     = !!parsed.defaultFly;
                 if (parsed.defaultRide    !== undefined) state.defaultRide    = !!parsed.defaultRide;
                 if (parsed.defaultNeon    !== undefined) state.defaultNeon    = !!parsed.defaultNeon;
@@ -2796,10 +2797,10 @@
                     am_f_v:  row.am_f_v  || 0,
                     am_r_v:  row.am_r_v  || 0,
                     amfr_v:  row.amfr_v  || 0,
-                    cat: (row.categories || row.rarity || '').toLowerCase(),
-                    vt: row['value trend'] || row['vt'] || '', 
-                    dt: row['demand trend'] || row['dt'] || ''
-                })).filter(p => typeof p.n==='string' && p.n.length > 0);
+                    cat: String(row.categories || row.rarity || '').toLowerCase().replace(/[<>&"\\]/g,''),
+                    vt: String(row['value trend'] || row['vt'] || '').replace(/[<>&"\\]/g,''), 
+                    dt: String(row['demand trend'] || row['dt'] || '').replace(/[<>&"\\]/g,'')
+                })).filter(p => typeof p.n==='string' && p.n.length > 0 && p.n.length<=120 && !/[<>&"\x00-\x1f\\]/.test(p.n));
                 const unique=new Set(nextPets.map(p=>p.n));
                 if(nextPets.length<100||unique.size!==nextPets.length)throw Error("Invalid or duplicate catalog entries");
                 if(refresh&&ALL_PETS.length&&nextPets.length<ALL_PETS.length*.8)throw Error("Catalog shrank by more than 20%");
@@ -5677,7 +5678,7 @@ if (advisorShowMega) {
                     : '<option value="">-- pick pet --</option>' + pets.map(n => `<option value="${n.replace(/"/g,'&quot;')}" ${b.petName===n?'selected':''}>${n}</option>`).join('');
 
                 return `<div class="keybind-row">
-                    <div class="keybind-key" title="Click to change key" onclick="startKeyCapture(${i})">${b.key || '?'}</div>
+                    <div class="keybind-key" title="Click to change key" onclick="startKeyCapture(${i})">${escapeCalcHTML(b.key || '?')}</div>
                     <div class="keybind-source-toggle">
                         <button class="ks-tog ${b.source==='inv'?'active':''}" onclick="setKeybindSource(${i},'inv')">Inv</button>
                         <button class="ks-tog ${b.source==='all'?'active':''}" onclick="setKeybindSource(${i},'all')">All</button>
@@ -7833,16 +7834,16 @@ function setVListVariant(list, variant) {
 
             // Check hardcoded overrides first — for items AMVGG doesn't host
             if (IMAGE_OVERRIDES[key]) {
-                return `<img src="${IMAGE_OVERRIDES[key]}" style="${styleAttr}" alt="${name.replace(/"/g,'&quot;')}">`;
+                return `<img src="${IMAGE_OVERRIDES[key]}" style="${styleAttr}" alt="${escapeCalcHTML(name)}">`;
             }
 
             const variants = getPetImageVariants(name);
             const firstSrc = 'https://amvgg.com/items/' + encodeURIComponent(variants[0]) + '.webp';
             const fallbacks = JSON.stringify(variants.slice(1).map(v => 'https://amvgg.com/items/' + encodeURIComponent(v) + '.webp'));
             return `<img src="${firstSrc}" style="${styleAttr}" loading="lazy"
-                data-fallbacks='${fallbacks}' data-fb-idx="0"
+                data-fallbacks='${escapeCalcHTML(fallbacks)}' data-fb-idx="0"
                 onerror="petImgFallback(this)"
-                alt="${name.replace(/"/g,'&quot;')}">`;
+                alt="${escapeCalcHTML(name)}">`;
         }
 
         // Called when a pet image 404s. Tries the next URL variant from
@@ -9015,7 +9016,7 @@ if (verdict && verdict.label !== '?') {
             </div>
         </div>
 
-        ${t.notes ? `<div style="font-size:0.75em;color:#64748b;font-style:italic;margin-bottom:10px">"${t.notes}"</div>` : ''}
+        ${t.notes ? `<div style="font-size:0.75em;color:#64748b;font-style:italic;margin-bottom:10px">"${escapeCalcHTML(t.notes)}"</div>` : ''}
 
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             <button id="tbRepostBtn_${t.id}" onclick="tbRepost('${t.id}')" ${left > 0 ? 'disabled' : ''} style="background:${left===0?'#059669':'#1e293b'};border:1.5px solid ${left===0?'#059669':'#334155'};color:${left===0?'white':'#475569'};border-radius:7px;padding:5px 12px;font-size:0.78em;font-weight:800;cursor:${left===0?'pointer':'not-allowed'};transition:0.2s">
