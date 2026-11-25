@@ -922,6 +922,7 @@
             .plus:active { border-color: var(--accent); color: var(--accent); }
         }
 </style>
+    <link rel="stylesheet" href="./src/v2/overhaul.css">
 </head>
 <body>
 
@@ -959,6 +960,16 @@
 
     <!-- HOME SCREEN WRAPPER -->
     <div class="home-screen" id="homeScreen">
+    <header class="calc-brandbar">
+        <div class="calc-brand"><div class="calc-mark" aria-hidden="true">C</div><div><h1>Calc · Trade smarter</h1><p>Calculator / Inventory / Market intelligence</p></div></div>
+        <nav class="calc-quick" aria-label="New tools">
+            <a href="./market-preview.html">Market data</a>
+            <a href="./tracker.html">Trade tracker</a>
+            <button type="button" onclick="window.openCompanionSetup()">Desktop companion</button>
+            <a href="./account.html">Account</a>
+        </nav>
+    </header>
+
 
     <!-- TAB BAR -->
     <div class="tab-bar">
@@ -1077,7 +1088,7 @@
     <!-- original nav buttons inside calc tab -->
     <div class="nav-bar">
         <div id="lastUpdatedBadge" style="display:none;align-items:center;gap:5px;font-size:0.72em;font-weight:700;padding:5px 10px;border-radius:10px;border:1px solid #1e293b;color:#64748b;white-space:nowrap;margin-right:auto">
-            <span id="lastUpdatedText">Updated just now</span>
+            <span id="lastUpdatedText">Source freshness not verified</span>
         </div>
         <button class="nav-btn" onclick="openInfo()">ℹ️ Information</button>
         <button class="nav-btn" onclick="openHistory()">📜 History</button>
@@ -1294,11 +1305,11 @@
                     <div style="font-size:0.75em;color:var(--subtext);margin:6px 0 10px">Experimental features — may not work perfectly.</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
                         <div>
-                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Elve Auto-Click Accept</span>
+                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Desktop Trade Companion</span>
                             <span style="display:inline-block;margin-left:6px;padding:1px 7px;background:#7c3aed33;border:1px solid #7c3aed66;border-radius:10px;font-size:0.65em;font-weight:900;color:#a78bfa">BETA</span>
-                            <div style="font-size:0.72em;color:var(--subtext);margin-top:2px">When ON: the Accept script will try to auto-click Elve's accept button for you. When OFF (default): it still opens Elve, highlights the exact trade with a glow, and scrolls to it — you click Accept yourself.</div>
+                            <div style="font-size:0.72em;color:var(--subtext);margin-top:2px">Download the companion to monitor inventory-backed offers. Review trades on the provider website; automatic acceptance is unavailable.</div>
                         </div>
-                        <button id="settingBetaElveAccept" onclick="toggleSetting('betaElveAccept')"
+                        <button id="settingBetaElveAccept" onclick="window.openCompanionSetup()"
                             style="padding:5px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:800;font-size:0.78em;font-family:inherit;background:#1e293b;color:#64748b;flex-shrink:0;margin-left:12px">OFF</button>
                     </div>
                 </div>
@@ -2679,7 +2690,7 @@
                 const parsed = JSON.parse(saved);
                 const hydrate = (item) => {
                     const freshData = ALL_PETS.find(p => p.n === item.n);
-                    if (!freshData) return null; 
+                    if (!freshData) return {n:item.n,cat:'',d:0,nd:0,md:0,v:0,vt:'',dt:'',...item};
                     return { ...freshData, ...item };
                 };
                 state.A = (parsed.A || []).map(hydrate).filter(x => x);
@@ -2690,7 +2701,7 @@
                 if (parsed.defaultRide    !== undefined) state.defaultRide    = !!parsed.defaultRide;
                 if (parsed.defaultNeon    !== undefined) state.defaultNeon    = !!parsed.defaultNeon;
                 if (parsed.defaultMega    !== undefined) state.defaultMega    = !!parsed.defaultMega;
-                if (parsed.betaElveAccept !== undefined) state.betaElveAccept = !!parsed.betaElveAccept;
+                state.betaElveAccept = false;
                 // Restore zoom: old saves stored decimal (1.0), new stores int (100).
                 // If value is clearly bad (< 10 means decimal), convert it.
                 // Clamp to 80–130 so a corrupt value never makes text invisible.
@@ -2719,10 +2730,19 @@
         //   5. Trigger render() and any tab-specific render (value, demand, trades)
         async function loadPetData() {
             try {
-                const response = await fetch(MASTER_CSV_URL, {cache:"no-cache"});
-                if (!response.ok) throw new Error("Pet data HTTP " + response.status);
-                const csvText = await response.text();
+                let csvText, fromCache=false;
+                try {
+                    const response=await fetch(MASTER_CSV_URL,{cache:"no-cache",signal:AbortSignal.timeout(20000)});
+                    if(!response.ok)throw Error("Pet data HTTP "+response.status);
+                    csvText=await response.text();
+                    if(!csvText.split(/\r?\n/,1)[0].split(',').includes('n') || csvText.length<1000)throw Error("Unexpected catalog");
+                }catch(e){
+                    const cached=localStorage.getItem('calc_master_csv_cache');
+                    if(!cached)throw e;
+                    csvText=cached;fromCache=true;
+                }
                 const data = parseCSV(csvText);
+                if(data.length<100||!data.some(p=>Number(p.v)>0))throw Error("Incomplete pet catalog");
                 
                 ALL_PETS = data.map(row => ({
                     n: row.n || row.name || '',
@@ -2762,6 +2782,9 @@
                     dt: row['demand trend'] || row['dt'] || ''
                 })).filter(p => p.n && p.n.length > 0);
                 
+                if(!fromCache){try{localStorage.setItem('calc_master_csv_cache',csvText)}catch{}}
+                document.getElementById('lastUpdatedBadge').style.display='flex';
+                document.getElementById('lastUpdatedText').textContent=fromCache?'Cached values · freshness unknown':'Sheet loaded · source freshness unknown';
                 document.getElementById('loadingScreen').style.display = 'none';
 
                 buildDynamicHTT();  // initial HTT from pet data (before history)
@@ -3176,7 +3199,7 @@ function startLastUpdatedTicker() {
 
             function update() {
                 const ts = window._dataLastUpdated;
-                if (!ts) return;
+                if (!ts) { text.textContent = 'Sheet loaded · source freshness unknown'; return; }
                 const ageHr = (Date.now() - ts) / 3600000;
                 const d = new Date(ts);
                 const today = new Date();
@@ -3188,13 +3211,13 @@ function startLastUpdatedTicker() {
 
                 let label, color, border;
                 if (ageHr < 12) {
-                    label = '✅ Values updated ' + dateStr;
+                    label = 'Latest history snapshot ' + dateStr;
                     color = '#34d399'; border = '#34d39933';
                 } else if (ageHr < 24) {
-                    label = '⚠️ Values updated ' + dateStr;
+                    label = 'History snapshot ' + dateStr;
                     color = '#fbbf24'; border = '#fbbf2433';
                 } else {
-                    label = '⚠️ Values may be outdated — last updated ' + dateStr;
+                    label = 'Source freshness unverified · history ' + dateStr;
                     color = '#f87171'; border = '#f8717133';
                 }
                 text.textContent = label;
@@ -3404,29 +3427,15 @@ function startLastUpdatedTicker() {
         // and fly/ride status. Reads from the variant value fields on the pet object
         // (f_v, r_v, fr_v, n_v, nfr_v, m_v, mfr_v).
         // Falls back to base value (p.v) if a variant field is missing.
-        function calculatePetVal(p, mode) {
-            const isBaseless = mode === 'baseless';
-            // Helper: pick baseless field if available (non-zero), else fall back to elve field, else base v
-            const b = (aField, eField, base) => (isBaseless && aField) ? aField : (eField || base || 0);
-            let val = 0;
-            if (p.type === 'neon') {
-                if (p.f_st && p.r_st) val = b(p.anfr_v, p.nfr_v,  p.n_v || p.v);
-                else if (p.f_st)      val = b(p.an_f_v, p.n_f_v,  p.n_v || p.v);
-                else if (p.r_st)      val = b(p.an_r_v, p.n_r_v,  p.n_v || p.v);
-                else                  val = b(p.an_v,   p.n_v,    p.v);
-            } else if (p.type === 'mega') {
-                if (p.f_st && p.r_st) val = b(p.amfr_v, p.mfr_v, p.m_v || p.v);
-                else if (p.f_st)      val = b(p.am_f_v, p.m_f_v, p.m_v || p.v);
-                else if (p.r_st)      val = b(p.am_r_v, p.m_r_v, p.m_v || p.v);
-                else                  val = b(p.am_v,   p.m_v,   p.v);
-            } else {
-                if (p.f_st && p.r_st) val = b(p.afrl_v, p.fr_v,  p.v);
-                else if (p.f_st)      val = b(p.af_v,   p.f_v,   p.v);
-                else if (p.r_st)      val = b(p.ar_v,   p.r_v,   p.v);
-                else                  val = isBaseless ? (p.av || p.v) : p.v;
-            }
-            return val || 0;
+        function exactPetValue(p,mode) {
+            const fields = mode === 'baseless'
+                ? {reg:['av','af_v','ar_v','afrl_v'],neon:['an_v','an_f_v','an_r_v','anfr_v'],mega:['am_v','am_f_v','am_r_v','amfr_v']}
+                : {reg:['v','f_v','r_v','fr_v'],neon:['n_v','n_f_v','n_r_v','nfr_v'],mega:['m_v','m_f_v','m_r_v','mfr_v']};
+            const field=fields[p.type||'reg']?.[(p.f_st?1:0)+(p.r_st?2:0)];
+            const value=field?Number(p[field]):NaN;
+            return Number.isFinite(value)&&value>0?value:null;
         }
+        function calculatePetVal(p,mode) { return exactPetValue(p,mode)??0; }
 
         // Renders the inventory grid and updates all stat displays.
         // Groups identical pets (same name+type+fly+ride) into stacks shown with x2/x3 badge.
@@ -4705,7 +4714,7 @@ function startLastUpdatedTicker() {
                             ${imgTag}
                         </div>
                         <div class="card-name">${p.n}${getTrendIcons(p)}</div>
-                        <div class="card-val">${val.toFixed(2)}</div>
+                        <div class="card-val">${exactPetValue(p,state.mode)===null?"N/A":val.toFixed(2)}</div>
                         <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
                         <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
@@ -4734,13 +4743,17 @@ function startLastUpdatedTicker() {
             const gaugeNeedle = document.getElementById('gaugeNeedle');
             const gaugeBar = document.getElementById('gaugeBar');
             let isTrap = false;
+            if ([...state.A,...state.B].some(p=>exactPetValue(p,state.mode)===null)) {
+                verdict.innerText="UNKNOWN";verdict.className="v-text";vDiff.innerText="Incomplete values";vSub.innerText="At least one exact pet variant has no value in the selected source. No win/loss verdict can be verified.";gaugeNeedle.style.left="50%";gaugeBar.classList.remove('trap-active');
+                const extras=document.getElementById('verdictExtras');if(extras)extras.replaceChildren();return;
+            }
             if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; gaugeNeedle.style.left = "50%"; gaugeBar.classList.remove('trap-active'); return; }
             const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
             const demGap = demA - demB;
             let needlePos = 50 + (pDiff / 0.15 * 50);
             if (needlePos < 0) needlePos = 0; if (needlePos > 100) needlePos = 100;
             gaugeNeedle.style.left = `${needlePos}%`;
-            if (Math.abs(diff) < 0.01) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "The trade is perfectly balanced in value. No one gain or loses raw wealth."; }
+            if (vA>0 && Math.abs(pDiff) <= 0.03) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "Values are within 3% of each other. Check demand and trading risk too."; }
             else if (diff > 0) {
                 if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`; isTrap = true; }
                 else {
@@ -4801,14 +4814,7 @@ function startLastUpdatedTicker() {
         // Analyzes both sides for: HTT pets, demand mismatch, manipulation flags.
         // Gives actionable tips like "Add a high-demand pet to improve odds".
         // Exact source/variant values for recommendations; never substitute missing data.
-        function exactSuggestionValue(p) {
-            const fields = state.mode === 'baseless'
-                ? {reg:['av','af_v','ar_v','afrl_v'],neon:['an_v','an_f_v','an_r_v','anfr_v'],mega:['am_v','am_f_v','am_r_v','amfr_v']}
-                : {reg:['v','f_v','r_v','fr_v'],neon:['n_v','n_f_v','n_r_v','nfr_v'],mega:['m_v','m_f_v','m_r_v','mfr_v']};
-            const field = fields[p.type || 'reg']?.[(p.f_st ? 1 : 0) + (p.r_st ? 2 : 0)];
-            const v = field ? Number(p[field]) : NaN;
-            return Number.isFinite(v) && v > 0 ? v : null;
-        }
+        function exactSuggestionValue(p) { return exactPetValue(p,state.mode); }
         function updateTradeSuggestions() {
             const container = document.getElementById('sideASuggestions');
             const list = document.getElementById('suggestList');
@@ -5481,6 +5487,7 @@ if (advisorShowMega) {
         }
 
         function toggleSetting(key) {
+            if (key === 'betaElveAccept') { state.betaElveAccept = false; window.openCompanionSetup(); return; }
             state[key] = !state[key];
             saveTrade();
             refreshSettingBtns();
@@ -5496,7 +5503,7 @@ if (advisorShowMega) {
                 var btn = document.getElementById(id);
                 if (!btn) return;
                 var on = !!state[key];
-                btn.textContent = on ? 'ON' : 'OFF';
+                btn.textContent = key === 'betaElveAccept' ? 'SET UP' : (on ? 'ON' : 'OFF');
                 btn.style.background = on ? 'var(--accent)' : '#1e293b';
                 btn.style.color = on ? 'white' : '#64748b';
             });
@@ -9112,5 +9119,14 @@ if (verdict && verdict.label !== '?') {
         <div class="mobile-ctx-item" onclick="mobileCtxAction('remove')" style="color:#f87171">✕ Remove Pet</div>
     </div>
 
+    <dialog class="calc-dialog" id="companionSetup">
+        <h2>Set up Trade Companion</h2>
+        <p>Get a desktop monitor for Elvebredd and AMVGG. Automatic acceptance is unavailable. Live listing feeds still require configuration.</p>
+        <label>Minimum profit (%) <input type="number" id="companionProfit" min="5" max="10000" value="10"></label>
+        <label>Maximum demand loss (/10) <input type="number" id="companionLoss" min="0" max="1" step=".1" value=".5"></label>
+        <p id="companionNote" role="status">Windows: Python 3 with Tkinter is required.</p>
+        <div class="actions"><a class="primary" id="companionDownload" href="./desktop/Calc-Trade-Companion.py" download>Download app</a><button type="button" id="companionInventory">Export my inventory</button><button type="button" id="companionInstalled">Already installed</button><button type="button" id="companionClose">Cancel</button></div>
+    </dialog>
+    <script type="module" src="./src/v2/companion-setup.mjs"></script>
 </body>
 </html>
