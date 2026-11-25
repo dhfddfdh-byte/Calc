@@ -1,0 +1,9 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {scanTrades,trackerSettings,marketChanges} from '../src/v2/tracker.mjs';
+const now=1795574340000,p={"name":"Dog","type":"reg","fly":false,"ride":false},q={"name":"Cat","type":"reg","fly":false,"ride":false},t={"source":"elve","id":"x","status":"active","verifiedAt":"2026-11-25T02:39:00.000Z","offering":[{"name":"Cat","type":"reg","fly":false,"ride":false}],"requesting":[{"name":"Dog","type":"reg","fly":false,"ride":false}]},inv=[{"name":"Dog","type":"reg","fly":false,"ride":false,"id":"a"}];const lookup=x=>({value:x.name==="Dog"?100:120,demand:8,unit:"shark",stale:false});
+test('profitable affordable active trade',()=>assert.equal(scanTrades([t],inv,lookup,{},now)[0].qualifies,true));
+test('owned inventory only',()=>assert.equal(scanTrades([t],[],lookup,{},now).length,0));
+test('locked pet excluded',()=>assert.equal(scanTrades([t],[{...inv[0],locked:true}],lookup,{},now).length,0));
+test('closed and stale listings excluded',()=>{assert.equal(scanTrades([{...t,status:'closed'}],inv,lookup,{},now).length,0);assert.equal(scanTrades([t],inv,lookup,{},now+300001).length,0)});
+test('reject demand loss and stale metrics',()=>{assert.equal(scanTrades([t],inv,x=>({...lookup(x),demand:x.name==='Cat'?5:8}),{},now)[0].qualifies,false);assert.equal(scanTrades([t],inv,x=>({...lookup(x),stale:true}),{},now)[0].qualifies,false)});
+test('dedup and 5 percent floor',()=>{assert.equal(scanTrades([t,t],inv,lookup,{},now).length,1);assert.throws(()=>trackerSettings({minProfit:4}))});
+test('no history event for same metrics',()=>{const r={source:'elve',petId:'x',variant:'R0',value:1,unit:'shark',demand:2,observedAt:t.verifiedAt};assert.equal(marketChanges([r],[{...r,observedAt:new Date(now+1).toISOString()}]).length,0);assert.equal(marketChanges([r],[{...r,value:2}]).length,1)});
