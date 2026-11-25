@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {parseListings,matchInventory,rankListings,createDraft} from '../src/v2/scout.mjs';
+const p=(name,type="reg",fly=false,ride=false)=>({name,type,fly,ride});
+const now=1795564800000;
+const t={"id":"1","source":"elve","observedAt":"2026-11-24T23:55:00Z","offering":[{"name":"Turtle","type":"reg","fly":false,"ride":false}],"requesting":[{"name":"Dog","type":"reg","fly":false,"ride":false},{"name":"Dog","type":"reg","fly":false,"ride":false}]};
+const inv=[{"name":"Dog","type":"reg","fly":false,"ride":false,"id":"d1"},{"name":"Dog","type":"reg","fly":false,"ride":false,"id":"d2","locked":true},{"name":"Dog","type":"mega","fly":false,"ride":false,"id":"d3"}];
+test("exact matching and locked pets",()=>assert.ok((()=>matchInventory(inv,t.requesting).missing.length===1)()));
+test("no double spending",()=>assert.ok((()=>matchInventory([inv[0]],t.requesting).matched.length===1)()));
+test("fresh listing",()=>assert.ok((()=>rankListings(parseListings([t]),inv,{now}).length===1)()));
+test("expired listing",()=>assert.ok((()=>rankListings(parseListings([{...t,expiresAt:"2026-11-24T23:59:00Z"}]),inv,{now}).length===0)()));
+test("unknown value stays null",()=>assert.ok((()=>rankListings([t],inv,{now})[0].gain===null)()));
+test("correct offer direction",()=>assert.ok((()=>rankListings([t],inv,{now,lookup:x=>x.name==="Dog"?1:3})[0].gain===.5)()));
+test("draft never posts",()=>assert.ok((()=>createDraft(t.requesting,t.offering,"elve").status==="draft")()));
+test("duplicate listing rejected",()=>assert.ok((()=>{try{parseListings([t,t]);return false}catch{return true}})()));
