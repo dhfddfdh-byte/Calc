@@ -2728,7 +2728,10 @@
         //   3. Call fetchHistory() for graph data + manipulation cache
         //   4. Call restoreTrade() to reload last session from localStorage
         //   5. Trigger render() and any tab-specific render (value, demand, trades)
-        async function loadPetData() {
+        let catalogRefreshBusy=false, catalogLastCsv=null, catalogRefreshTimer=null;
+        async function loadPetData(refresh=false) {
+            if(catalogRefreshBusy)return;
+            catalogRefreshBusy=true;
             try {
                 let csvText, fromCache=false;
                 try {
@@ -2737,6 +2740,7 @@
                     csvText=await response.text();
                     if(!csvText.split(/\r?\n/,1)[0].split(',').includes('n') || csvText.length<1000)throw Error("Unexpected catalog");
                 }catch(e){
+                    if(refresh)throw e;
                     const cached=localStorage.getItem('calc_master_csv_cache');
                     if(!cached)throw e;
                     csvText=cached;fromCache=true;
@@ -2744,7 +2748,11 @@
                 const data = parseCSV(csvText);
                 if(data.length<100||!data.some(p=>Number(p.v)>0))throw Error("Incomplete pet catalog");
                 
-                ALL_PETS = data.map(row => ({
+                if(refresh && csvText===catalogLastCsv) {
+                    document.getElementById('lastUpdatedBadge').title='Spreadsheet checked '+new Date().toLocaleString()+'; provider freshness unverified.';
+                    return;
+                }
+                const nextPets = data.map(row => ({
                     n: row.n || row.name || '',
                     d: row.d || 0,
                     nd: row.nd || 0,
@@ -2780,26 +2788,53 @@
                     cat: (row.categories || row.rarity || '').toLowerCase(),
                     vt: row['value trend'] || row['vt'] || '', 
                     dt: row['demand trend'] || row['dt'] || ''
-                })).filter(p => p.n && p.n.length > 0);
-                
+                })).filter(p => typeof p.n==='string' && p.n.length > 0);
+                const unique=new Set(nextPets.map(p=>p.n));
+                if(nextPets.length<100||unique.size!==nextPets.length)throw Error("Invalid or duplicate catalog entries");
+                if(refresh&&ALL_PETS.length&&nextPets.length<ALL_PETS.length*.8)throw Error("Catalog shrank by more than 20%");
+                const valueFields=['v','f_v','r_v','fr_v','n_v','n_f_v','n_r_v','nfr_v','m_v','m_f_v','m_r_v','mfr_v'];
+                const amvggFields=['av','af_v','ar_v','afrl_v','an_v','an_f_v','an_r_v','anfr_v','am_v','am_f_v','am_r_v','amfr_v'];
+                const coverage=(rows,fields)=>rows.reduce((n,p)=>n+fields.filter(k=>Number(p[k])>0).length,0);
+                if(refresh&&ALL_PETS.length&&[valueFields,amvggFields].some(fields=>coverage(nextPets,fields)<coverage(ALL_PETS,fields)*.8))throw Error("Value coverage dropped; keeping last good catalog");
+                ALL_PETS=nextPets;catalogLastCsv=csvText;
                 if(!fromCache){try{localStorage.setItem('calc_master_csv_cache',csvText)}catch{}}
                 document.getElementById('lastUpdatedBadge').style.display='flex';
                 document.getElementById('lastUpdatedText').textContent=fromCache?'Cached values · freshness unknown':'Sheet loaded · source freshness unknown';
                 document.getElementById('loadingScreen').style.display = 'none';
 
                 buildDynamicHTT();  // initial HTT from pet data (before history)
-                fetchHistory();
-                restoreTrade();
+                if(!refresh){
+                    fetchHistory();
+                    restoreTrade();
+                }else{
+                    // Preserve live calculator edits and exact variants; update only market fields.
+                    const byName=new Map(ALL_PETS.map(p=>[p.n,p]));
+                    for(const side of ['A','B','inv'])state[side]=state[side].map(p=>{
+                        const market=byName.get(p.n);
+                        return market?{...p,...market,type:p.type,f_st:p.f_st,r_st:p.r_st,uid:p.uid}:{...p,...Object.fromEntries([...valueFields,...amvggFields].map(k=>[k,0]))};
+                    });
+                    const inventory=document.getElementById('invOverlay');
+                    if(inventory&&inventory.style.display!=='none'&&inventory.style.display)renderInventory();
+                }
                 render();
 
                 // Render lists if already on those tabs
                 if (currentTab === 'value') renderValueList();
                 if (currentTab === 'demand') renderDemandList();
+                if (currentTab === 'lists') switchListsTab(_listsSubTab);
                 if (currentTab === 'trends') renderTrendsList();
                 if (currentTab === 'trades') { renderTradeBoard(); startTBTimers(); }
             } catch (error) {
                 console.error('Error loading data:', error);
-                document.querySelector('.loading-text').textContent = 'Error loading data.';
+                if(refresh){
+                    document.getElementById('lastUpdatedBadge').title='Refresh failed: retaining previous verified spreadsheet snapshot.';
+                    document.getElementById('lastUpdatedText').textContent='Refresh failed · cached data';
+                }else{
+                    document.querySelector('.loading-text').textContent='Error loading data. Reload to retry.';
+                }
+            }finally{
+                catalogRefreshBusy=false;
+                if(catalogRefreshTimer===null)catalogRefreshTimer=setInterval(()=>{if(!document.hidden)void loadPetData(true)},3600000);
             }
         }
 
