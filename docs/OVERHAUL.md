@@ -3,7 +3,7 @@
 ## Data sources and permissions
 - AMVGG: https://amvgg.com/values/pets — values and 3-star demand for normal, neon, mega. Automated ingestion disabled until permission/authorized feed is verified.
 - Elvebredd: https://elvebredd.com/adopt-me-calculator and https://elvebredd.com/value-updates — verify value units, feed access, and demand availability.
-- AMTV: https://adoptmetradingvalues.com/pet-value-list.php, rising-and-falling-values.php, exotic-pet-list.php, pet-demand-list.php — verify permission, coverage, semantics and change events.
+- AMTV: https://adoptmetradingvalues.com/pet-demand-list.php — demand rankings only, subject to verified permission. No AMTV values, value trends or exotic classifications. Combined values use Elvebredd and AMVGG only.
 - Existing owner-provided spreadsheet: preserve as migration input; verify malformed headers and timestamp semantics. Never publish private account data or restricted third-party data to this public repository.
 - Scheduled sync should fetch once centrally, validate schema and coverage, preserve last-known-good data, store source timestamps separately, and append change events. Schedule only after permissions and feed formats are confirmed.
 - Missing values stay null; no implicit variant/source substitution. Source and value unit must be explicit.
