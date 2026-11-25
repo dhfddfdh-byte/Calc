@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {extractInitialPets,normalizeElve} from '../src/v2/elve-initial-pets.mjs';
+const fixture=[{"type":"pets","name":"Test [pet]","rarity":"rare","categoryd":"Exotic","categorypreppyd":true,"rvalue - nopotion":2,"rvalue - fly&ride":3,"nvalue - nopotion":null},{"type":"eggs","name":"Test Egg","rvalue":4}];
+const raw="window.state = {\"initialPets\":[{\"type\":\"pets\",\"name\":\"Test [pet]\",\"rarity\":\"rare\",\"categoryd\":\"Exotic\",\"categorypreppyd\":true,\"rvalue - nopotion\":2,\"rvalue - fly&ride\":3,\"nvalue - nopotion\":null},{\"type\":\"eggs\",\"name\":\"Test Egg\",\"rvalue\":4}]};";
+const encoded="self.__next_f.push([1,\"{\\\"initialPets\\\":[{\\\"type\\\":\\\"pets\\\",\\\"name\\\":\\\"Test [pet]\\\",\\\"rarity\\\":\\\"rare\\\",\\\"categoryd\\\":\\\"Exotic\\\",\\\"categorypreppyd\\\":true,\\\"rvalue - nopotion\\\":2,\\\"rvalue - fly&ride\\\":3,\\\"nvalue - nopotion\\\":null},{\\\"type\\\":\\\"eggs\\\",\\\"name\\\":\\\"Test Egg\\\",\\\"rvalue\\\":4}]}\"]);";
+test("raw embedded payload",()=>assert.ok((()=>extractInitialPets([raw]).length===2)()));
+test("escaped embedded payload",()=>assert.ok((()=>extractInitialPets([encoded])[0].name==="Test [pet]")()));
+test("brackets in names",()=>assert.ok((()=>extractInitialPets([raw])[0].name==="Test [pet]")()));
+test("12 pet variants and missing stays null",()=>assert.ok((()=>{const p=normalizeElve(fixture)[0];return Object.keys(p.values).length===12&&p.values.N0===null&&p.values.RFR===3})()));
+test("egg variant restriction",()=>assert.ok((()=>{const e=normalizeElve(fixture)[1];return Object.keys(e.values).join()==="R0"&&e.values.R0===4})()));
+test("categories and unknown demand",()=>assert.ok((()=>{const p=normalizeElve(fixture)[0];return p.categories.includes("Preppy")&&p.categories.includes("Exotic")&&p.demand===null})()));
+test("reject malformed",()=>assert.ok((()=>{try{extractInitialPets(["initialPets: [broken]"]);return false}catch{return true}})()));
+test("reject duplicate",()=>assert.ok((()=>{try{normalizeElve([fixture[0],fixture[0]]);return false}catch{return true}})()));

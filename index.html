@@ -59,7 +59,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adopt Me Trade Calculator</title>
     <!-- Feature: Chart.js for History Graphs -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
     <style>
         :root {
             --bg: #0b1120;
@@ -922,6 +922,7 @@
             .plus:active { border-color: var(--accent); color: var(--accent); }
         }
 </style>
+    <link rel="stylesheet" href="./src/v2/overhaul.css">
 </head>
 <body>
 
@@ -959,6 +960,16 @@
 
     <!-- HOME SCREEN WRAPPER -->
     <div class="home-screen" id="homeScreen">
+    <header class="calc-brandbar">
+        <div class="calc-brand"><div class="calc-mark" aria-hidden="true">C</div><div><h1>Calc · Trade smarter</h1><p>Calculator / Inventory / Market intelligence</p></div></div>
+        <nav class="calc-quick" aria-label="New tools">
+            <a href="./market-preview.html">Market data</a>
+            <a href="./tracker.html">Trade tracker</a>
+            <button type="button" onclick="window.openCompanionSetup()">Desktop companion</button>
+            <a href="./account.html">Account</a>
+        </nav>
+    </header>
+
 
     <!-- TAB BAR -->
     <div class="tab-bar">
@@ -1077,7 +1088,7 @@
     <!-- original nav buttons inside calc tab -->
     <div class="nav-bar">
         <div id="lastUpdatedBadge" style="display:none;align-items:center;gap:5px;font-size:0.72em;font-weight:700;padding:5px 10px;border-radius:10px;border:1px solid #1e293b;color:#64748b;white-space:nowrap;margin-right:auto">
-            <span id="lastUpdatedText">Updated just now</span>
+            <span id="lastUpdatedText">Source freshness not verified</span>
         </div>
         <button class="nav-btn" onclick="openInfo()">ℹ️ Information</button>
         <button class="nav-btn" onclick="openHistory()">📜 History</button>
@@ -1294,11 +1305,11 @@
                     <div style="font-size:0.75em;color:var(--subtext);margin:6px 0 10px">Experimental features — may not work perfectly.</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
                         <div>
-                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Elve Auto-Click Accept</span>
+                            <span style="font-size:0.82em;font-weight:700;color:var(--text)">Desktop Trade Companion</span>
                             <span style="display:inline-block;margin-left:6px;padding:1px 7px;background:#7c3aed33;border:1px solid #7c3aed66;border-radius:10px;font-size:0.65em;font-weight:900;color:#a78bfa">BETA</span>
-                            <div style="font-size:0.72em;color:var(--subtext);margin-top:2px">When ON: the Accept script will try to auto-click Elve's accept button for you. When OFF (default): it still opens Elve, highlights the exact trade with a glow, and scrolls to it — you click Accept yourself.</div>
+                            <div style="font-size:0.72em;color:var(--subtext);margin-top:2px">Download the companion to monitor inventory-backed offers. Review trades on the provider website; automatic acceptance is unavailable.</div>
                         </div>
-                        <button id="settingBetaElveAccept" onclick="toggleSetting('betaElveAccept')"
+                        <button id="settingBetaElveAccept" onclick="window.openCompanionSetup()"
                             style="padding:5px 18px;border-radius:20px;border:none;cursor:pointer;font-weight:800;font-size:0.78em;font-family:inherit;background:#1e293b;color:#64748b;flex-shrink:0;margin-left:12px">OFF</button>
                     </div>
                 </div>
@@ -1413,6 +1424,7 @@
         </div>
     </div>
 
+    <div class="calc-workspace-heading"><div><span class="calc-eyebrow">TRADE WORKSPACE</span><h2>Compare your trade</h2><p>Exact variants · Source-specific prices · Demand risk</p></div><button class="nav-btn" type="button" onclick="refreshCalcCatalog()">Refresh data</button></div>
     <div class="container">
         <div class="trade-panel" id="panelA">
             <div class="p-header">
@@ -1432,7 +1444,7 @@
         <div class="trade-panel" id="panelB">
             <div class="p-header">
                 <div>
-                    <span class="p-title">They Give (<span id="cntB">0</span>)</span>
+                    <span class="p-title">You Receive (<span id="cntB">0</span>)</span>
                     <span class="p-dem" id="demB">Avg Demand: 0.0</span>
                 </div>
                 <span class="p-total" id="totB">0.000</span>
@@ -1442,6 +1454,7 @@
     </div>
 
     <div class="verdict-box">
+        <div class="calc-result-heading"><span class="calc-eyebrow">TRADE RESULT</span><span id="calcSourceNote">Elvebredd · sheet data</span></div>
         <div class="gauge-wrapper">
             <div id="gaugeBar" class="gauge-bar"></div>
             <div id="gaugeNeedle" class="gauge-needle"></div>
@@ -1453,12 +1466,15 @@
         <!-- Mobile-only speed+flip info (hidden on desktop via CSS) -->
         <div id="verdictMobileInfo" class="verdict-mobile-info"></div>
         <div class="switches">
-            <button class="sw-btn active" id="btnValue" onclick="setMode('value')">Value</button>
-            <button class="sw-btn" id="btnBaseless" onclick="setMode('baseless')">Baseless</button>
+            <button class="sw-btn active" id="btnValue" onclick="setMode('value')">Elvebredd</button>
+            <button class="sw-btn" id="btnBaseless" onclick="setMode('baseless')">AMVGG</button>
+            <button class="sw-btn" id="btnCombined" onclick="setMode('combined')">Combined</button>
             <button class="save-trade-btn" onclick="logCurrentTrade()">Save to History</button>
         </div>
-    </div>  <!-- end tabCalc -->
-    </div>  <!-- end homeScreen -->
+    </div> <!-- end verdict -->
+    <div id="verdictExtras" class="verdict-extras"></div>
+    </div> <!-- end tabCalc -->
+    </div> <!-- end homeScreen -->
 
    <script>
         // CRITICAL DATA VARIABLES DEFINED AT TOP
@@ -1488,7 +1504,7 @@
         //   uiScale    : zoom level for the overall UI (0.8–1.3)
         let state = { mode: 'value', A: [], B: [], inv: [], target: 'A', aiMode: 'normal', strategyLimit: 10, aiTargetPets: [], dreamPet: null, keybinds: [], uiScale: 1.0, defaultFly: false, defaultRide: false, defaultNeon: false, defaultMega: false, betaElveAccept: false };
         // Pet names locked from AI suggestions (persisted separately)
-        const lockedPets = new Set(JSON.parse(localStorage.getItem('lockedPets') || '[]'));
+        const lockedPets = new Set((()=>{try{const x=JSON.parse(localStorage.getItem('lockedPets')||'[]');return Array.isArray(x)?x.filter(n=>typeof n==='string'):[]}catch{return []}})());
         // Locked pets are excluded from AI trade suggestions.
         // The user can lock any inventory pet so the AI won't suggest trading it away.
         // Stored in localStorage as a JSON array of pet names.
@@ -2656,6 +2672,7 @@
         // Called after every user action. Restores automatically on page load.
         function saveTrade() {
             const simplifiedState = {
+                mode: state.mode,
                 A: state.A.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
                 B: state.B.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
                 inv: state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
@@ -2672,25 +2689,31 @@
             localStorage.setItem('tradeData', JSON.stringify(simplifiedState));
         }
 
+        function escapeCalcHTML(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+        function safeLegacyPet(item, keepUnknown=true) {
+            if(!item||typeof item.n!=='string'||!item.n.trim()||item.n.length>120||/[<>&"\x00-\x1f\\]/.test(item.n))return null;
+            const type=item.type||'reg';
+            if(!['reg','neon','mega'].includes(type))return null;
+            const base=ALL_PETS.find(p=>p.n===item.n);
+            if(!base&&!keepUnknown)return null;
+            return {...(base||{n:item.n,cat:'',d:0,nd:0,md:0,v:0,vt:'',dt:''}),type,f_st:item.f_st===true,r_st:item.r_st===true,uid:typeof item.uid==='number'&&Number.isFinite(item.uid)&&item.uid>0?item.uid:Math.random()};
+        }
         function restoreTrade() {
             const saved = localStorage.getItem('tradeData');
             if (!saved) return;
             try {
                 const parsed = JSON.parse(saved);
-                const hydrate = (item) => {
-                    const freshData = ALL_PETS.find(p => p.n === item.n);
-                    if (!freshData) return null; 
-                    return { ...freshData, ...item };
-                };
-                state.A = (parsed.A || []).map(hydrate).filter(x => x);
-                state.B = (parsed.B || []).map(hydrate).filter(x => x);
-                state.inv = (parsed.inv || []).map(hydrate).filter(x => x);
-                if (parsed.keybinds)      state.keybinds      = parsed.keybinds;
+                const hydrate = item => safeLegacyPet(item);
+                const restoreSide = key => (Array.isArray(parsed[key])?parsed[key]:[]).map(hydrate).filter(Boolean);
+                state.A=restoreSide('A').slice(0,18);state.B=restoreSide('B').slice(0,18);state.inv=restoreSide('inv');
+                if(['value','baseless','combined'].includes(parsed.mode))state.mode=parsed.mode;
+                syncSourceButtons();
+                if(Array.isArray(parsed.keybinds))state.keybinds=parsed.keybinds.filter(b=>b&&typeof b.key==='string'&&b.key.length<=30&&['inv','all'].includes(b.source)&&typeof b.petName==='string').slice(0,100).map(b=>({key:b.key,source:b.source,petName:b.petName}));
                 if (parsed.defaultFly     !== undefined) state.defaultFly     = !!parsed.defaultFly;
                 if (parsed.defaultRide    !== undefined) state.defaultRide    = !!parsed.defaultRide;
                 if (parsed.defaultNeon    !== undefined) state.defaultNeon    = !!parsed.defaultNeon;
                 if (parsed.defaultMega    !== undefined) state.defaultMega    = !!parsed.defaultMega;
-                if (parsed.betaElveAccept !== undefined) state.betaElveAccept = !!parsed.betaElveAccept;
+                state.betaElveAccept = false;
                 // Restore zoom: old saves stored decimal (1.0), new stores int (100).
                 // If value is clearly bad (< 10 means decimal), convert it.
                 // Clamp to 80–130 so a corrupt value never makes text invisible.
@@ -2717,13 +2740,31 @@
         //   3. Call fetchHistory() for graph data + manipulation cache
         //   4. Call restoreTrade() to reload last session from localStorage
         //   5. Trigger render() and any tab-specific render (value, demand, trades)
-        async function loadPetData() {
+        let catalogRefreshBusy=false, catalogLastCsv=null, catalogRefreshTimer=null;
+        async function loadPetData(refresh=false) {
+            if(catalogRefreshBusy)return;
+            catalogRefreshBusy=true;
             try {
-                const response = await fetch(MASTER_CSV_URL + "&t=" + Date.now());
-                const csvText = await response.text();
+                let csvText, fromCache=false;
+                try {
+                    const response=await fetch(MASTER_CSV_URL,{cache:"no-cache",signal:AbortSignal.timeout(20000)});
+                    if(!response.ok)throw Error("Pet data HTTP "+response.status);
+                    csvText=await response.text();
+                    if(!csvText.split(/\r?\n/,1)[0].split(',').includes('n') || csvText.length<1000)throw Error("Unexpected catalog");
+                }catch(e){
+                    if(refresh)throw e;
+                    const cached=localStorage.getItem('calc_master_csv_cache');
+                    if(!cached)throw e;
+                    csvText=cached;fromCache=true;
+                }
                 const data = parseCSV(csvText);
+                if(data.length<100||!data.some(p=>Number(p.v)>0))throw Error("Incomplete pet catalog");
                 
-                ALL_PETS = data.map(row => ({
+                if(refresh && csvText===catalogLastCsv) {
+                    document.getElementById('lastUpdatedBadge').title='Spreadsheet checked '+new Date().toLocaleString()+'; provider freshness unverified.';
+                    return;
+                }
+                const nextPets = data.map(row => ({
                     n: row.n || row.name || '',
                     d: row.d || 0,
                     nd: row.nd || 0,
@@ -2756,26 +2797,57 @@
                     am_f_v:  row.am_f_v  || 0,
                     am_r_v:  row.am_r_v  || 0,
                     amfr_v:  row.amfr_v  || 0,
-                    cat: (row.categories || row.rarity || '').toLowerCase(),
-                    vt: row['value trend'] || row['vt'] || '', 
-                    dt: row['demand trend'] || row['dt'] || ''
-                })).filter(p => p.n && p.n.length > 0);
-                
+                    cat: String(row.categories || row.rarity || '').toLowerCase().replace(/[<>&"\\]/g,''),
+                    vt: String(row['value trend'] || row['vt'] || '').replace(/[<>&"\\]/g,''), 
+                    dt: String(row['demand trend'] || row['dt'] || '').replace(/[<>&"\\]/g,'')
+                })).filter(p => typeof p.n==='string' && p.n.length > 0 && p.n.length<=120 && !/[<>&"\x00-\x1f\\]/.test(p.n));
+                const unique=new Set(nextPets.map(p=>p.n));
+                if(nextPets.length<100||unique.size!==nextPets.length)throw Error("Invalid or duplicate catalog entries");
+                if(refresh&&ALL_PETS.length&&nextPets.length<ALL_PETS.length*.8)throw Error("Catalog shrank by more than 20%");
+                const valueFields=['v','f_v','r_v','fr_v','n_v','n_f_v','n_r_v','nfr_v','m_v','m_f_v','m_r_v','mfr_v'];
+                const amvggFields=['av','af_v','ar_v','afrl_v','an_v','an_f_v','an_r_v','anfr_v','am_v','am_f_v','am_r_v','amfr_v'];
+                const coverage=(rows,fields)=>rows.reduce((n,p)=>n+fields.filter(k=>Number(p[k])>0).length,0);
+                if(refresh&&ALL_PETS.length&&[valueFields,amvggFields].some(fields=>coverage(nextPets,fields)<coverage(ALL_PETS,fields)*.8))throw Error("Value coverage dropped; keeping last good catalog");
+                ALL_PETS=nextPets;catalogLastCsv=csvText;
+                recomputeCombinedFactor();
+                if(!fromCache){try{localStorage.setItem('calc_master_csv_cache',csvText)}catch{}}
+                document.getElementById('lastUpdatedBadge').style.display='flex';
+                document.getElementById('lastUpdatedText').textContent=fromCache?'Cached values · freshness unknown':'Sheet loaded · source freshness unknown';
                 document.getElementById('loadingScreen').style.display = 'none';
 
                 buildDynamicHTT();  // initial HTT from pet data (before history)
-                fetchHistory();
-                restoreTrade();
+                if(!refresh){
+                    fetchHistory();
+                    restoreTrade();
+                }else{
+                    // Preserve live calculator edits and exact variants; update only market fields.
+                    const byName=new Map(ALL_PETS.map(p=>[p.n,p]));
+                    for(const side of ['A','B','inv'])state[side]=state[side].map(p=>{
+                        const market=byName.get(p.n);
+                        return market?{...p,...market,type:p.type,f_st:p.f_st,r_st:p.r_st,uid:p.uid}:{...p,...Object.fromEntries([...valueFields,...amvggFields].map(k=>[k,0]))};
+                    });
+                    const inventory=document.getElementById('invOverlay');
+                    if(inventory&&inventory.style.display!=='none'&&inventory.style.display)renderInventory();
+                }
                 render();
 
                 // Render lists if already on those tabs
                 if (currentTab === 'value') renderValueList();
                 if (currentTab === 'demand') renderDemandList();
+                if (currentTab === 'lists') switchListsTab(_listsSubTab);
                 if (currentTab === 'trends') renderTrendsList();
                 if (currentTab === 'trades') { renderTradeBoard(); startTBTimers(); }
             } catch (error) {
                 console.error('Error loading data:', error);
-                document.querySelector('.loading-text').textContent = 'Error loading data.';
+                if(refresh){
+                    document.getElementById('lastUpdatedBadge').title='Refresh failed: retaining previous verified spreadsheet snapshot.';
+                    document.getElementById('lastUpdatedText').textContent='Refresh failed · cached data';
+                }else{
+                    document.querySelector('.loading-text').textContent='Error loading data. Reload to retry.';
+                }
+            }finally{
+                catalogRefreshBusy=false;
+                if(catalogRefreshTimer===null)catalogRefreshTimer=setInterval(()=>{if(!document.hidden)void loadPetData(true)},3600000);
             }
         }
 
@@ -3175,7 +3247,7 @@ function startLastUpdatedTicker() {
 
             function update() {
                 const ts = window._dataLastUpdated;
-                if (!ts) return;
+                if (!ts) { text.textContent = 'Sheet loaded · source freshness unknown'; return; }
                 const ageHr = (Date.now() - ts) / 3600000;
                 const d = new Date(ts);
                 const today = new Date();
@@ -3187,13 +3259,13 @@ function startLastUpdatedTicker() {
 
                 let label, color, border;
                 if (ageHr < 12) {
-                    label = '✅ Values updated ' + dateStr;
+                    label = 'Latest history snapshot ' + dateStr;
                     color = '#34d399'; border = '#34d39933';
                 } else if (ageHr < 24) {
-                    label = '⚠️ Values updated ' + dateStr;
+                    label = 'History snapshot ' + dateStr;
                     color = '#fbbf24'; border = '#fbbf2433';
                 } else {
-                    label = '⚠️ Values may be outdated — last updated ' + dateStr;
+                    label = 'Source freshness unverified · history ' + dateStr;
                     color = '#f87171'; border = '#f8717133';
                 }
                 text.textContent = label;
@@ -3230,8 +3302,9 @@ function startLastUpdatedTicker() {
             try {
                 const decoded = decodeURIComponent(escape(atob(code)));
                 const data = JSON.parse(decoded);
-                const validData = data.filter(item => ALL_PETS.some(p => p.n === item.n));
-                if (validData.length > 0) {
+                if(!Array.isArray(data)||data.length>10000)throw Error('Invalid inventory');
+                const validData = data.map(item=>safeLegacyPet(item,false)).filter(Boolean);
+                if (validData.length > 0 && validData.length === data.length) {
                     pushState();
                     state.inv = validData.map(item => ({...item, uid: Math.random()}));
                     renderInventory();
@@ -3403,37 +3476,38 @@ function startLastUpdatedTicker() {
         // and fly/ride status. Reads from the variant value fields on the pet object
         // (f_v, r_v, fr_v, n_v, nfr_v, m_v, mfr_v).
         // Falls back to base value (p.v) if a variant field is missing.
-        function calculatePetVal(p, mode) {
-            const isBaseless = mode === 'baseless';
-            // Helper: pick baseless field if available (non-zero), else fall back to elve field, else base v
-            const b = (aField, eField, base) => (isBaseless && aField) ? aField : (eField || base || 0);
-            let val = 0;
-            if (p.type === 'neon') {
-                if (p.f_st && p.r_st) val = b(p.anfr_v, p.nfr_v,  p.n_v || p.v);
-                else if (p.f_st)      val = b(p.an_f_v, p.n_f_v,  p.n_v || p.v);
-                else if (p.r_st)      val = b(p.an_r_v, p.n_r_v,  p.n_v || p.v);
-                else                  val = b(p.an_v,   p.n_v,    p.v);
-            } else if (p.type === 'mega') {
-                if (p.f_st && p.r_st) val = b(p.amfr_v, p.mfr_v, p.m_v || p.v);
-                else if (p.f_st)      val = b(p.am_f_v, p.m_f_v, p.m_v || p.v);
-                else if (p.r_st)      val = b(p.am_r_v, p.m_r_v, p.m_v || p.v);
-                else                  val = b(p.am_v,   p.m_v,   p.v);
-            } else {
-                if (p.f_st && p.r_st) val = b(p.afrl_v, p.fr_v,  p.v);
-                else if (p.f_st)      val = b(p.af_v,   p.f_v,   p.v);
-                else if (p.r_st)      val = b(p.ar_v,   p.r_v,   p.v);
-                else                  val = isBaseless ? (p.av || p.v) : p.v;
-            }
-            return val || 0;
+        let combinedFactor=null;
+        const ELVE_EXACT={reg:['v','f_v','r_v','fr_v'],neon:['n_v','n_f_v','n_r_v','nfr_v'],mega:['m_v','m_f_v','m_r_v','mfr_v']};
+        const AMVGG_EXACT={reg:['av','af_v','ar_v','afrl_v'],neon:['an_v','an_f_v','an_r_v','anfr_v'],mega:['am_v','am_f_v','am_r_v','amfr_v']};
+        function median(a){const x=[...a].sort((a,b)=>a-b),i=Math.floor(x.length/2);return x.length?(x.length%2?x[i]:(x[i-1]+x[i])/2):null}
+        function recomputeCombinedFactor(){
+            const ratios=[];
+            for(const p of ALL_PETS){const a=Number(p.av),e=Number(p.v);if(a>0&&e>0&&Number.isFinite(a)&&Number.isFinite(e))ratios.push(e/a)}
+            const center=median(ratios),consistent=ratios.filter(x=>center&&Math.abs(x/center-1)<=.35);
+            combinedFactor=consistent.length>=5&&consistent.length>=ratios.length*.5?median(consistent):null;
+            syncSourceButtons();
         }
-
+        function exactPetValue(p,mode) {
+            const i=(p.f_st?1:0)+(p.r_st?2:0),type=p.type||'reg';
+            const get=fields=>{const v=Number(p[fields[type]?.[i]]);return Number.isFinite(v)&&v>0?v:null};
+            const e=get(ELVE_EXACT),a=get(AMVGG_EXACT);
+            if(mode==='combined')return e!==null&&a!==null&&combinedFactor!==null?(e+a*combinedFactor)/2:null;
+            return mode==='baseless'?a:e;
+        }
+        function calculatePetVal(p,mode){return exactPetValue(p,mode)??0;}
+        function exactDemand(p){const v=Number(p[p.type==='neon'?'nd':p.type==='mega'?'md':'d']);return Number.isFinite(v)&&v>0&&v<=10?v:null}
+        function syncSourceButtons(){
+            for(const [id,mode] of [['btnValue','value'],['btnBaseless','baseless'],['btnCombined','combined']]){const el=document.getElementById(id);if(el){el.classList.toggle('active',state.mode===mode);el.setAttribute('aria-pressed',String(state.mode===mode))}}
+            const note=document.getElementById('calcSourceNote');if(note)note.textContent=state.mode==='combined'?(combinedFactor===null?'Combined · insufficient matching anchors':'Combined · estimated Elve scale'):state.mode==='baseless'?'AMVGG · sheet data':'Elvebredd · sheet data';
+        }
+        function refreshCalcCatalog(){void loadPetData(true);}
         // Renders the inventory grid and updates all stat displays.
         // Groups identical pets (same name+type+fly+ride) into stacks shown with x2/x3 badge.
         // Also updates: total value, avg demand, milestone badges, and AI suggestions.
         function renderInventory() {
             const list = state.inv;
             const grid = document.getElementById('invGrid');
-            grid.innerHTML = '';
+            const cardMarkup = [];
             let totalV = 0, totalD = 0;
             const groups = {};
             list.forEach(p => {
@@ -3450,7 +3524,7 @@ function startLastUpdatedTicker() {
                 const stackUidsString = JSON.stringify(stack.map(item => item.uid));
                 const rarityColor = getRarityColor(p.cat);
                 const demandColor = getDemandColor(currentDemand);
-                grid.innerHTML += `
+                cardMarkup.push(`
                     <div class="card ${lockedPets.has(p.n) ? 'pet-locked' : ''}" style="border-color: ${lockedPets.has(p.n) ? '#f59e0b' : rarityColor}" data-petname="${p.n}" data-side="inv" data-uid="${p.uid}">
                         ${count > 1 ? `<div class="card-stack-badge">x${count}</div>` : ''}
                         <div class="del" onclick="removeStack('inv', ${stackUidsString})">✕</div>
@@ -3463,7 +3537,7 @@ function startLastUpdatedTicker() {
                              <img src="https://amvgg.com/items/${encodeURIComponent(p.n)}.webp">
                         </div>
                         <div class="card-name">${p.n}${getTrendIcons(p)}</div>
-                        <div class="card-val">${valTotal.toFixed(2)}</div>
+                        <div class="card-val">${exactPetValue(p,state.mode)===null?"N/A":valTotal.toFixed(2)}</div>
                         <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
                         <div class="toggles">
                             <div class="t-btn ${p.type==='neon'?'active':''}" onclick="togStack('inv',${stackUidsString},'n')">N</div>
@@ -3471,10 +3545,13 @@ function startLastUpdatedTicker() {
                             <div class="t-btn ${p.f_st?'active':''}" onclick="togStack('inv',${stackUidsString},'f')">F</div>
                             <div class="t-btn ${p.r_st?'active':''}" onclick="togStack('inv',${stackUidsString},'r')">R</div>
                         </div>
-                    </div>`;
+                    </div>`);
             });
+            grid.innerHTML = cardMarkup.join('');
             const finalVal = totalV.toFixed(2);
+            const missingCount=list.filter(p=>exactPetValue(p,state.mode)===null).length;
             document.getElementById('invTotalValue').innerText = finalVal;
+            document.getElementById('invTotalValue').title=missingCount?missingCount+' pets have unknown values; total is partial.':'All inventory values available';
             document.getElementById('invAvgDemand').innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
             const v = parseFloat(finalVal);
             document.getElementById('mile-1').classList.toggle('active', v >= 1);
@@ -4681,42 +4758,34 @@ function startLastUpdatedTicker() {
         // Draws all pet cards with their value, demand, type toggles (N/M/F/R),
         // duplicate button, and remove button. Updates the side total value.
         function renderSide(s) {
-            const list = state[s];
-            const grid = document.getElementById(`grid${s}`);
-            grid.innerHTML = '';
-            let totalV = 0, totalD = 0;
-            list.forEach(p => {
-                let currentDemand = p.type === 'neon' ? (p.nd || p.d) : (p.type === 'mega' ? (p.md || p.d) : p.d);
-                let val = calculatePetVal(p, state.mode);
-                totalV += val; totalD += currentDemand;
-                const imgUrl = `https://amvgg.com/items/${encodeURIComponent(p.n)}.webp`;
-                const imgTag = petImgTag(p.n, 'width:100%;height:100%;object-fit:contain');
-                const rarityColor = getRarityColor(p.cat);
-                const demandColor = getDemandColor(currentDemand);
-                grid.innerHTML += `
-                    <div class="card" style="border-color: ${rarityColor}" data-petname="${p.n}" data-side="${s}" data-uid="${p.uid}">
-                        <div class="del" onclick="remove('${s}', ${p.uid})">✕</div>
-                        <div class="card-img-container" 
-                             oncontextmenu="handlePetContext(event, ${JSON.stringify(p).replace(/"/g, '&quot;')})"
-                             ondblclick="duplicate('${s}', ${p.uid})"
-                             title="Right click for Qty | Shift + Right click for Graph | Long-press on mobile">
-                            ${imgTag}
-                        </div>
-                        <div class="card-name">${p.n}${getTrendIcons(p)}</div>
-                        <div class="card-val">${val.toFixed(2)}</div>
-                        <div class="card-demand" style="color: ${demandColor}">Dem: ${currentDemand}</div>
-                        <div class="toggles">
-                            <div class="t-btn ${p.type==='neon'?'active':''}" onclick="tog('${s}',${p.uid},'n')">N</div>
-                            <div class="t-btn ${p.type==='mega'?'active':''}" onclick="tog('${s}',${p.uid},'m')">M</div>
-                            <div class="t-btn ${p.f_st?'active':''}" onclick="tog('${s}',${p.uid},'f')">F</div>
-                            <div class="t-btn ${p.r_st?'active':''}" onclick="tog('${s}',${p.uid},'r')">R</div>
-                        </div>
-                    </div>`;
-            });
-            grid.innerHTML += `<div class="plus" onclick="openSearch('${s}')">+</div>`;
-            document.getElementById(`tot${s}`).innerText = totalV.toFixed(2);
-            document.getElementById(`cnt${s}`).innerText = list.length;
-            document.getElementById(`dem${s}`).innerText = list.length > 0 ? (totalD / list.length).toFixed(1) : "0.0";
+            const list=state[s],grid=document.getElementById('grid'+s),frag=document.createDocumentFragment();
+            let totalV=0,totalD=0,missing=0,knownD=0;
+            for(const p of list){
+                const v=exactPetValue(p,state.mode),d=exactDemand(p);
+                if(v===null)missing++;else totalV+=v;
+                if(d!==null){totalD+=d;knownD++}
+                const card=document.createElement('div');card.className='card calc-pet-card';card.dataset.petname=p.n;card.dataset.side=s;card.dataset.uid=p.uid;card.style.borderColor=getRarityColor(p.cat);
+                const button=(label,cls,action,title)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.title=title;b.setAttribute('aria-label',title);b.onclick=action;return b};
+                card.append(button('×','del',()=>remove(s,p.uid),'Remove '+p.n));
+                const imgBox=document.createElement('div');imgBox.className='card-img-container';imgBox.title='Right click for quantity · Shift + right click for history';
+                imgBox.oncontextmenu=e=>handlePetContext(e,p);imgBox.ondblclick=()=>duplicate(s,p.uid);
+                const img=document.createElement('img');img.alt=p.n;img.loading='lazy';img.decoding='async';
+                const urls=getPetImageVariants(p.n).slice(0,8).map(n=>'https://amvgg.com/items/'+encodeURIComponent(n)+'.webp');let next=0;
+                img.onerror=()=>{if(next<urls.length)img.src=urls[next++];else{img.onerror=null;img.removeAttribute('src')}};
+                const override=IMAGE_OVERRIDES[p.n.toLowerCase().trim()];if(override)img.src=override;else if(urls.length)img.src=urls[next++];
+                imgBox.append(img);card.append(imgBox);
+                const name=document.createElement('div');name.className='card-name';name.textContent=p.n;card.append(name);
+                const value=document.createElement('div');value.className='card-val';value.textContent=v===null?'N/A':v.toFixed(2);card.append(value);
+                const dem=document.createElement('div');dem.className='card-demand';dem.textContent=d===null?'Demand —':'Demand '+d.toFixed(1);if(d!==null)dem.style.color=getDemandColor(d);card.append(dem);
+                const toggles=document.createElement('div');toggles.className='toggles';
+                for(const [letter,flag,on,label] of [['N','n',p.type==='neon','Neon'],['M','m',p.type==='mega','Mega'],['F','f',p.f_st,'Fly'],['R','r',p.r_st,'Ride']]){const b=button(letter,'t-btn'+(on?' active':''),()=>tog(s,p.uid,flag),label);b.setAttribute('aria-pressed',String(!!on));toggles.append(b)}
+                card.append(toggles);frag.append(card);
+            }
+            const add=document.createElement('button');add.type='button';add.className='plus calc-add-pet';add.textContent='+ Add pet';add.onclick=()=>openSearch(s);add.disabled=list.length>=18;frag.append(add);
+            grid.replaceChildren(frag);
+            document.getElementById('tot'+s).innerText=missing?'N/A':totalV.toFixed(2);
+            document.getElementById('cnt'+s).innerText=list.length;
+            document.getElementById('dem'+s).innerText=knownD===list.length&&knownD?(totalD/knownD).toFixed(1):'—';
         }
 
         // Computes the trade verdict shown in the bottom verdict bar.
@@ -4732,13 +4801,20 @@ function startLastUpdatedTicker() {
             const gaugeNeedle = document.getElementById('gaugeNeedle');
             const gaugeBar = document.getElementById('gaugeBar');
             let isTrap = false;
-            if (vA === 0 && vB === 0) { verdict.innerText = "--"; verdict.className = "v-text"; gaugeNeedle.style.left = "50%"; gaugeBar.classList.remove('trap-active'); return; }
+            if ([...state.A,...state.B].some(p=>exactPetValue(p,state.mode)===null)) {
+                verdict.innerText="UNKNOWN";verdict.className="v-text";vDiff.innerText="Incomplete values";vSub.innerText="At least one exact pet variant has no value in the selected source. No win/loss verdict can be verified.";gaugeNeedle.style.left="50%";gaugeBar.classList.remove('trap-active');
+                const extras=document.getElementById('verdictExtras');if(extras)extras.replaceChildren();return;
+            }
+            if(!state.A.length||!state.B.length){
+                verdict.innerText="—";verdict.className="v-text";vDiff.innerText="Add both sides";vSub.innerText="Add the pets you give and receive to compare this trade.";gaugeNeedle.style.left="50%";gaugeBar.classList.remove('trap-active');document.getElementById('verdictExtras')?.replaceChildren();return;
+            }
             const diff = vB - vA, pDiff = vA > 0 ? (diff / vA) : (vB > 0 ? 1.0 : 0);
-            const demGap = demA - demB;
+            const demandKnown=Number.isFinite(demA)&&Number.isFinite(demB);
+            const demGap = demandKnown ? demA - demB : 0;
             let needlePos = 50 + (pDiff / 0.15 * 50);
             if (needlePos < 0) needlePos = 0; if (needlePos > 100) needlePos = 100;
             gaugeNeedle.style.left = `${needlePos}%`;
-            if (Math.abs(diff) < 0.01) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "The trade is perfectly balanced in value. No one gain or loses raw wealth."; }
+            if (vA>0 && Math.abs(pDiff) <= 0.03) { verdict.innerText = "FAIR"; verdict.className = "v-text fair-c"; vSub.innerText = "Values are within 3% of each other. Check demand and trading risk too."; }
             else if (diff > 0) {
                 if (demGap >= 3 && pDiff < 0.4) { verdict.innerText = "TRAP"; verdict.className = "v-text trap-c"; vSub.innerText = `DANGER: You are gaining ${diff.toFixed(2)} value, but losing ${demGap.toFixed(1)} demand points. These pets will be extremely hard to trade away later. Avoid unless you love them.`; isTrap = true; }
                 else {
@@ -4772,6 +4848,7 @@ function startLastUpdatedTicker() {
                 }
             }
 
+            if(!demandKnown){const warning=document.createElement('p');warning.textContent='Demand is incomplete. Treat this as a value-only result.';vSub.append(warning);}
             updateVerdictExtras();
         }
 
@@ -4779,11 +4856,11 @@ function startLastUpdatedTicker() {
         // Repaints both trade panels (A = You Give, B = You Get),
         // recalculates the verdict, and updates the trade speed suggestions.
         function render() { renderSide('A'); renderSide('B'); calculate(); updateTradeSuggestions(); }
-        function setMode(m) {
-            state.mode = m;
-            document.getElementById('btnValue').classList.toggle('active', m === 'value');
-            document.getElementById('btnBaseless').classList.toggle('active', m === 'baseless');
-            render();
+        function setMode(m){
+            if(!['value','baseless','combined'].includes(m))return;
+            state.mode=m;syncSourceButtons();render();saveTrade();
+            if(currentTab==='lists')switchListsTab(_listsSubTab);
+            const inventory=document.getElementById('invOverlay');if(inventory?.style.display==='flex')renderInventory();
         }
         function tog(s, uid, type) {
             pushState(); const p = state[s].find(x => x.uid === uid);
@@ -4798,32 +4875,53 @@ function startLastUpdatedTicker() {
         // Updates the "Trade Speed" panel below the verdict bar.
         // Analyzes both sides for: HTT pets, demand mismatch, manipulation flags.
         // Gives actionable tips like "Add a high-demand pet to improve odds".
+        // Exact source/variant values for recommendations; never substitute missing data.
+        function exactSuggestionValue(p) { return exactPetValue(p,state.mode); }
         function updateTradeSuggestions() {
             const container = document.getElementById('sideASuggestions');
             const list = document.getElementById('suggestList');
-            const targetVal = parseFloat(document.getElementById('totB').innerText);
-            if (targetVal <= 0 || state.inv.length === 0) { container.style.display = 'none'; return; }
-            container.style.display = 'block'; list.innerHTML = '';
-            let pool = [...state.inv].sort(() => Math.random() - 0.5);
-            for (let i = 0; i < 3; i++) {
-                let bundle = [], sum = 0;
-                for (let p of pool) {
-                    let v = calculatePetVal(p, state.mode);
-                    if (sum + v <= targetVal * 1.15) { bundle.push(p); sum += v; }
-                    if (sum >= targetVal * 0.9) break;
-                }
-                if (bundle.length > 0) {
-                    list.innerHTML += `<div class="suggest-pill" onclick='applySuggestion(${JSON.stringify(bundle.map(b=>b.uid))})'><div class="suggest-items-text">${bundle.map(b=>b.n).join(' + ')}</div><div class="suggest-val-text">${sum.toFixed(2)}</div></div>`;
-                }
+            const values = state.B.map(exactSuggestionValue);
+            const target = values.reduce((s,v)=>s+(v||0),0);
+            list.replaceChildren();
+            if (!values.length || values.some(v=>v===null) || target<=0 || !state.inv.length) {
+                container.style.display='none'; return;
             }
+            const pool = state.inv.filter(p=>!lockedPets.has(p.n)).map(p=>({p,v:exactSuggestionValue(p)}))
+                .filter(x=>x.v!==null && x.v<=target*1.15);
+            pool.sort((a,b)=>b.v-a.v || String(a.p.uid).localeCompare(String(b.p.uid)));
+            const unique = new Set();
+            const candidates = pool.filter(x=>{if(unique.has(x.p.uid))return false;unique.add(x.p.uid);return true});
+            const maxSlots=6, width=60, cap=target*1.15;
+            const rank=x=>Math.abs(target-x.total)/target+x.items.length*.005;
+            let buckets=Array.from({length:maxSlots+1},()=>[]);
+            buckets[0]=[{items:[],total:0}];
+            for(const x of candidates) for(let k=maxSlots;k>=1;k--) {
+                const added=buckets[k-1].filter(b=>b.total+x.v<=cap).map(b=>({items:[...b.items,x.p],total:b.total+x.v}));
+                buckets[k]=[...buckets[k],...added].sort((a,b)=>rank(a)-rank(b)).slice(0,width);
+            }
+            const best=buckets.flat().filter(b=>b.items.length&&b.total>=target*.9).sort((a,b)=>rank(a)-rank(b));
+            const seen=new Set();
+            for(const bundle of best) {
+                const signature=JSON.stringify(bundle.items.map(p=>JSON.stringify([p.n,p.type,!!p.f_st,!!p.r_st])).sort());
+                if(seen.has(signature))continue;
+                seen.add(signature);
+                const button=document.createElement('button');button.type='button';button.className='suggest-pill';
+                const names=document.createElement('div');names.className='suggest-items-text';names.textContent=bundle.items.map(p=>p.n).join(' + ');
+                const val=document.createElement('div');val.className='suggest-val-text';val.textContent=bundle.total.toFixed(2);
+                button.append(names,val);button.onclick=()=>applySuggestion(bundle.items.map(p=>p.uid));list.append(button);
+                if(seen.size>=3)break;
+            }
+            container.style.display=seen.size?'block':'none';
         }
 
         function applySuggestion(uids) {
-            pushState(); uids.forEach(uid => {
-                const item = state.inv.find(x => x.uid === uid);
-                if (item) state.A.push({...item, uid: Math.random()});
-            });
-            render(); saveTrade();
+            const ids=new Set(uids);
+            if(ids.size!==uids.length)return;
+            const items=uids.map(uid=>state.inv.find(p=>p.uid===uid));
+            if(items.some(p=>!p||lockedPets.has(p.n)||exactSuggestionValue(p)===null))return;
+            pushState();
+            state.A=items.map(p=>({...p,uid:Math.random()}));
+            render();saveTrade();
         }
 
         // ===================================================
@@ -5451,6 +5549,7 @@ if (advisorShowMega) {
         }
 
         function toggleSetting(key) {
+            if (key === 'betaElveAccept') { state.betaElveAccept = false; window.openCompanionSetup(); return; }
             state[key] = !state[key];
             saveTrade();
             refreshSettingBtns();
@@ -5466,7 +5565,7 @@ if (advisorShowMega) {
                 var btn = document.getElementById(id);
                 if (!btn) return;
                 var on = !!state[key];
-                btn.textContent = on ? 'ON' : 'OFF';
+                btn.textContent = key === 'betaElveAccept' ? 'SET UP' : (on ? 'ON' : 'OFF');
                 btn.style.background = on ? 'var(--accent)' : '#1e293b';
                 btn.style.color = on ? 'white' : '#64748b';
             });
@@ -5579,7 +5678,7 @@ if (advisorShowMega) {
                     : '<option value="">-- pick pet --</option>' + pets.map(n => `<option value="${n.replace(/"/g,'&quot;')}" ${b.petName===n?'selected':''}>${n}</option>`).join('');
 
                 return `<div class="keybind-row">
-                    <div class="keybind-key" title="Click to change key" onclick="startKeyCapture(${i})">${b.key || '?'}</div>
+                    <div class="keybind-key" title="Click to change key" onclick="startKeyCapture(${i})">${escapeCalcHTML(b.key || '?')}</div>
                     <div class="keybind-source-toggle">
                         <button class="ks-tog ${b.source==='inv'?'active':''}" onclick="setKeybindSource(${i},'inv')">Inv</button>
                         <button class="ks-tog ${b.source==='all'?'active':''}" onclick="setKeybindSource(${i},'all')">All</button>
@@ -5677,16 +5776,27 @@ if (advisorShowMega) {
         function renderBlocklistUI() {
             const el = document.getElementById('scoutBlocklistTags');
             if (!el) return;
-            if (_scoutBlocklist.length === 0) {
-                el.innerHTML = '<span style="font-size:11px;color:#475569">No blocked users</span>';
+            el.replaceChildren();
+            if (!_scoutBlocklist.length) {
+                const empty = document.createElement('span');
+                empty.style.cssText = 'font-size:11px;color:#475569';
+                empty.textContent = 'No blocked users';
+                el.append(empty);
                 return;
             }
-            el.innerHTML = _scoutBlocklist.map(n =>
-                `<span style="display:inline-flex;align-items:center;gap:4px;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:2px 8px;font-size:11px;color:#e2e8f0">
-                    ${n}
-                    <span onclick="scoutRemoveBlock('${n}')" style="cursor:pointer;color:#ef4444;font-weight:900;font-size:12px">✕</span>
-                </span>`
-            ).join('');
+            for (const n of _scoutBlocklist) {
+                const tag = document.createElement('span');
+                tag.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:#1e293b;border:1px solid #334155;border-radius:6px;padding:2px 8px;font-size:11px;color:#e2e8f0';
+                tag.append(document.createTextNode(String(n)));
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.style.cssText = 'cursor:pointer;color:#ef4444;font-weight:900;font-size:12px;background:none;border:0';
+                remove.textContent = '✕';
+                remove.setAttribute('aria-label', 'Remove ' + n);
+                remove.addEventListener('click', () => scoutRemoveBlock(n));
+                tag.append(remove);
+                el.append(tag);
+            }
         }
 
         // ── Persistent scout prefs ───────────────────────────────────────────
@@ -7456,25 +7566,8 @@ function setVListVariant(list, variant) {
         }
 
         // Get the correct value for a pet based on list type
-        function getPetListValue(p, type, variant) {
-    variant = variant || 'none';
-    if (type === 'neon') {
-        if (variant === 'fr') return parseFloat(p.nfr_v || p.n_v || p.v) || 0;
-        if (variant === 'f')  return parseFloat(p.n_f_v || p.n_v || p.v) || 0;
-        if (variant === 'r')  return parseFloat(p.n_r_v || p.n_v || p.v) || 0;
-        return parseFloat(p.n_v || p.v) || 0;
-    }
-    if (type === 'mega') {
-        if (variant === 'fr') return parseFloat(p.mfr_v || p.m_v || p.v) || 0;
-        if (variant === 'f')  return parseFloat(p.m_f_v || p.m_v || p.v) || 0;
-        if (variant === 'r')  return parseFloat(p.m_r_v || p.m_v || p.v) || 0;
-        return parseFloat(p.m_v || p.v) || 0;
-    }
-    // Normal type
-    if (variant === 'fr') return parseFloat(p.fr_v || p.v) || 0;
-    if (variant === 'f')  return parseFloat(p.f_v  || p.v) || 0;
-    if (variant === 'r')  return parseFloat(p.r_v  || p.v) || 0;
-    return parseFloat(p.v) || 0;
+        function getPetListValue(p,type,variant='none'){
+    return exactPetValue({...p,type:type==='normal'?'reg':type,f_st:variant==='f'||variant==='fr',r_st:variant==='r'||variant==='fr'},state.mode)??0;
 }
 
         // Get demand for a pet based on type
@@ -7506,8 +7599,8 @@ function setVListVariant(list, variant) {
             let pets = ALL_PETS.filter(p => !search || p.n.toLowerCase().includes(search));
 
             // For neon/mega, filter out pets with no value for that type AND eggs (eggs don't have neon/mega)
-            if (type === 'neon')  pets = pets.filter(p => !isEgg(p.n) && parseFloat(p.nfr_v || p.n_v) > 0);
-            if (type === 'mega')  pets = pets.filter(p => !isEgg(p.n) && parseFloat(p.mfr_v || p.m_v) > 0);
+            if (type === 'neon') pets=pets.filter(p=>getPetListValue(p,type,variant)>0);
+            if (type === 'mega') pets=pets.filter(p=>getPetListValue(p,type,variant)>0);
 
             const groups = {};
             pets.forEach(p => {
@@ -7534,7 +7627,7 @@ function setVListVariant(list, variant) {
                 <div class="vlist-tier-row">
                     <div class="vlist-tier-label">${g.tier >= 1 ? g.tier : g.tier.toFixed(2)}</div>
                     <div class="vlist-pets">
-                        ${g.pets.sort((a,b) => getPetListValue(b,type) - getPetListValue(a,type)).map(p => {
+                        ${g.pets.sort((a,b) => getPetListValue(b,type,variant) - getPetListValue(a,type,variant)).map(p => {
                             const val = getPetListValue(p, type, variant);
                             const safeN = p.n.replace(/'/g,"\'");
                             return `<div class="vlist-pet" style="width:${tileSize}px;height:${tileSize}px" onclick="quickAddFromList('${safeN}','${type}')">
@@ -7741,16 +7834,16 @@ function setVListVariant(list, variant) {
 
             // Check hardcoded overrides first — for items AMVGG doesn't host
             if (IMAGE_OVERRIDES[key]) {
-                return `<img src="${IMAGE_OVERRIDES[key]}" style="${styleAttr}" alt="${name.replace(/"/g,'&quot;')}">`;
+                return `<img src="${IMAGE_OVERRIDES[key]}" style="${styleAttr}" alt="${escapeCalcHTML(name)}">`;
             }
 
             const variants = getPetImageVariants(name);
             const firstSrc = 'https://amvgg.com/items/' + encodeURIComponent(variants[0]) + '.webp';
             const fallbacks = JSON.stringify(variants.slice(1).map(v => 'https://amvgg.com/items/' + encodeURIComponent(v) + '.webp'));
             return `<img src="${firstSrc}" style="${styleAttr}" loading="lazy"
-                data-fallbacks='${fallbacks}' data-fb-idx="0"
+                data-fallbacks='${escapeCalcHTML(fallbacks)}' data-fb-idx="0"
                 onerror="petImgFallback(this)"
-                alt="${name.replace(/"/g,'&quot;')}">`;
+                alt="${escapeCalcHTML(name)}">`;
         }
 
         // Called when a pet image 404s. Tries the next URL variant from
@@ -8200,31 +8293,36 @@ function tbFinalizeComplete() {
     if (!s) return;
     const id = s.id;
 
-    // Remove offered pets from inventory (one at a time, respecting quantity)
-    s.finalOffer.forEach(offeredPet => {
-        const base = ALL_PETS.find(x => x.n === offeredPet.n);
-        if (!base) return;
-        // Find matching pet in inventory (same name, same type/fly/ride)
-        const idx = state.inv.findIndex(ip =>
-            ip.n === offeredPet.n &&
-            (ip.type || 'reg') === (offeredPet.type || 'reg') &&
-            !!ip.f_st === !!offeredPet.f_st &&
-            !!ip.r_st === !!offeredPet.r_st
-        );
-        if (idx >= 0) state.inv.splice(idx, 1);
-        // If no exact match, try just by name
-        else {
-            const fallback = state.inv.findIndex(ip => ip.n === offeredPet.n);
-            if (fallback >= 0) state.inv.splice(fallback, 1);
+    // Validate the entire exchange before mutating inventory.
+    if (!Array.isArray(s.finalOffer) || !Array.isArray(s.finalRequest) ||
+        !s.finalOffer.length || !s.finalRequest.length ||
+        !tbPendingLoad().some(t => t.id === id) || tbCompletedLoad().some(t => t.id === id)) {
+        showTBToast('Trade is missing, invalid, or already completed.', '#f87171');
+        return;
+    }
+    const catalog = new Map(ALL_PETS.map(p => [p.n, p]));
+    const remaining = [...state.inv];
+    const sameVariant = (a,b) => a.n === b.n &&
+        (a.type || 'reg') === (b.type || 'reg') &&
+        !!a.f_st === !!b.f_st && !!a.r_st === !!b.r_st;
+    for (const offered of s.finalOffer) {
+        const idx = remaining.findIndex(p => sameVariant(p, offered));
+        if (idx < 0) {
+            showTBToast('Missing exact pet variant or quantity. Inventory unchanged.', '#f87171');
+            return;
         }
-    });
-
-    // Add received pets to inventory
-    s.finalRequest.forEach(receivedPet => {
-        const base = ALL_PETS.find(x => x.n === receivedPet.n);
-        if (!base) return;
-        state.inv.push({ ...base, ...receivedPet, uid: Math.random() });
-    });
+        remaining.splice(idx, 1);
+    }
+    const received = [];
+    for (const pet of s.finalRequest) {
+        const base = catalog.get(pet.n);
+        if (!base) {
+            showTBToast('Received pet not found in catalog. Inventory unchanged.', '#f87171');
+            return;
+        }
+        received.push({...base, ...pet, uid: Math.random()});
+    }
+    state.inv = [...remaining, ...received];
 
     saveTrade();
     renderInventory();
@@ -8918,7 +9016,7 @@ if (verdict && verdict.label !== '?') {
             </div>
         </div>
 
-        ${t.notes ? `<div style="font-size:0.75em;color:#64748b;font-style:italic;margin-bottom:10px">"${t.notes}"</div>` : ''}
+        ${t.notes ? `<div style="font-size:0.75em;color:#64748b;font-style:italic;margin-bottom:10px">"${escapeCalcHTML(t.notes)}"</div>` : ''}
 
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
             <button id="tbRepostBtn_${t.id}" onclick="tbRepost('${t.id}')" ${left > 0 ? 'disabled' : ''} style="background:${left===0?'#059669':'#1e293b'};border:1.5px solid ${left===0?'#059669':'#334155'};color:${left===0?'white':'#475569'};border-radius:7px;padding:5px 12px;font-size:0.78em;font-weight:800;cursor:${left===0?'pointer':'not-allowed'};transition:0.2s">
@@ -8935,7 +9033,6 @@ if (verdict && verdict.label !== '?') {
 }
 
     </script>
-    <div id="verdictExtras" class="verdict-extras"></div>
 
     <!-- AI STRATEGIST FULLSCREEN OVERLAY -->
     <div id="aiFullscreenOverlay">
@@ -9066,5 +9163,14 @@ if (verdict && verdict.label !== '?') {
         <div class="mobile-ctx-item" onclick="mobileCtxAction('remove')" style="color:#f87171">✕ Remove Pet</div>
     </div>
 
+    <dialog class="calc-dialog" id="companionSetup">
+        <h2>Set up Trade Companion</h2>
+        <p>Get a desktop monitor for Elvebredd and AMVGG. Automatic acceptance is unavailable. Live listing feeds still require configuration.</p>
+        <label>Minimum profit (%) <input type="number" id="companionProfit" min="5" max="10000" value="10"></label>
+        <label>Maximum demand loss (/10) <input type="number" id="companionLoss" min="0" max="1" step=".1" value=".5"></label>
+        <p id="companionNote" role="status">Windows: Python 3 with Tkinter is required.</p>
+        <div class="actions"><a class="primary" id="companionDownload" href="./desktop/Calc-Trade-Companion.py" download>Download app</a><button type="button" id="companionInventory">Export my inventory</button><button type="button" id="companionInstalled">Already installed</button><button type="button" id="companionClose">Cancel</button></div>
+    </dialog>
+    <script type="module" src="./src/v2/companion-setup.mjs"></script>
 </body>
 </html>
