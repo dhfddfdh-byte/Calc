@@ -11,3 +11,6 @@ test("trade mismatch",()=>assert.ok((()=>evaluateTrade([{value:10,unit:"shark"}]
 test("fair threshold",()=>assert.ok((()=>evaluateTrade([{value:100,unit:"rp"}],[{value:102,unit:"rp"}]).verdict==="fair")()));
 test("locked inventory",()=>assert.ok((()=>{const b=findBundles([{id:"a",value:6},{id:"b",value:4},{id:"locked",value:10,locked:true}],10);return b[0].total===10&&b[0].ids.length===2&&!b[0].ids.includes("locked")})()));
 test("no duplicate IDs",()=>assert.ok((()=>{try{findBundles([{id:"a",value:5},{id:"a",value:5}],10);return false}catch{return true}})()));
+
+test("AMTV value records are rejected",()=>assert.throws(()=>makeMarket([{source:"amtv",petId:"pet",variant:"R0",value:99,unit:"RP",demand:8,observedAt:"2026-11-24T00:00:00Z"}]),/demand-only/));
+test("AMTV demand works but cannot be selected for value",()=>{const index=makeMarket([{source:"amtv",petId:"pet",variant:"NFR",value:null,unit:null,demand:8,observedAt:"2026-11-24T00:00:00Z"}]);assert.equal(resolveMetric(index,"pet","NFR","amtv","demand").value,8);assert.throws(()=>resolveMetric(index,"pet","NFR","amtv","value"));});
