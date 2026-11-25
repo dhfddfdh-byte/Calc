@@ -1,4 +1,4 @@
-"""AMTV public-page collection entry point. Explicit enablement required.
+"""AMTV demand-only collection entry point. Explicit enablement required.
 Run only where automated access and data use are permitted. No stealth, no
 cookies, no browser impersonation. Output is local; never auto-committed.
 """
@@ -16,10 +16,7 @@ from provider_export_parser import parse_export
 
 ORIGIN = "https://adoptmetradingvalues.com"
 PAGES = {
-    "values": "/pet-value-list.php",
     "demand": "/pet-demand-list.php",
-    "exotics": "/exotic-pet-list.php",
-    "changes": "/rising-and-falling-values.php",
 }
 AGENT = "CalcMarketCollector"
 LIMIT = 10 * 1024 * 1024
@@ -67,7 +64,7 @@ def checked_collect(output):
         # Any denial, rate limit or schema change aborts the run.
         rows = parse_export(fetch(path))
         previous = old.get("data", {}).get(key, []) if old else []
-        if key in ("values", "demand") and (len(rows) < 100 or (previous and len(rows) < len(previous) * .8)):
+        if key == "demand" and (len(rows) < 100 or (previous and len(rows) < len(previous) * .8)):
             raise RuntimeError("Incomplete catalog: " + key)
         data[key] = rows
     payload = {
