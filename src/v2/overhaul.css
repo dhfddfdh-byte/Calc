@@ -7,3 +7,45 @@ body{font-family:Inter,"Segoe UI",system-ui,sans-serif}
 .calc-dialog{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:18px;padding:24px;width:min(94vw,480px);max-height:90vh;overflow:auto;position:fixed;inset:0;margin:auto;z-index:9999}
 .calc-dialog::backdrop{background:#050a14c9;backdrop-filter:blur(4px)}.calc-dialog h2{font-size:1.2rem;margin-bottom:12px}.calc-dialog p{line-height:1.5;color:var(--subtext);margin:12px 0;font-size:.9rem}.calc-dialog .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.calc-dialog .primary{background:var(--accent);color:white;border-color:var(--accent)}.calc-dialog label{display:block;margin:12px 0}.calc-dialog input[type=number]{width:88px;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px}
 button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.calc-state-note{font-size:.75rem;color:var(--subtext)}@media(max-width:650px){.calc-brandbar{padding:12px}.calc-quick{width:100%}.calc-quick a,.calc-quick button{flex:1;text-align:center}.tab-bar{overflow-x:auto}.tab-btn{flex-shrink:0}.calc-mark{width:36px;height:36px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* Workspace and consistent responsive components */
+.calc-workspace-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:22px 0 14px}
+.calc-workspace-heading h2{font-size:clamp(1.25rem,3vw,1.8rem);letter-spacing:-.035em;margin:5px 0}
+.calc-workspace-heading p{font-size:.82rem;color:var(--subtext)}
+.calc-eyebrow{font-size:.69rem;letter-spacing:.12em;font-weight:800;color:var(--subtext)}
+#tabCalc .container{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;width:100%;margin:0 0 14px;align-items:stretch}
+#tabCalc .trade-panel{min-width:0;min-height:330px;overflow:visible;border:1px solid var(--border);box-shadow:0 8px 24px #00000012}
+#panelA .p-header{border-top:3px solid var(--accent);border-radius:17px 17px 0 0}#panelB .p-header{border-top:3px solid var(--win);border-radius:17px 17px 0 0}
+#tabCalc .p-header{padding:16px;gap:8px;align-items:center;background:var(--panel)}
+.p-title,.p-total{color:var(--text)!important}.p-total{font-variant-numeric:tabular-nums;font-size:clamp(1.15rem,3vw,1.7rem)}
+#tabCalc .grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:14px}
+.calc-pet-card{min-width:0;background:var(--card);border-width:1px;padding:12px 7px 9px;box-shadow:none}
+.calc-pet-card .card-img-container{width:64px;height:64px}.calc-pet-card .card-name{font-size:.73rem;color:var(--text);min-height:2.4em}
+.calc-pet-card .card-val{font-variant-numeric:tabular-nums;font-size:.98rem}
+.calc-pet-card .card-demand{font-size:.65rem;font-weight:650}
+.calc-pet-card .del{top:4px;right:4px;width:22px;height:22px;border:0;background:var(--panel);color:var(--subtext);font-size:16px}
+.calc-pet-card .del:hover{background:var(--lose);color:white}
+.calc-pet-card .t-btn{border:1px solid var(--border);border-radius:5px;background:var(--panel);color:var(--subtext);width:23px;height:23px}
+.calc-pet-card .t-btn.active{background:var(--accent);color:white;border-color:var(--accent)}
+.calc-add-pet{min-height:136px;height:100%;background:transparent;color:var(--subtext);border:1px dashed var(--border);font-size:.82rem;font-weight:700;padding:10px;line-height:1.4}
+.calc-add-pet:hover{color:var(--accent);background:var(--card)}.calc-add-pet:disabled{opacity:.4;cursor:not-allowed}
+#tabCalc .verdict-box{position:relative;inset:auto;transform:none;width:100%;max-width:none;margin:14px 0;box-shadow:0 8px 24px #00000012;padding:20px 24px;text-align:center}
+.calc-result-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+#calcSourceNote{font-size:.72rem;color:var(--subtext);font-weight:650}
+#tabCalc .gauge-wrapper{height:14px;border-radius:8px}#tabCalc .gauge-needle{height:18px}
+#tabCalc .v-text{font-size:clamp(1.7rem,4vw,2.8rem);letter-spacing:-.04em}#tabCalc .v-sub{font-style:normal;max-width:850px;margin:8px auto 14px;line-height:1.6}
+#tabCalc .switches{flex-wrap:wrap;justify-content:center;border-radius:12px;gap:5px;padding:5px;background:var(--bg)}#tabCalc .sw-btn{border-radius:8px;padding:8px 14px}
+#tabCalc .v-diff{color:var(--text);font-variant-numeric:tabular-nums}
+#tabCalc .verdict-extras{position:static!important;inset:auto!important;transform:none!important;width:100%!important;max-width:none!important;margin:12px 0 30px}
+#tabCalc .verdict-extras:empty{display:none!important}
+.nav-bar{flex-wrap:wrap}.nav-btn{padding:9px 13px;border-radius:9px;color:var(--text);font-size:.82rem}
+#lastUpdatedBadge{max-width:100%;white-space:normal!important;line-height:1.4}
+#lastUpdatedText{white-space:normal}
+#invGrid .card{content-visibility:auto;contain-intrinsic-size:auto 140px}
+@media(max-width:700px){.calc-workspace-heading{margin:14px 0;align-items:flex-start}.calc-workspace-heading p{font-size:.74rem}
+#tabCalc .container{gap:8px}#tabCalc .trade-panel{min-height:235px}#tabCalc .p-header{padding:10px;flex-wrap:wrap}#tabCalc .p-title{font-size:.85rem}#tabCalc .p-total{font-size:1.18rem}
+#tabCalc .grid{padding:7px;gap:6px;grid-template-columns:repeat(auto-fill,minmax(78px,1fr))}.calc-pet-card{padding:8px 4px}
+.calc-pet-card .card-img-container{width:48px;height:48px}.calc-pet-card .t-btn{width:19px;height:23px}.calc-pet-card .card-demand{font-size:.58rem}
+.calc-add-pet{min-height:116px}#tabCalc .verdict-box{padding:14px 12px;border-radius:14px}
+#tabCalc .sw-btn{padding:8px 10px;font-size:.72rem}.calc-result-heading{align-items:flex-start}.nav-bar .nav-btn{flex:1;min-height:38px}
+}
