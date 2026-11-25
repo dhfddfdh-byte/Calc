@@ -164,10 +164,7 @@ def parse_export(html):
     handlers = {
         "https://elvebredd.com/value-updates": elve_trends,
         "https://amvgg.com/trades": amvgg_catalog,
-        "https://adoptmetradingvalues.com/pet-value-list.php": lambda d: amtv_list(d, "values"),
         "https://adoptmetradingvalues.com/pet-demand-list.php": lambda d: amtv_list(d, "demand"),
-        "https://adoptmetradingvalues.com/exotic-pet-list.php": amtv_exotics,
-        "https://adoptmetradingvalues.com/rising-and-falling-values.php": amtv_changes
     }
     if url not in handlers:
         raise ValueError("Unsupported export or client-rendered page: " + url)
