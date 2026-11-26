@@ -960,17 +960,6 @@
 
     <!-- HOME SCREEN WRAPPER -->
     <div class="home-screen" id="homeScreen">
-    <header class="calc-brandbar">
-        <div class="calc-brand"><div class="calc-mark" aria-hidden="true">C</div><div><h1>Calc · Trade smarter</h1><p>Calculator / Inventory / Market intelligence</p></div></div>
-        <nav class="calc-quick" aria-label="New tools">
-            <a href="./market-preview.html">Market data</a>
-            <a href="./tracker.html">Trade tracker</a>
-            <button type="button" onclick="window.openCompanionSetup()">Desktop companion</button>
-            <a href="./account.html">Account</a>
-        </nav>
-    </header>
-
-
     <!-- TAB BAR -->
     <div class="tab-bar">
         <button class="tab-btn" id="tabBtnLists" onclick="switchTab('lists')">
@@ -1247,6 +1236,16 @@
                 </div>
             </div>
             <div class="settings-body">
+                <div class="settings-section">
+                    <div class="settings-section-title">Account &amp; tools</div>
+                    <nav class="calc-quick" aria-label="Account and tools" style="margin-top:10px">
+                        <a href="./account.html">Account</a>
+                        <a href="./market-preview.html">Market data</a>
+                        <a href="./tracker.html">Trade tracker</a>
+                        <button type="button" onclick="window.openCompanionSetup()">Desktop companion</button>
+                    </nav>
+                </div>
+
 
                 <!-- UI Scale -->
                 <div class="settings-section">
