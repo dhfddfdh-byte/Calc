@@ -2685,24 +2685,26 @@
         // Parses raw CSV text into an array of objects keyed by header row.
         // Handles quoted fields and commas inside values.
         // Used to process both the master pet list and the price history CSV.
-        function parseCSV(text) {
-            const lines = text.trim().split('\n');
-            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-            return lines.slice(1).map(line => {
-                const values = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                const obj = {};
-                headers.forEach((header, i) => {
-                    let val = values[i] ? values[i].trim().replace(/^"|"$/g, '') : '';
-                    if (!isNaN(parseFloat(val)) && isFinite(val) && val !== '') {
-                        obj[header] = parseFloat(val);
-                    } else {
-                        obj[header] = val;
-                    }
-                });
-                return obj;
-            });
-        }
-
+        function parseCsvRows(s){if(typeof s!=="string")throw Error("Expected CSV text");s=s.replace(/^\uFEFF/,"");const rows=[];let row=[],field="",quoted=false,closed=false;for(let i=0;i<s.length;i++){const c=s[i];if(quoted){if(c==='"'){if(s[i+1]==='"'){field+='"';i++}else{quoted=false;closed=true}}else field+=c;continue}if(c==='"'&&field===""&&!closed){quoted=true;continue}if(c===","||c==="\n"||c==="\r"){row.push(field);field="";closed=false;if(c!==","){if(c==="\r"&&s[i+1]==="\n")i++;rows.push(row);row=[]}continue}if(closed||c==='"')throw Error("Malformed CSV");field+=c}if(quoted)throw Error("Unclosed CSV quote");if(row.length||field||closed){row.push(field);rows.push(row)}return rows}
+function parseCSV(text){
+ const rows=parseCsvRows(text);if(rows.length<2)throw Error('Empty catalog');
+ const headers=rows.shift().map(h=>h.trim().toLowerCase());
+ if(!headers.includes('n')||!headers.includes('v'))throw Error('Missing catalog columns');
+ if(headers[31]==='a_demand_n'&&headers[32]==='a_demand_nea_demand_m'){headers[32]='a_demand_ne';headers[33]='a_demand_m'}
+ return rows.filter(r=>String(r[0]??'').trim()).map(r=>{
+  const obj=Object.create(null);
+  headers.forEach((h,i)=>{if(!h)return;const v=String(r[i]??'').trim();const numeric=v.replace(/,/g,'');obj[h]=h!=='n'&&numeric!==''&&Number.isFinite(Number(numeric))?Number(numeric):v});
+  return obj;
+ });
+}
+function parseDemandStars(value){const match=String(value??'').trim().match(/^([1-3])\s*\/\s*3$/);return match?Number(match[1]):null}
+function validateCatalogCsv(csv){
+ const rows=parseCSV(csv);
+ if(rows.length<100||!rows.some(p=>Number(p.v)>0||Number(p.av)>0))throw Error('Incomplete pet catalog');
+ const names=rows.map(p=>String(p.n).trim());
+ if(new Set(names).size!==names.length)throw Error('Duplicate exact catalog names');
+ return rows;
+}
         // Saves the current state (both calc sides + inventory + keybinds + settings) to localStorage.
         // Called after every user action. Restores automatically on page load.
         function saveTrade() {
@@ -2781,21 +2783,29 @@
             if(catalogRefreshBusy)return;
             catalogRefreshBusy=true;
             try {
-                let csvText, fromCache=false;
-                try {
-                    const response=await fetch(MASTER_CSV_URL,{cache:"no-cache",signal:AbortSignal.timeout(20000)});
-                    if(!response.ok)throw Error("Pet data HTTP "+response.status);
-                    csvText=await response.text();
-                    if(!csvText.split(/\r?\n/,1)[0].split(',').includes('n') || csvText.length<1000)throw Error("Unexpected catalog");
-                }catch(e){
-                    if(refresh)throw e;
-                    const cached=localStorage.getItem('calc_master_csv_cache');
-                    if(!cached)throw e;
-                    csvText=cached;fromCache=true;
+                let csvText,data,fromCache=false,fromFallback=false;
+                async function getCatalog(url){
+                    const response=await fetch(url,{cache:'no-cache',signal:AbortSignal.timeout(20000)});
+                    if(!response.ok)throw Error('Pet data HTTP '+response.status);
+                    const csv=await response.text();
+                    if(csv.length>8000000)throw Error('Catalog too large');
+                    return {csv,rows:validateCatalogCsv(csv)};
                 }
-                const data = parseCSV(csvText);
-                if(data.length<100||!data.some(p=>Number(p.v)>0))throw Error("Incomplete pet catalog");
-                
+                try{
+                    const result=await getCatalog(MASTER_CSV_URL);
+                    csvText=result.csv;data=result.rows;
+                }catch(e){
+                    console.warn('Spreadsheet unavailable',e);
+                    if(refresh&&ALL_PETS.length)throw e;
+                    try{
+                        csvText=localStorage.getItem('calc_master_csv_cache');
+                        data=validateCatalogCsv(csvText);fromCache=true;
+                    }catch{
+                        const backup=await getCatalog('./data/master-fallback.csv');
+                        csvText=backup.csv;data=backup.rows;fromFallback=true;
+                    }
+                }
+
                 if(refresh && csvText===catalogLastCsv) {
                     catalogCheckedAt=Date.now();catalogStatus='checked';updateCatalogBadge();
                     return;
@@ -2833,6 +2843,9 @@
                     am_f_v:  row.am_f_v  || 0,
                     am_r_v:  row.am_r_v  || 0,
                     amfr_v:  row.amfr_v  || 0,
+                    aDemandN: parseDemandStars(row.a_demand_n),
+                    aDemandNe: parseDemandStars(row.a_demand_ne),
+                    aDemandM: parseDemandStars(row.a_demand_m),
                     cat: String(row.categories || row.rarity || '').toLowerCase().replace(/[<>&"\\]/g,''),
                     vt: String(row['value trend'] || row['vt'] || '').replace(/[<>&"\\]/g,''), 
                     dt: String(row['demand trend'] || row['dt'] || '').replace(/[<>&"\\]/g,'')
@@ -2846,8 +2859,8 @@
                 if(refresh&&ALL_PETS.length&&[valueFields,amvggFields].some(fields=>coverage(nextPets,fields)<coverage(ALL_PETS,fields)*.8))throw Error("Value coverage dropped; keeping last good catalog");
                 ALL_PETS=nextPets;catalogLastCsv=csvText;
                 recomputeCombinedFactor();
-                if(!fromCache){try{localStorage.setItem('calc_master_csv_cache',csvText)}catch{}}
-                catalogStatus=fromCache?'cached':'checked';if(!fromCache)catalogCheckedAt=Date.now();startLastUpdatedTicker();
+                if(!fromCache&&!fromFallback){try{localStorage.setItem('calc_master_csv_cache',csvText)}catch{}}
+                catalogStatus=fromFallback?'fallback':fromCache?'cached':'checked';if(!fromCache&&!fromFallback)catalogCheckedAt=Date.now();startLastUpdatedTicker();
                 document.getElementById('loadingScreen').style.display = 'none';
 
                 buildDynamicHTT();  // initial HTT from pet data (before history)
@@ -3279,7 +3292,7 @@ function updateCatalogBadge() {
             const format=ts=>new Date(ts).toLocaleString([], {year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
             const history=window._dataLastUpdated;
             const detail=[
-                'Spreadsheet: '+(catalogStatus==='checked'?'successfully retrieved':catalogStatus==='failed'?'refresh failed; last good data retained if available':catalogStatus==='cached'?'cached data':'checking'),
+                'Spreadsheet: '+(catalogStatus==='checked'?'successfully retrieved':catalogStatus==='failed'?'refresh failed; last good data retained if available':catalogStatus==='fallback'?'bundled spreadsheet snapshot':catalogStatus==='cached'?'cached data':'checking'),
                 'Last successful check: '+(catalogCheckedAt?format(catalogCheckedAt):'not available this session'),
                 'Latest history snapshot: '+(Number.isFinite(history)&&history>0?format(history):'not available'),
                 'Elvebredd and AMVGG upstream update times: not verified. A spreadsheet check is not a provider value update.'
@@ -3288,7 +3301,7 @@ function updateCatalogBadge() {
             if(catalogStatus==='checked'){
                 const minutes=Math.max(0,Math.floor((Date.now()-catalogCheckedAt)/60000));
                 label.textContent=minutes<1?'Sheet checked just now':minutes<60?'Sheet checked '+minutes+'m ago':'Sheet checked '+Math.floor(minutes/60)+'h ago';
-            }else label.textContent=catalogStatus==='cached'?'Cached values':catalogStatus==='failed'?'Refresh failed':'Checking values…';
+            }else label.textContent=catalogStatus==='fallback'?'Saved sheet values':catalogStatus==='cached'?'Cached values':catalogStatus==='failed'?'Refresh failed':'Checking values…';
             badge.style.color=catalogStatus==='checked'?'var(--subtext)':'#fbbf24';
             const el=document.getElementById('calcDataDetails');if(el)el.textContent=detail;
         }
