@@ -922,7 +922,20 @@
             .plus:active { border-color: var(--accent); color: var(--accent); }
         }
 </style>
-    <link rel="stylesheet" href="./src/v2/overhaul.css">
+    <style>
+        /* Styles limited to new Settings tools and companion dialog; original calculator styles untouched. */
+        .calc-quick{display:flex;gap:8px;flex-wrap:wrap}
+        .calc-quick a,.calc-quick button,.calc-dialog button,.calc-dialog a{border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text);font:inherit;font-size:.85rem;font-weight:650;text-decoration:none;padding:10px 13px;cursor:pointer}
+        .calc-dialog{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:18px;padding:24px;width:min(94vw,480px);max-height:90vh;overflow:auto;position:fixed;inset:0;margin:auto;z-index:9999}
+        .calc-dialog::backdrop{background:#050a14c9;backdrop-filter:blur(4px)}
+        .calc-dialog h2{font-size:1.2rem;margin-bottom:12px}.calc-dialog p{line-height:1.5;color:var(--subtext);margin:12px 0;font-size:.9rem}
+        .calc-dialog .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.calc-dialog .primary{background:var(--accent);color:white;border-color:var(--accent)}.calc-dialog label{display:block;margin:12px 0}
+        .calc-dialog input[type=number]{width:88px;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px}
+        .calc-legacy-controls button.t-btn,.calc-legacy-controls button.del{padding:0;border-width:0;font-family:inherit}
+        button.calc-legacy-add{background:transparent;width:100%;font-family:inherit}
+        .calc-legacy-add:disabled{opacity:.4;cursor:not-allowed}
+        #lastUpdatedText{white-space:normal}
+    </style>
 </head>
 <body>
 
@@ -1077,7 +1090,7 @@
     <!-- original nav buttons inside calc tab -->
     <div class="nav-bar">
         <div id="lastUpdatedBadge" style="display:none;align-items:center;gap:5px;font-size:0.72em;font-weight:700;padding:5px 10px;border-radius:10px;border:1px solid #1e293b;color:#64748b;white-space:nowrap;margin-right:auto">
-            <span id="lastUpdatedText">Source freshness not verified</span>
+            <span id="lastUpdatedText">Checking values…</span>
         </div>
         <button class="nav-btn" onclick="openInfo()">ℹ️ Information</button>
         <button class="nav-btn" onclick="openHistory()">📜 History</button>
@@ -1246,6 +1259,19 @@
                     </nav>
                 </div>
 
+
+                <div class="settings-section">
+                    <div class="settings-section-title">Value data</div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0">
+                        <label for="calcValueSource">Value source</label>
+                        <select id="calcValueSource" onchange="setMode(this.value)" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px">
+                            <option value="value">Elvebredd (Value)</option><option value="baseless">AMVGG (Baseless)</option><option value="combined">Combined (estimated)</option>
+                        </select>
+                        <button type="button" class="nav-btn" onclick="refreshCalcCatalog()">Refresh data</button>
+                    </div>
+                    <p id="calcSourceNote" style="font-size:.8em;color:var(--subtext);margin:5px 0"></p>
+                    <p id="calcDataDetails" style="font-size:.8em;color:var(--subtext);line-height:1.6;white-space:pre-line">Checking spreadsheet…</p>
+                </div>
 
                 <!-- UI Scale -->
                 <div class="settings-section">
@@ -1423,7 +1449,6 @@
         </div>
     </div>
 
-    <div class="calc-workspace-heading"><div><span class="calc-eyebrow">TRADE WORKSPACE</span><h2>Compare your trade</h2><p>Exact variants · Source-specific prices · Demand risk</p></div><button class="nav-btn" type="button" onclick="refreshCalcCatalog()">Refresh data</button></div>
     <div class="container">
         <div class="trade-panel" id="panelA">
             <div class="p-header">
@@ -1443,7 +1468,7 @@
         <div class="trade-panel" id="panelB">
             <div class="p-header">
                 <div>
-                    <span class="p-title">You Receive (<span id="cntB">0</span>)</span>
+                    <span class="p-title">They Give (<span id="cntB">0</span>)</span>
                     <span class="p-dem" id="demB">Avg Demand: 0.0</span>
                 </div>
                 <span class="p-total" id="totB">0.000</span>
@@ -1453,7 +1478,6 @@
     </div>
 
     <div class="verdict-box">
-        <div class="calc-result-heading"><span class="calc-eyebrow">TRADE RESULT</span><span id="calcSourceNote">Elvebredd · sheet data</span></div>
         <div class="gauge-wrapper">
             <div id="gaugeBar" class="gauge-bar"></div>
             <div id="gaugeNeedle" class="gauge-needle"></div>
@@ -1465,15 +1489,12 @@
         <!-- Mobile-only speed+flip info (hidden on desktop via CSS) -->
         <div id="verdictMobileInfo" class="verdict-mobile-info"></div>
         <div class="switches">
-            <button class="sw-btn active" id="btnValue" onclick="setMode('value')">Elvebredd</button>
-            <button class="sw-btn" id="btnBaseless" onclick="setMode('baseless')">AMVGG</button>
-            <button class="sw-btn" id="btnCombined" onclick="setMode('combined')">Combined</button>
+            <button class="sw-btn active" id="btnValue" onclick="setMode('value')">Value</button>
+            <button class="sw-btn" id="btnBaseless" onclick="setMode('baseless')">Baseless</button>
             <button class="save-trade-btn" onclick="logCurrentTrade()">Save to History</button>
         </div>
-    </div> <!-- end verdict -->
-    <div id="verdictExtras" class="verdict-extras"></div>
-    </div> <!-- end tabCalc -->
-    </div> <!-- end homeScreen -->
+    </div>  <!-- end tabCalc -->
+    </div>  <!-- end homeScreen -->
 
    <script>
         // CRITICAL DATA VARIABLES DEFINED AT TOP
@@ -2740,6 +2761,7 @@
         //   4. Call restoreTrade() to reload last session from localStorage
         //   5. Trigger render() and any tab-specific render (value, demand, trades)
         let catalogRefreshBusy=false, catalogLastCsv=null, catalogRefreshTimer=null;
+        let catalogCheckedAt=0,catalogStatus='checking',catalogTicker=null;
         async function loadPetData(refresh=false) {
             if(catalogRefreshBusy)return;
             catalogRefreshBusy=true;
@@ -2760,7 +2782,7 @@
                 if(data.length<100||!data.some(p=>Number(p.v)>0))throw Error("Incomplete pet catalog");
                 
                 if(refresh && csvText===catalogLastCsv) {
-                    document.getElementById('lastUpdatedBadge').title='Spreadsheet checked '+new Date().toLocaleString()+'; provider freshness unverified.';
+                    catalogCheckedAt=Date.now();catalogStatus='checked';updateCatalogBadge();
                     return;
                 }
                 const nextPets = data.map(row => ({
@@ -2810,8 +2832,7 @@
                 ALL_PETS=nextPets;catalogLastCsv=csvText;
                 recomputeCombinedFactor();
                 if(!fromCache){try{localStorage.setItem('calc_master_csv_cache',csvText)}catch{}}
-                document.getElementById('lastUpdatedBadge').style.display='flex';
-                document.getElementById('lastUpdatedText').textContent=fromCache?'Cached values · freshness unknown':'Sheet loaded · source freshness unknown';
+                catalogStatus=fromCache?'cached':'checked';if(!fromCache)catalogCheckedAt=Date.now();startLastUpdatedTicker();
                 document.getElementById('loadingScreen').style.display = 'none';
 
                 buildDynamicHTT();  // initial HTT from pet data (before history)
@@ -2839,10 +2860,9 @@
             } catch (error) {
                 console.error('Error loading data:', error);
                 if(refresh){
-                    document.getElementById('lastUpdatedBadge').title='Refresh failed: retaining previous verified spreadsheet snapshot.';
-                    document.getElementById('lastUpdatedText').textContent='Refresh failed · cached data';
+                    catalogStatus='failed';updateCatalogBadge();
                 }else{
-                    document.querySelector('.loading-text').textContent='Error loading data. Reload to retry.';
+                    catalogStatus='failed';updateCatalogBadge();document.querySelector('.loading-text').textContent='Error loading data. Reload to retry.';
                 }
             }finally{
                 catalogRefreshBusy=false;
@@ -3238,42 +3258,28 @@
     }
 }
 
-function startLastUpdatedTicker() {
-            const badge = document.getElementById('lastUpdatedBadge');
-            const text  = document.getElementById('lastUpdatedText');
-            if (!badge || !text) return;
-            badge.style.display = 'flex';
-
-            function update() {
-                const ts = window._dataLastUpdated;
-                if (!ts) { text.textContent = 'Sheet loaded · source freshness unknown'; return; }
-                const ageHr = (Date.now() - ts) / 3600000;
-                const d = new Date(ts);
-                const today = new Date();
-                const isToday = d.toDateString() === today.toDateString();
-                const timeStr = d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-                const dateStr = isToday
-                    ? 'today at ' + timeStr
-                    : d.toLocaleDateString([], {month:'short', day:'numeric'}) + ' at ' + timeStr;
-
-                let label, color, border;
-                if (ageHr < 12) {
-                    label = 'Latest history snapshot ' + dateStr;
-                    color = '#34d399'; border = '#34d39933';
-                } else if (ageHr < 24) {
-                    label = 'History snapshot ' + dateStr;
-                    color = '#fbbf24'; border = '#fbbf2433';
-                } else {
-                    label = 'Source freshness unverified · history ' + dateStr;
-                    color = '#f87171'; border = '#f8717133';
-                }
-                text.textContent = label;
-                badge.style.color = color;
-                badge.style.borderColor = border;
-            }
-
-            update();
-            setInterval(update, 60000);
+function updateCatalogBadge() {
+            const badge=document.getElementById('lastUpdatedBadge'),label=document.getElementById('lastUpdatedText');
+            if(!badge||!label)return;
+            const format=ts=>new Date(ts).toLocaleString([], {year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+            const history=window._dataLastUpdated;
+            const detail=[
+                'Spreadsheet: '+(catalogStatus==='checked'?'successfully retrieved':catalogStatus==='failed'?'refresh failed; last good data retained if available':catalogStatus==='cached'?'cached data':'checking'),
+                'Last successful check: '+(catalogCheckedAt?format(catalogCheckedAt):'not available this session'),
+                'Latest history snapshot: '+(Number.isFinite(history)&&history>0?format(history):'not available'),
+                'Elvebredd and AMVGG upstream update times: not verified. A spreadsheet check is not a provider value update.'
+            ].join('\n');
+            badge.style.display='flex';badge.title=detail;
+            if(catalogStatus==='checked'){
+                const minutes=Math.max(0,Math.floor((Date.now()-catalogCheckedAt)/60000));
+                label.textContent=minutes<1?'Sheet checked just now':minutes<60?'Sheet checked '+minutes+'m ago':'Sheet checked '+Math.floor(minutes/60)+'h ago';
+            }else label.textContent=catalogStatus==='cached'?'Cached values':catalogStatus==='failed'?'Refresh failed':'Checking values…';
+            badge.style.color=catalogStatus==='checked'?'var(--subtext)':'#fbbf24';
+            const el=document.getElementById('calcDataDetails');if(el)el.textContent=detail;
+        }
+        function startLastUpdatedTicker() {
+            updateCatalogBadge();
+            if(catalogTicker===null)catalogTicker=setInterval(updateCatalogBadge,60000);
         }
         function toggleHealthSimple(id) {
             const el = document.getElementById(id);
@@ -3497,9 +3503,11 @@ function startLastUpdatedTicker() {
         function exactDemand(p){const v=Number(p[p.type==='neon'?'nd':p.type==='mega'?'md':'d']);return Number.isFinite(v)&&v>0&&v<=10?v:null}
         function syncSourceButtons(){
             for(const [id,mode] of [['btnValue','value'],['btnBaseless','baseless'],['btnCombined','combined']]){const el=document.getElementById(id);if(el){el.classList.toggle('active',state.mode===mode);el.setAttribute('aria-pressed',String(state.mode===mode))}}
+            const select=document.getElementById('calcValueSource');if(select)select.value=state.mode;
+            const vb=document.getElementById('btnValue');if(vb)vb.textContent=state.mode==='combined'?'Combined':'Value';if(vb&&state.mode==='combined'){vb.classList.add('active');vb.setAttribute('aria-pressed','true')}
             const note=document.getElementById('calcSourceNote');if(note)note.textContent=state.mode==='combined'?(combinedFactor===null?'Combined · insufficient matching anchors':'Combined · estimated Elve scale'):state.mode==='baseless'?'AMVGG · sheet data':'Elvebredd · sheet data';
         }
-        function refreshCalcCatalog(){void loadPetData(true);}
+        function refreshCalcCatalog(){void loadPetData(ALL_PETS.length>0);}
         // Renders the inventory grid and updates all stat displays.
         // Groups identical pets (same name+type+fly+ride) into stacks shown with x2/x3 badge.
         // Also updates: total value, avg demand, milestone badges, and AI suggestions.
@@ -4763,9 +4771,9 @@ function startLastUpdatedTicker() {
                 const v=exactPetValue(p,state.mode),d=exactDemand(p);
                 if(v===null)missing++;else totalV+=v;
                 if(d!==null){totalD+=d;knownD++}
-                const card=document.createElement('div');card.className='card calc-pet-card';card.dataset.petname=p.n;card.dataset.side=s;card.dataset.uid=p.uid;card.style.borderColor=getRarityColor(p.cat);
+                const card=document.createElement('div');card.className='card calc-legacy-controls';card.dataset.petname=p.n;card.dataset.side=s;card.dataset.uid=p.uid;card.style.borderColor=getRarityColor(p.cat);
                 const button=(label,cls,action,title)=>{const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=label;b.title=title;b.setAttribute('aria-label',title);b.onclick=action;return b};
-                card.append(button('×','del',()=>remove(s,p.uid),'Remove '+p.n));
+                card.append(button('✕','del',()=>remove(s,p.uid),'Remove '+p.n));
                 const imgBox=document.createElement('div');imgBox.className='card-img-container';imgBox.title='Right click for quantity · Shift + right click for history';
                 imgBox.oncontextmenu=e=>handlePetContext(e,p);imgBox.ondblclick=()=>duplicate(s,p.uid);
                 const img=document.createElement('img');img.alt=p.n;img.loading='lazy';img.decoding='async';
@@ -4773,14 +4781,14 @@ function startLastUpdatedTicker() {
                 img.onerror=()=>{if(next<urls.length)img.src=urls[next++];else{img.onerror=null;img.removeAttribute('src')}};
                 const override=IMAGE_OVERRIDES[p.n.toLowerCase().trim()];if(override)img.src=override;else if(urls.length)img.src=urls[next++];
                 imgBox.append(img);card.append(imgBox);
-                const name=document.createElement('div');name.className='card-name';name.textContent=p.n;card.append(name);
+                const name=document.createElement('div');name.className='card-name';name.textContent=p.n;for(const marker of ['📈','📉','🔥','❄️'])if(String(p.vt||'').includes(marker)||String(p.dt||'').includes(marker))name.append(document.createTextNode(' '+marker));card.append(name);
                 const value=document.createElement('div');value.className='card-val';value.textContent=v===null?'N/A':v.toFixed(2);card.append(value);
-                const dem=document.createElement('div');dem.className='card-demand';dem.textContent=d===null?'Demand —':'Demand '+d.toFixed(1);if(d!==null)dem.style.color=getDemandColor(d);card.append(dem);
+                const dem=document.createElement('div');dem.className='card-demand';dem.textContent=d===null?'Dem: —':'Dem: '+d;if(d!==null)dem.style.color=getDemandColor(d);card.append(dem);
                 const toggles=document.createElement('div');toggles.className='toggles';
                 for(const [letter,flag,on,label] of [['N','n',p.type==='neon','Neon'],['M','m',p.type==='mega','Mega'],['F','f',p.f_st,'Fly'],['R','r',p.r_st,'Ride']]){const b=button(letter,'t-btn'+(on?' active':''),()=>tog(s,p.uid,flag),label);b.setAttribute('aria-pressed',String(!!on));toggles.append(b)}
                 card.append(toggles);frag.append(card);
             }
-            const add=document.createElement('button');add.type='button';add.className='plus calc-add-pet';add.textContent='+ Add pet';add.onclick=()=>openSearch(s);add.disabled=list.length>=18;frag.append(add);
+            const add=document.createElement('button');add.type='button';add.className='plus calc-legacy-add';add.textContent='+';add.setAttribute('aria-label','Add pet');add.onclick=()=>openSearch(s);add.disabled=list.length>=18;frag.append(add);
             grid.replaceChildren(frag);
             document.getElementById('tot'+s).innerText=missing?'N/A':totalV.toFixed(2);
             document.getElementById('cnt'+s).innerText=list.length;
@@ -5575,7 +5583,7 @@ if (advisorShowMega) {
             renderKeybindList();
             document.getElementById('uiScaleSlider').value = Math.round(state.uiScale * 100);
             document.getElementById('uiScaleLabel').textContent = Math.round(state.uiScale * 100) + '%';
-            refreshSettingBtns();
+            refreshSettingBtns();syncSourceButtons();updateCatalogBadge();
         }
 
         function closeSettings() {
@@ -9032,6 +9040,7 @@ if (verdict && verdict.label !== '?') {
 }
 
     </script>
+    <div id="verdictExtras" class="verdict-extras"></div>
 
     <!-- AI STRATEGIST FULLSCREEN OVERLAY -->
     <div id="aiFullscreenOverlay">
