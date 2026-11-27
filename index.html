@@ -1814,21 +1814,23 @@ function renderPetMarketData(petData){
     const fmt=x=>Number.isFinite(x)&&x>0?x.toLocaleString(undefined,{maximumFractionDigits:4}):'N/A';
     const heading=make('h3',petData.n+' — market data');heading.style.marginBottom='10px';root.append(heading);
     if(!base){root.append(make('p','This pet is not in the loaded value catalog.'));return}
-    root.append(make('p','Source: your existing Google Sheets catalog. Provider update times are not verified. Combined estimates use Elvebredd units.'));
+    root.append(make('p','Saved spreadsheet values — not a direct provider feed. Combined estimates use the saved Elvebredd scale. Demand /10 comes from your old spreadsheet, not an official live Elvebredd rating.'));
+    const official=document.createElement('div');official.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:10px 0';
+    for(const [label,url] of [['Elvebredd calculator','https://elvebredd.com/adopt-me-calculator'],['Elvebredd value history','https://elvebredd.com/value-updates'],['AMVGG values','https://amvgg.com/values/pets']]){const link=make('a',label);link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.style.cssText='color:var(--accent);font-size:.8em;text-decoration:underline';official.append(link)}root.append(official);
     const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;margin:12px 0;font-size:.82em;text-align:left';
     const addRow=(cells,header=false,selected=false)=>{const tr=document.createElement('tr');if(selected)tr.style.background='var(--card-bg)';for(const t of cells){const c=make(header?'th':'td',t);c.style.cssText='padding:8px 5px;border-bottom:1px solid var(--border)';tr.append(c)}table.append(tr)};
-    addRow(['Variant','Elvebredd','AMVGG','Combined','Demand /10'],true);
+    addRow(['Variant','Elve (saved)','AMVGG (saved)','Combined','Sheet demand /10'],true);
     for(const [type,label] of [['reg','Normal'],['neon','Neon'],['mega','Mega']])for(const [f,r,suffix] of [[false,false,''],[true,false,' F'],[false,true,' R'],[true,true,' FR']]){
         const pet={...base,type,f_st:f,r_st:r};
         addRow([label+suffix,fmt(exactPetValue(pet,'value')),fmt(exactPetValue(pet,'baseless')),fmt(exactPetValue(pet,'combined')),fmt(exactDemand(pet))],false,(petData.type||'reg')===type&&!!petData.f_st===f&&!!petData.r_st===r);
     }
     root.append(table);
     const star=base[(petData.type==='neon'?'aDemandNe':petData.type==='mega'?'aDemandM':'aDemandN')];
-    root.append(make('p','AMVGG demand for this growth stage: '+(star==null?'Not available':star+'/3 stars')));
+    root.append(make('p','Saved AMVGG demand for this growth stage: '+(star==null?'Not available':star+'/3 stars')));
     if(base.vt)root.append(make('p','Value trend: '+base.vt));if(base.dt)root.append(make('p','Demand trend: '+base.dt));
     const records=HISTORY_DATA.filter(p=>String(p.name||p['pet name']||'').toLowerCase().trim()===base.n.toLowerCase().trim());
     const latest=Math.max(0,...records.map(p=>new Date(p.date||p.timestamp||p.time||'').getTime()).filter(Number.isFinite));
-    root.append(make('p','Legacy Elvebredd history: '+records.length+' recorded snapshots'+(latest?' · latest '+new Date(latest).toLocaleString():'')+'.'));
+    root.append(make('p','Saved Elvebredd history: '+records.length+' recorded snapshots'+(latest?' · latest '+new Date(latest).toLocaleString():'')+'.'));
 }
 async function openGraph(petData) {
     const token=++graphOpenToken,mode=state.mode;
@@ -1858,17 +1860,17 @@ async function openGraph(petData) {
         }
         if(mode==='baseless')add('AMVGG: only actual AMVGG sheet observations are shown. The older history sheet has no AMVGG records.');
         else if(mode==='combined')add('Combined history uses paired observations and the conversion factor recorded at that time; older Elve-only snapshots are excluded.');
-        else add('Elvebredd: historical sheet values plus subsequent sheet observations. Missing variants are not substituted.');
+        else add('Elvebredd: saved spreadsheet history plus subsequent spreadsheet observations. Official provider history is not connected. Missing variants are not substituted.');
         add('Observation timestamps indicate when the spreadsheet was checked, not when a provider published a change. Recent observations are retained on this browser.');
         if(mode!=='combined'){
-            const link=document.createElement('a');link.href=mode==='baseless'?'https://amvgg.com/values/pets':'https://elvebredd.com/value-updates';link.textContent='View '+sourceLabel+' directly';link.target='_blank';link.rel='noopener noreferrer';link.style.color='#38bdf8';analysis.append(link);
+            const link=document.createElement('a');link.href=mode==='baseless'?'https://amvgg.com/values/pets':'https://elvebredd.com/value-updates';link.textContent=mode==='baseless'?'Open official AMVGG values':'Open official Elvebredd value history';link.target='_blank';link.rel='noopener noreferrer';link.style.color='#38bdf8';analysis.append(link);
         }
         if(!points.length){empty.textContent='No recorded '+sourceLabel+' history for this exact variant. Market Data shows the loaded catalog values.';return}
         if(typeof Chart==='undefined'){empty.textContent='Chart library unavailable. Recorded values are summarized below.';return}
         empty.style.display='none';canvas.style.display='';
         const dataset=[];
-        if(values.length)dataset.push({label:sourceLabel+' value',data:points.map(p=>p.value),yAxisID:'value',borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.1)',borderWidth:3,pointRadius:values.length===1?5:2,fill:false,tension:.15,spanGaps:false});
-        if(demands.length)dataset.push({label:mode==='baseless'?'AMVGG demand stars':'Legacy demand score',data:points.map(p=>p.demand),yAxisID:'demand',borderColor:'#fbbf24',borderWidth:2,pointRadius:demands.length===1?5:2,fill:false,tension:.15,spanGaps:false});
+        if(values.length)dataset.push({label:sourceLabel+' value (saved records)',data:points.map(p=>p.value),yAxisID:'value',borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.1)',borderWidth:3,pointRadius:values.length===1?5:2,fill:false,tension:.15,spanGaps:false});
+        if(demands.length)dataset.push({label:mode==='baseless'?'Saved AMVGG demand stars':'Spreadsheet demand (0–10)',data:points.map(p=>p.demand),yAxisID:'demand',borderColor:'#fbbf24',borderWidth:2,pointRadius:demands.length===1?5:2,fill:false,tension:.15,spanGaps:false});
         petChart=new Chart(canvas.getContext('2d'),{type:'line',data:{labels:points.map(p=>new Date(p.t).toLocaleString()),datasets:dataset},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{value:{type:'linear',display:values.length>0,position:'left',grid:{color:'#334155'},ticks:{color:'#94a3b8'},beginAtZero:false},demand:{type:'linear',display:demands.length>0,position:'right',min:0,max:demandMax,grid:{drawOnChartArea:false},ticks:{color:'#fbbf24'}},x:{grid:{display:false},ticks:{color:'#94a3b8',maxTicksLimit:8}}},plugins:{legend:{labels:{color:'white'}},tooltip:{callbacks:{afterTitle:items=>points[items[0]?.dataIndex]?.origin||''}}}}});
     }catch(e){if(token===graphOpenToken){empty.style.display='block';empty.textContent='Unable to load history: '+e.message;console.error(e)}}
 }
@@ -3117,7 +3119,7 @@ function updateCatalogBadge() {
             for(const [id,mode] of [['btnValue','value'],['btnBaseless','baseless'],['btnCombined','combined']]){const el=document.getElementById(id);if(el){el.classList.toggle('active',state.mode===mode);el.setAttribute('aria-pressed',String(state.mode===mode))}}
             for(const id of ['calcValueSource','listValueSource']){const select=document.getElementById(id);if(select)select.value=state.mode;}
             const vb=document.getElementById('btnValue');if(vb)vb.textContent=state.mode==='combined'?'Combined':'Value';if(vb&&state.mode==='combined'){vb.classList.add('active');vb.setAttribute('aria-pressed','true')}
-            const note=document.getElementById('calcSourceNote');if(note)note.textContent=state.mode==='combined'?(combinedFactor===null?'Combined · insufficient matching anchors':'Combined · estimated Elve scale'):state.mode==='baseless'?'AMVGG · sheet data':'Elvebredd · sheet data';
+            const note=document.getElementById('calcSourceNote');if(note)note.textContent=state.mode==='combined'?(combinedFactor===null?'Combined · insufficient matching anchors':'Combined · saved sheet estimate'):state.mode==='baseless'?'AMVGG · saved spreadsheet data':'Elvebredd · saved spreadsheet data';
         }
         function refreshCalcCatalog(){void loadPetData(ALL_PETS.length>0);}
         // Renders the inventory grid and updates all stat displays.
