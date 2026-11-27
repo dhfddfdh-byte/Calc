@@ -1716,39 +1716,16 @@
         const text = await response.text();
         console.log("📄 Raw CSV received, length:", text.length);
         
-        const lines = text.trim().split('\n');
-        console.log("📊 Total lines in CSV:", lines.length);
-        
-        if (lines.length < 2) {
-            console.warn("⚠️ No history data rows (only header or empty)");
-            return;
-        }
-        
-        // Get headers to map columns correctly
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-        console.log("📊 Headers:", headers);
-        
-        // Parse with ALL columns preserved
-        HISTORY_DATA = lines.slice(1).map((line, index) => {
-            const vals = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            const row = {};
-            
-            headers.forEach((header, i) => {
-                const val = vals[i]?.trim() || '';
-                // Convert numbers, keep strings as-is
-                row[header] = (!isNaN(parseFloat(val)) && isFinite(val) && val !== '') 
-                    ? parseFloat(val) 
-                    : val;
-            });
-            
-            // Log first row for debugging
-            if (index === 0) {
-                console.log("📊 Sample row:", row);
-            }
-            
+        const rows=parseCsvRows(text);
+        if(rows.length<2)return;
+        const headers=rows.shift().map(h=>h.trim().toLowerCase());
+        const timeCol=headers.findIndex(h=>['timestamp','date','time'].includes(h)),nameCol=headers.findIndex(h=>['pet name','name'].includes(h));
+        if(timeCol<0||nameCol<0)throw Error('History sheet headers missing');
+        HISTORY_DATA=rows.map(cells=>{
+            const row=Object.create(null);
+            headers.forEach((h,k)=>{if(!h)return;const v=String(cells[k]??'').trim();row[h]=k===timeCol||k===nameCol||v===''?v:Number.isFinite(Number(v.replace(/,/g,'')))?Number(v.replace(/,/g,'')):v;});
             return row;
-        }).filter(row => row.name || row['pet name']); // Support both column names
-        
+        }).filter(row=>row.name||row['pet name']);
         console.log("✅ History loaded successfully:", HISTORY_DATA.length, "records");
         buildManipCache();    // pre-compute manipulation flags
         buildDynamicHTT();    // build dynamic HTT from live demand/trend data
@@ -1851,499 +1828,49 @@ function renderPetMarketData(petData){
     if(base.vt)root.append(make('p','Value trend: '+base.vt));if(base.dt)root.append(make('p','Demand trend: '+base.dt));
     const records=HISTORY_DATA.filter(p=>String(p.name||p['pet name']||'').toLowerCase().trim()===base.n.toLowerCase().trim());
     const latest=Math.max(0,...records.map(p=>new Date(p.date||p.timestamp||p.time||'').getTime()).filter(Number.isFinite));
-    root.append(make('p','History: '+records.length+' recorded snapshots'+(latest?' · latest '+new Date(latest).toLocaleString():'')+'.'));
+    root.append(make('p','Legacy Elvebredd history: '+records.length+' recorded snapshots'+(latest?' · latest '+new Date(latest).toLocaleString():'')+'.'));
 }
 async function openGraph(petData) {
-    const token=++graphOpenToken;
-    document.getElementById('graphTitle').textContent=String(petData.n).toUpperCase();
+    const token=++graphOpenToken,mode=state.mode;
+    const sourceLabel=mode==='baseless'?'AMVGG':mode==='combined'?'Combined estimate':'Elvebredd';
+    const title=document.getElementById('graphTitle'),empty=document.getElementById('petHistoryEmpty'),canvas=document.getElementById('petChart'),analysis=document.getElementById('trendAnalysis');
+    title.textContent=String(petData.n).toUpperCase()+' · '+sourceLabel;
     document.getElementById('graphOverlay').style.display='flex';
     if(petChart){petChart.destroy();petChart=null}
-    document.getElementById('trendAnalysis').replaceChildren();
-    document.getElementById('petChart').style.display='none';
-    const empty=document.getElementById('petHistoryEmpty');empty.style.display='block';empty.textContent='Loading history…';
+    analysis.replaceChildren();canvas.style.display='none';empty.style.display='block';empty.textContent='Loading '+sourceLabel+' history…';
     renderPetMarketData(petData);switchPetHistoryTab('history');
-    await fetchHistory();
-    if(token!==graphOpenToken||document.getElementById('graphOverlay').style.display==='none')return;
-    renderPetMarketData(petData);
-    
-    // Extract name and type from the petData object
-    const name = petData.n;
-    const type = petData.type || 'reg';
-    const isFly = petData.f_st || false;
-    const isRide = petData.r_st || false;
-    
-    // Determine which columns to use based on type and potions
-    // Determine which columns to use based ONLY on type (Neon/Mega/Normal)
-    // Ignore Fly/Ride variants - always use base version
-    let demandKey = 'd';
-    let valueKey = 'v';
-    
-    if (type === 'neon') {
-        demandKey = 'nd';
-        valueKey = 'n_v';
-    } else if (type === 'mega') {
-        demandKey = 'md';
-        valueKey = 'm_v';
-    } else {
-        // Normal (base version, no fly/ride)
-        demandKey = 'd';
-        valueKey = 'v';
-    }
-    
-    // Filter history for this specific pet (case insensitive)
-    const petHistory = HISTORY_DATA.filter(p => {
-        const histName = (p.name || p['pet name'] || '').toLowerCase().trim();
-        return histName === name.toLowerCase().trim();
-    });
-    
-    if (petHistory.length < 2) {
-        empty.textContent='Not enough historical data for '+name+'. Open Market Data to view available values.';
-        return;
-    }
-    
-    // Create title with version info
-    // Create title with version info (ONLY Neon/Mega/Normal - ignore Fly/Ride)
-    let versionText = type === 'neon' ? 'NEON ' : (type === 'mega' ? 'MEGA ' : 'NORMAL ');
-    
-    // Override valueKey to use base values (ignore fly/ride variants)
-    if (type === 'neon') {
-        valueKey = 'n_v';
-    } else if (type === 'mega') {
-        valueKey = 'm_v';
-    } else {
-        valueKey = 'v';
-    }
-    
-    document.getElementById('graphTitle').innerText = versionText + name.toUpperCase();
-    document.getElementById('graphOverlay').style.display = 'flex';
-    
-    if(typeof Chart==='undefined'){empty.textContent='History chart unavailable. Market Data is still available.';return;}
-    empty.style.display='none';document.getElementById('petChart').style.display='';
-    const ctx = document.getElementById('petChart').getContext('2d');
-    if (petChart) petChart.destroy();
-    
-    // Extract the correct data using the determined keys
-    const demandData = petHistory.map(p => p[demandKey] || p.d || 0);
-    const valueData = petHistory.map(p => p[valueKey] || p.v || 0);
-    
-    console.log(`📊 Graphing ${name} (${versionText})`);
-    console.log(`📊 Using demand key: ${demandKey}, value key: ${valueKey}`);
-    console.log(`📊 Sample values - Demand: ${demandData[0]}, Value: ${valueData[0]}`);
-    
-    const dataPointCount = valueData.length;
-    const firstValue = valueData[0];
-    const lastValue = valueData[valueData.length - 1];
-    const minValue = Math.min(...valueData);
-    const maxValue = Math.max(...valueData);
-    const firstDemand = demandData[0];
-    const lastDemand = demandData[demandData.length - 1];
-    const avgDemand = demandData.reduce((a, b) => a + b, 0) / demandData.length;
-    const peakDemand = Math.max(...demandData);
-    const lowestDemand = Math.min(...demandData);
-    
-    // OVERALL TREND (entire dataset)
-    const overallValueChange = lastValue - firstValue;
-    const overallValueChangePercent = ((overallValueChange / firstValue) * 100);
-    const overallDemandChange = lastDemand - firstDemand;
-    const overallDemandChangePercent = firstDemand > 0 ? ((overallDemandChange / firstDemand) * 100) : 0;
-    
-    // RECENT TREND (last 25% of data vs previous 75%)
-    const splitPoint = Math.floor(dataPointCount * 0.75);
-    const recentValues = valueData.slice(splitPoint);
-    const olderValues = valueData.slice(0, splitPoint);
-    const recentAvg = recentValues.reduce((a, b) => a + b, 0) / recentValues.length;
-    const olderAvg = olderValues.reduce((a, b) => a + b, 0) / olderValues.length;
-    const recentTrendChange = ((recentAvg - olderAvg) / olderAvg) * 100;
-    
-    const recentDemands = demandData.slice(splitPoint);
-    const olderDemands = demandData.slice(0, splitPoint);
-    const recentDemandAvg = recentDemands.reduce((a, b) => a + b, 0) / recentDemands.length;
-    const olderDemandAvg = olderDemands.reduce((a, b) => a + b, 0) / olderDemands.length;
-    const recentDemandTrendChange = olderDemandAvg > 0 ? ((recentDemandAvg - olderDemandAvg) / olderDemandAvg) * 100 : 0;
-    
-    // MOMENTUM DETECTION (is trend accelerating or decelerating?)
-    let momentum = 'neutral';
-    if (dataPointCount >= 6) {
-        const third = Math.floor(dataPointCount / 3);
-        const early = valueData.slice(0, third);
-        const mid = valueData.slice(third, third * 2);
-        const late = valueData.slice(third * 2);
-        const earlyAvg = early.reduce((a, b) => a + b, 0) / early.length;
-        const midAvg = mid.reduce((a, b) => a + b, 0) / mid.length;
-        const lateAvg = late.reduce((a, b) => a + b, 0) / late.length;
-        const earlySlope = midAvg - earlyAvg;
-        const lateSlope = lateAvg - midAvg;
-        if (Math.abs(lateSlope) > Math.abs(earlySlope) * 1.3) {
-            momentum = lateSlope > 0 ? 'accelerating upward' : 'accelerating downward';
-        } else if (Math.abs(lateSlope) < Math.abs(earlySlope) * 0.7) {
-            momentum = 'decelerating';
+    try{
+        const mod=await import('./src/v2/pet-history.mjs');
+        await Promise.all([fetchHistory(),catalogHistoryWrite]);
+        if(token!==graphOpenToken||document.getElementById('graphOverlay').style.display==='none')return;
+        renderPetMarketData(petData);
+        const {variant,points,demandMax}=mod.buildSeries(petData,mode,HISTORY_DATA,mod.readObservations());
+        title.textContent=String(petData.n).toUpperCase()+' · '+variant+' · '+sourceLabel;
+        const values=points.filter(p=>p.value!==null);
+        const demands=points.filter(p=>p.demand!==null);
+        const add=(text,tag='p')=>{const el=document.createElement(tag);el.textContent=text;el.style.margin='5px 0';analysis.append(el);return el};
+        add(sourceLabel+' · '+variant,'strong');
+        add(values.length+' value observations · '+demands.length+' demand observations');
+        if(values.length){
+            const first=values[0],last=values.at(-1);
+            add('Latest recorded value: '+last.value.toLocaleString(undefined,{maximumFractionDigits:4})+' · '+new Date(last.t).toLocaleString());
+            if(values.length>1)add('Recorded change: '+((last.value-first.value)/first.value*100).toFixed(2)+'%');
         }
-    }
-    
-    // VOLATILITY ANALYSIS
-    const volatilityRange = maxValue - minValue;
-    const volatilityPercent = ((volatilityRange / firstValue) * 100);
-    let valueFluctuations = 0;
-    let upMoves = 0;
-    let downMoves = 0;
-    for (let i = 1; i < valueData.length; i++) {
-        const change = valueData[i] - valueData[i-1];
-        valueFluctuations += Math.abs(change);
-        if (change > 0) upMoves++;
-        else if (change < 0) downMoves++;
-    }
-    const avgFluctuation = valueFluctuations / (valueData.length - 1);
-    const isVolatile = volatilityPercent > 20 || avgFluctuation > firstValue * 0.05;
-    const volatilityBias = upMoves > downMoves * 1.3 ? 'upward' : downMoves > upMoves * 1.3 ? 'downward' : 'neutral';
-    
-    // PEAK DETECTION
-    const isNearPeak = lastValue >= maxValue * 0.95;
-    const isNearBottom = lastValue <= minValue * 1.05;
-    
-    // ── REAL DATE/TIME PARSING ────────────────────────────────
-    // Tries multiple common date formats from the CSV timestamps
-    function parseTimestamp(raw) {
-        if (!raw || typeof raw !== 'string') return null;
-        const s = raw.trim();
-        // Try native parse first (ISO, MM/DD/YYYY, etc.)
-        let d = new Date(s);
-        if (!isNaN(d)) return d;
-        // Try DD/MM/YYYY
-        const dmy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
-        if (dmy) { d = new Date(`${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`); if (!isNaN(d)) return d; }
-        // Try Month DD (e.g. "Jan 5" or "January 5")
-        const monthDay = s.match(/^([A-Za-z]+)\s+(\d{1,2}),?\s*(\d{4})?$/);
-        if (monthDay) { d = new Date(`${monthDay[1]} ${monthDay[2]} ${monthDay[3] || new Date().getFullYear()}`); if (!isNaN(d)) return d; }
-        return null;
-    }
-
-    const rawTimestamps = petHistory.map(p => p.timestamp || p.time || p.date || '');
-    const parsedDates   = rawTimestamps.map(parseTimestamp);
-    const validDates    = parsedDates.filter(d => d !== null);
-    const hasRealDates  = validDates.length >= 2;
-
-    let totalDaysSpan     = null;
-    let avgDaysBetweenPoints = null;
-    let isSparseData      = false;
-    let timeSpan          = 'unknown timeframe';
-    let perDayValueChange = null;   // absolute value change per day
-    let recentDaysWindow  = null;   // how many calendar days the "recent" slice covers
-
-    if (hasRealDates) {
-        const firstDate = validDates[0];
-        const lastDate  = validDates[validDates.length - 1];
-        const MS_PER_DAY = 86400000;
-        totalDaysSpan = Math.round((lastDate - firstDate) / MS_PER_DAY);
-        avgDaysBetweenPoints = dataPointCount > 1 ? totalDaysSpan / (dataPointCount - 1) : 0;
-        isSparseData = avgDaysBetweenPoints > 14; // more than 2 weeks between updates = sparse
-
-        // Per-day rate of value change
-        if (totalDaysSpan > 0) {
-            perDayValueChange = overallValueChange / totalDaysSpan;
+        if(mode==='baseless')add('AMVGG: only actual AMVGG sheet observations are shown. The older history sheet has no AMVGG records.');
+        else if(mode==='combined')add('Combined history uses paired observations and the conversion factor recorded at that time; older Elve-only snapshots are excluded.');
+        else add('Elvebredd: historical sheet values plus subsequent sheet observations. Missing variants are not substituted.');
+        add('Observation timestamps indicate when the spreadsheet was checked, not when a provider published a change. Recent observations are retained on this browser.');
+        if(mode!=='combined'){
+            const link=document.createElement('a');link.href=mode==='baseless'?'https://amvgg.com/values/pets':'https://elvebredd.com/value-updates';link.textContent='View '+sourceLabel+' directly';link.target='_blank';link.rel='noopener noreferrer';link.style.color='#38bdf8';analysis.append(link);
         }
-
-        // How many days does the "recent" slice cover?
-        const splitDateIdx = Math.floor(validDates.length * 0.75);
-        if (splitDateIdx < validDates.length) {
-            recentDaysWindow = Math.round((lastDate - validDates[splitDateIdx]) / MS_PER_DAY);
-        }
-
-        // Human-readable span
-        if (totalDaysSpan < 7) timeSpan = `past ${totalDaysSpan} day${totalDaysSpan !== 1 ? 's' : ''}`;
-        else if (totalDaysSpan < 30) timeSpan = `past ${Math.round(totalDaysSpan / 7)} week${Math.round(totalDaysSpan / 7) !== 1 ? 's' : ''}`;
-        else if (totalDaysSpan < 365) timeSpan = `past ${Math.round(totalDaysSpan / 30)} month${Math.round(totalDaysSpan / 30) !== 1 ? 's' : ''}`;
-        else timeSpan = `past ${(totalDaysSpan / 365).toFixed(1)} year${totalDaysSpan > 500 ? 's' : ''}`;
-    } else {
-        // No parseable dates — fall back to point-count language
-        timeSpan = `across ${dataPointCount} recorded update${dataPointCount !== 1 ? 's' : ''}`;
-    }
-
-    // CONFIDENCE SCORE — now based on days & density, not just count
-    let confidence = 'LOW';
-    let confidenceNote = '';
-    if (hasRealDates) {
-        if (totalDaysSpan >= 60 && dataPointCount >= 8 && !isSparseData) {
-            confidence = 'HIGH';
-            confidenceNote = `${dataPointCount} points over ${totalDaysSpan} days`;
-        } else if (totalDaysSpan >= 21 && dataPointCount >= 5) {
-            confidence = 'MEDIUM';
-            confidenceNote = `${dataPointCount} points over ${totalDaysSpan} days`;
-            if (isSparseData) confidenceNote += ' (sparse — avg ' + Math.round(avgDaysBetweenPoints) + 'd between updates)';
-        } else {
-            confidence = 'LOW';
-            confidenceNote = `only ${totalDaysSpan} days of data`;
-            if (isSparseData) confidenceNote += ', sparsely recorded';
-        }
-    } else {
-        if (dataPointCount >= 20) confidence = 'MEDIUM';
-        confidenceNote = `${dataPointCount} data point${dataPointCount !== 1 ? 's' : ''}, no parseable timestamps`;
-    }
-    
-    // BUILD TREND TEXT (date-aware)
-    let trendText = '';
-
-    let overallDirection = overallValueChangePercent > 10 ? 'Strong upward' :
-                          overallValueChangePercent > 5  ? 'Moderate upward' :
-                          overallValueChangePercent > 2  ? 'Slight upward' :
-                          overallValueChangePercent < -10? 'Sharp downward' :
-                          overallValueChangePercent < -5 ? 'Moderate downward' :
-                          overallValueChangePercent < -2 ? 'Slight downward' : 'Stable';
-
-    trendText = `<strong>${overallDirection}</strong> overall trend (${timeSpan}): ${firstValue.toFixed(2)} → ${lastValue.toFixed(2)} (<span style="color: ${overallValueChangePercent >= 0 ? 'var(--win)' : 'var(--lose)'};">${overallValueChangePercent > 0 ? '+' : ''}${overallValueChangePercent.toFixed(1)}%</span>). `;
-
-    // Show per-day rate of change if we have real dates
-    if (perDayValueChange !== null && totalDaysSpan > 3) {
-        const pdSign = perDayValueChange >= 0 ? '+' : '';
-        trendText += `Rate of change: <strong style="color:${perDayValueChange >= 0 ? 'var(--win)' : 'var(--lose)'};">${pdSign}${perDayValueChange.toFixed(3)} value/day</strong>. `;
-    }
-
-    // Sparse data warning
-    if (hasRealDates && isSparseData) {
-        trendText += `<span style="color:var(--trap)">⚠️ Sparse data — recorded roughly every ${Math.round(avgDaysBetweenPoints)} days, so short-term moves may be invisible.</span> `;
-    }
-
-    // Recent trend comparison — only show if recent window is meaningful in days
-    const recentWindowLabel = (hasRealDates && recentDaysWindow !== null)
-        ? (recentDaysWindow < 7 ? `last ${recentDaysWindow}d` : `last ~${Math.round(recentDaysWindow/7)}wk`)
-        : 'recent';
-    if (Math.abs(recentTrendChange - overallValueChangePercent) > 5) {
-        if (recentTrendChange > 0 && overallValueChangePercent < 0) {
-            trendText += `<strong style="color: var(--win);">🔄 RECOVERING (${recentWindowLabel}):</strong> Up <span style="color: var(--win);">+${recentTrendChange.toFixed(1)}%</span> despite overall decline. `;
-        } else if (recentTrendChange < -5 && overallValueChangePercent > 0) {
-            trendText += `<strong style="color: var(--lose);">⚠️ WEAKENING (${recentWindowLabel}):</strong> Down <span style="color: var(--lose);">${recentTrendChange.toFixed(1)}%</span> despite overall growth. `;
-        } else if (recentTrendChange > overallValueChangePercent + 5) {
-            trendText += `<strong style="color: var(--win);">📈 MOMENTUM BUILDING (${recentWindowLabel}):</strong> <span style="color: var(--win);">+${recentTrendChange.toFixed(1)}%</span> stronger than overall trend. `;
-        }
-    }
-
-    // Demand analysis
-    let demandStatus = lastDemand >= 8 ? 'excellent' : lastDemand >= 6 ? 'strong' : lastDemand >= 4 ? 'moderate' : lastDemand >= 2 ? 'weak' : 'very poor';
-    trendText += `Demand is <strong style="color: ${getDemandColor(lastDemand)};">${demandStatus} (${lastDemand.toFixed(1)})</strong>`;
-    if (Math.abs(overallDemandChangePercent) > 10) {
-        trendText += `, ${overallDemandChangePercent > 0 ? 'up' : 'down'} ${Math.abs(overallDemandChangePercent).toFixed(1)}% from ${firstDemand.toFixed(1)}`;
-    }
-    trendText += '. ';
-
-    // Peak/bottom — only assert if data covers enough days
-    const enoughDaysForPeak = !hasRealDates ? (dataPointCount >= 10) : (totalDaysSpan >= 30);
-    if (isNearPeak && enoughDaysForPeak) {
-        trendText += `<strong style="color: var(--trap);">⚠️ Near recorded high</strong> (${lastValue.toFixed(2)} vs peak ${maxValue.toFixed(2)} over ${timeSpan}). `;
-    } else if (isNearPeak) {
-        trendText += `Currently at the top of its <em>recent</em> range — not enough history to call this an all-time high. `;
-    }
-    if (isNearBottom && enoughDaysForPeak) {
-        trendText += `<strong>Near recorded low</strong> (${lastValue.toFixed(2)} vs bottom ${minValue.toFixed(2)} over ${timeSpan}). `;
-    } else if (isNearBottom) {
-        trendText += `At the bottom of its recent recorded range. `;
-    }
-
-    // Volatility
-    if (isVolatile) {
-        trendText += `<strong style="color: var(--trap);">High volatility</strong> (${volatilityPercent.toFixed(1)}% swing${hasRealDates ? ' over ' + timeSpan : ''}) with ${volatilityBias} bias. `;
-    }
-
-    // Momentum
-    if (momentum !== 'neutral') {
-        trendText += `Trend is <strong>${momentum}</strong>. `;
-    }
-    
-    // ===================================================
-    // Feature 7: Overhauled Trend Analysis & Recommendations
-    // Uses real date/day calculations where available
-    // ===================================================
-    let recommendation = '';
-    let recommendColor = 'white';
-
-    const catStr     = (petData.cat || '').toLowerCase();
-    const isHighTier = catStr.includes('high tier') || catStr.includes('preppy') || catStr.includes('exotic');
-    const isRandom   = catStr.includes('random') || catStr.includes('common') || catStr.includes('uncommon');
-
-    // Noise threshold — scale based on actual days if available
-    const noiseValPct  = hasRealDates && totalDaysSpan < 14 ? 5 : 3;
-    const isSmallFluctuation = Math.abs(overallValueChangePercent) < noiseValPct && Math.abs(overallDemandChange) < 0.5;
-
-    // Genuine peak/low requires meaningful time coverage
-    const enoughHistory      = hasRealDates ? totalDaysSpan >= 30 : dataPointCount >= 10;
-    const genuineHistoricalHigh = enoughHistory && isNearPeak;
-    const genuineHistoricalLow  = enoughHistory && isNearBottom;
-
-    // Limited data: less than 5 points OR less than 7 days if we have dates
-    const limitedData = hasRealDates ? (totalDaysSpan < 7 || dataPointCount < 3) : dataPointCount < 5;
-
-    // "Strong" trend requires meaningful time to confirm — a 10% move in 2 days is less reliable than over 2 weeks
-    const sustainedUptrend  = overallValueChangePercent > 10 && recentTrendChange > 5
-                              && (!hasRealDates || totalDaysSpan >= 14);
-    const sustainedDowntrend = overallValueChangePercent < -8 && recentTrendChange < -3
-                              && (!hasRealDates || totalDaysSpan >= 14);
-
-    if (limitedData) {
-        // Not enough data — don't make dramatic claims
-        if (lastDemand >= 7) {
-            recommendation = '📊 Limited data — not enough history for confident analysis. Demand looks solid right now.';
-            recommendColor = 'var(--subtext)';
-        } else if (lastDemand >= 4) {
-            recommendation = '📊 Limited data — only ' + dataPointCount + ' point(s) available. Current demand is average. Trade carefully.';
-            recommendColor = 'var(--subtext)';
-        } else {
-            recommendation = '📊 Limited data with low demand. Insufficient history to judge trend — approach with caution.';
-            recommendColor = 'var(--trap)';
-        }
-    } else if (isSmallFluctuation) {
-        // Minor noise, don't over-react
-        if (lastDemand >= 7) {
-            recommendation = '✅ Short-term fluctuation in a high-demand pet — long-term stable. Good time to trade for or hold.';
-            recommendColor = 'var(--win)';
-        } else if (lastDemand >= 4) {
-            recommendation = '➡️ Minor noise — value and demand are essentially flat. Neutral outlook; neither rush to trade nor avoid.';
-            recommendColor = 'white';
-        } else {
-            recommendation = '⚠️ Stable but weak demand. Low trading velocity — consider whether you can move this pet before acquiring.';
-            recommendColor = 'var(--trap)';
-        }
-    } else if (genuineHistoricalHigh) {
-        // Confirmed near peak across many data points
-        if (isHighTier && lastDemand >= 7 && momentum === 'accelerating upward') {
-            recommendation = '⚠️ High-Tier pet at confirmed multi-week peak with strong demand. Could continue rising, but risk of correction is real. Advanced traders only — consider holding rather than trading away.';
-            recommendColor = 'var(--trap)';
-        } else if (isHighTier) {
-            recommendation = '⚠️ High-Tier pet at genuine historical high (' + dataPointCount + ' data points). Consider holding rather than trading away — re-entry after a dip may be costly.';
-            recommendColor = 'var(--trap)';
-        } else {
-            recommendation = '⚠️ At confirmed historical high. High risk of pullback. Wait for a dip before acquiring.';
-            recommendColor = 'var(--trap)';
-        }
-    } else if (genuineHistoricalLow) {
-        // Confirmed near bottom
-        if (lastDemand >= 5 && recentTrendChange > 0) {
-            recommendation = '✅ Short-term dip, long-term stable — this is a reasonable time to trade for. Demand is healthy and recent trend is recovering.';
-            recommendColor = 'var(--win)';
-        } else if (lastDemand >= 5) {
-            recommendation = '⚠️ Near confirmed historical low. Demand is ok, but value has not started recovering yet — wait 1–2 more data cycles for confirmation.';
-            recommendColor = 'var(--trap)';
-        } else {
-            recommendation = '❌ Near historical low with weak demand. Both value and interest are depressed — avoid until signs of recovery.';
-            recommendColor = 'var(--lose)';
-        }
-    } else if (sustainedUptrend) {
-        // Strong, confirmed multi-day uptrend
-        const dayCtx = hasRealDates ? ` over ${totalDaysSpan} days` : '';
-        if (isHighTier && lastDemand >= 7) {
-            recommendation = `🔥 Strong uptrend in a High-Tier pet${dayCtx} — consider holding rather than trading away. If acquiring, excellent long-term pick.`;
-            recommendColor = 'var(--win)';
-        } else if (lastDemand >= 6) {
-            recommendation = `🔥 Sustained uptrend${dayCtx} with solid demand. Good acquisition — momentum is confirmed, not a blip.`;
-            recommendColor = 'var(--win)';
-        } else {
-            recommendation = `⚠️ Value rising${dayCtx} but demand is below average. Possible value trap — verify interest before committing.`;
-            recommendColor = 'var(--trap)';
-        }
-    } else if (sustainedDowntrend) {
-        // Confirmed sustained decline
-        const dayCtx = hasRealDates ? ` over ${totalDaysSpan} days` : '';
-        if (recentDemandTrendChange > 15 && lastDemand >= 6) {
-            const watchTime = hasRealDates ? `${Math.max(7, Math.round(totalDaysSpan * 0.2))} more days` : '1–2 more weeks';
-            recommendation = `⚠️ Value dropping${dayCtx} but demand recently spiked. Conflicting signals — watch for ${watchTime} before deciding.`;
-            recommendColor = 'var(--trap)';
-        } else if (isHighTier) {
-            recommendation = `⚠️ High-Tier pet in a confirmed downtrend${dayCtx}. Don't panic-trade — these often stabilise. Wait for value to flatten.`;
-            recommendColor = 'var(--trap)';
-        } else {
-            recommendation = `❌ Sustained value decline${dayCtx} with no reversal. Avoid acquiring. Trade away if you own it.`;
-            recommendColor = 'var(--lose)';
-        }
-    } else if (overallValueChangePercent < -5 && recentTrendChange > 4) {
-        // Declined overall but recently recovering
-        recommendation = '⚠️ Short-term dip with recent recovery signals — watch for 1 more week to confirm reversal before trading for.';
-        recommendColor = 'var(--trap)';
-    } else if (isVolatile) {
-        if (volatilityBias === 'upward' && lastDemand >= 6) {
-            recommendation = '⚠️ Volatile but upward-biased with decent demand. Higher risk, but real upside. Only for experienced traders.';
-            recommendColor = 'var(--trap)';
-        } else if (volatilityBias === 'downward') {
-            recommendation = '❌ High volatility with downward bias. Unpredictable and risky — avoid unless you have a specific strategy.';
-            recommendColor = 'var(--lose)';
-        } else {
-            recommendation = '⚠️ Chaotic price action with no clear direction. Risky entry point — wait for the pattern to settle.';
-            recommendColor = 'var(--trap)';
-        }
-    } else if (lastDemand >= 7 && Math.abs(overallValueChangePercent) <= 5) {
-        recommendation = '✅ Stable value with strong demand — a reliable, liquid pet. Safe to hold or trade; easy to move when needed.';
-        recommendColor = 'var(--win)';
-    } else if (lastDemand < 3) {
-        recommendation = '❌ Very low demand regardless of price action. Hard to find interested traders — poor liquidity. Avoid unless you intend to keep it.';
-        recommendColor = 'var(--lose)';
-    } else {
-        // Fallback moderate cases
-        if (overallValueChangePercent >= 3) {
-            recommendation = '✅ Modest, steady growth with average demand. Decent choice for patient traders; not a high-velocity pick.';
-            recommendColor = 'var(--win)';
-        } else if (overallValueChangePercent >= -3) {
-            recommendation = '➡️ Value is flat with moderate demand. Neutral outlook — fine to hold, no urgent action needed.';
-            recommendColor = 'white';
-        } else {
-            recommendation = '⚠️ Slight decline in value with low-moderate demand. Not alarming, but not ideal. Monitor before committing.';
-            recommendColor = 'var(--trap)';
-        }
-    }
-    
-    // Add confidence score with date context
-    trendText += `<br><br><em style="color: var(--subtext); font-size: 0.85em;">Analysis confidence: <strong>${confidence}</strong> — ${confidenceNote}</em>`;
-    
-    document.getElementById('trendAnalysis').innerHTML = `<strong style="color: var(--accent);">📊 Trend Analysis:</strong><br>${trendText}<br><br><strong style="color: var(--frost);">Recommendation:</strong> <span style="color: ${recommendColor};">${recommendation}</span>`;
-    
-    petChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: petHistory.map(p => p.timestamp || p.time || ''),
-            datasets: [
-                {
-                    label: `Value (${versionText.trim()})`,
-                    data: valueData,
-                    borderColor: '#38bdf8',
-                    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.3
-                },
-                {
-                    label: `Demand (${type === 'neon' ? 'Neon' : type === 'mega' ? 'Mega' : 'Normal'})`,
-                    data: demandData,
-                    borderColor: '#fbbf24',
-                    backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                    borderWidth: 3,
-                    fill: true,
-                    tension: 0.3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { 
-                    grid: { color: '#334155' }, 
-                    ticks: { color: '#94a3b8' },
-                    beginAtZero: false
-                },
-                x: { 
-                    grid: { display: false }, 
-                    ticks: { color: '#94a3b8', maxRotation: 45, minRotation: 45 } 
-                }
-            },
-            plugins: {
-                legend: { 
-                    labels: { color: 'white', font: { weight: 'bold', size: 14 } } 
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}`;
-                        }
-                    }
-                }
-            }
-        }
-    });
+        if(!points.length){empty.textContent='No recorded '+sourceLabel+' history for this exact variant. Market Data shows the loaded catalog values.';return}
+        if(typeof Chart==='undefined'){empty.textContent='Chart library unavailable. Recorded values are summarized below.';return}
+        empty.style.display='none';canvas.style.display='';
+        const dataset=[];
+        if(values.length)dataset.push({label:sourceLabel+' value',data:points.map(p=>p.value),yAxisID:'value',borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.1)',borderWidth:3,pointRadius:values.length===1?5:2,fill:false,tension:.15,spanGaps:false});
+        if(demands.length)dataset.push({label:mode==='baseless'?'AMVGG demand stars':'Legacy demand score',data:points.map(p=>p.demand),yAxisID:'demand',borderColor:'#fbbf24',borderWidth:2,pointRadius:demands.length===1?5:2,fill:false,tension:.15,spanGaps:false});
+        petChart=new Chart(canvas.getContext('2d'),{type:'line',data:{labels:points.map(p=>new Date(p.t).toLocaleString()),datasets:dataset},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{value:{type:'linear',display:values.length>0,position:'left',grid:{color:'#334155'},ticks:{color:'#94a3b8'},beginAtZero:false},demand:{type:'linear',display:demands.length>0,position:'right',min:0,max:demandMax,grid:{drawOnChartArea:false},ticks:{color:'#fbbf24'}},x:{grid:{display:false},ticks:{color:'#94a3b8',maxTicksLimit:8}}},plugins:{legend:{labels:{color:'white'}},tooltip:{callbacks:{afterTitle:items=>points[items[0]?.dataIndex]?.origin||''}}}}});
+    }catch(e){if(token===graphOpenToken){empty.style.display='block';empty.textContent='Unable to load history: '+e.message;console.error(e)}}
 }
         // CONTINUE WITH THE REST OF YOUR ORIGINAL FUNCTIONS HERE
         // (handlePetContext, openInfo, closeInfo, playSfx, pushState, undo, parseCSV, etc.)
@@ -2830,6 +2357,12 @@ function validateCatalogCsv(csv){
         //   5. Trigger render() and any tab-specific render (value, demand, trades)
         let catalogRefreshBusy=false, catalogLastCsv=null, catalogRefreshTimer=null;
         let catalogCheckedAt=0,catalogStatus='checking',catalogTicker=null;
+        let catalogHistoryWrite=Promise.resolve();
+        function recordCatalogHistory(){
+            const pets=ALL_PETS,checkedAt=catalogCheckedAt,factor=combinedFactor;
+            catalogHistoryWrite=catalogHistoryWrite.then(async()=>{const mod=await import('./src/v2/pet-history.mjs');mod.recordObservation(pets,checkedAt,factor)}).catch(e=>console.warn('History snapshot not saved',e));
+            return catalogHistoryWrite;
+        }
         async function loadPetData(refresh=false) {
             if(catalogRefreshBusy)return;
             catalogRefreshBusy=true;
@@ -2858,7 +2391,7 @@ function validateCatalogCsv(csv){
                 }
 
                 if(refresh && csvText===catalogLastCsv) {
-                    catalogCheckedAt=Date.now();catalogStatus='checked';updateCatalogBadge();
+                    catalogCheckedAt=Date.now();catalogStatus='checked';updateCatalogBadge();void recordCatalogHistory();
                     return;
                 }
                 const nextPets = data.map(row => ({
@@ -2911,7 +2444,7 @@ function validateCatalogCsv(csv){
                 ALL_PETS=nextPets;catalogLastCsv=csvText;
                 recomputeCombinedFactor();
                 if(!fromCache&&!fromFallback){try{localStorage.setItem('calc_master_csv_cache',csvText)}catch{}}
-                catalogStatus=fromFallback?'fallback':fromCache?'cached':'checked';if(!fromCache&&!fromFallback)catalogCheckedAt=Date.now();startLastUpdatedTicker();
+                catalogStatus=fromFallback?'fallback':fromCache?'cached':'checked';if(!fromCache&&!fromFallback){catalogCheckedAt=Date.now();void recordCatalogHistory();}startLastUpdatedTicker();
                 document.getElementById('loadingScreen').style.display = 'none';
 
                 buildDynamicHTT();  // initial HTT from pet data (before history)
