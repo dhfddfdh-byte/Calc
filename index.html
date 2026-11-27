@@ -1289,6 +1289,8 @@
                         </select>
                         <button type="button" class="nav-btn" onclick="refreshCalcCatalog()">Refresh data</button>
                     </div>
+                    <div style="display:flex;align-items:center;gap:8px;margin:10px 0;flex-wrap:wrap"><label for="calcDemandSource">Demand source</label><select id="calcDemandSource" onchange="setDemandSource(this.value)" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px"><option value="amtv">AMTV / existing sheet</option><option value="amvgg">AMVGG stars</option><option value="elve">Elvebredd (if supplied)</option></select></div>
+                    <p id="calcDemandNote" style="font-size:.8em;color:var(--subtext)"></p>
                     <p id="calcSourceNote" style="font-size:.8em;color:var(--subtext);margin:5px 0"></p>
                     <p id="calcDataDetails" style="font-size:.8em;color:var(--subtext);line-height:1.6;white-space:pre-line">Checking spreadsheet…</p>
                 </div>
@@ -1699,8 +1701,9 @@
         // Fetches historical price and demand data from the second Google Sheet.
         // Populates HISTORY_DATA used by the graph overlay. Also calls
         // buildManipCache() to detect pets with suspicious price movement patterns.
-        async function fetchHistory() {
-    if (HISTORY_DATA.length > 0) {
+        let PROVIDER_HISTORY=[],historyFetchedAt=0;
+async function fetchHistory() {
+    if (HISTORY_DATA.length > 0 && Date.now()-historyFetchedAt<300000) {
         console.log("📦 History already loaded:", HISTORY_DATA.length, "records");
         return;
     }
@@ -1726,6 +1729,7 @@
             headers.forEach((h,k)=>{if(!h)return;const v=String(cells[k]??'').trim();row[h]=k===timeCol||k===nameCol||v===''?v:Number.isFinite(Number(v.replace(/,/g,'')))?Number(v.replace(/,/g,'')):v;});
             return row;
         }).filter(row=>row.name||row['pet name']);
+        PROVIDER_HISTORY=HISTORY_DATA.filter(r=>['elve','amvgg','amtv'].includes(r.provider_source));HISTORY_DATA=HISTORY_DATA.filter(r=>!r.provider_source);historyFetchedAt=Date.now();
         console.log("✅ History loaded successfully:", HISTORY_DATA.length, "records");
         buildManipCache();    // pre-compute manipulation flags
         buildDynamicHTT();    // build dynamic HTT from live demand/trend data
@@ -1814,12 +1818,13 @@ function renderPetMarketData(petData){
     const fmt=x=>Number.isFinite(x)&&x>0?x.toLocaleString(undefined,{maximumFractionDigits:4}):'N/A';
     const heading=make('h3',petData.n+' — market data');heading.style.marginBottom='10px';root.append(heading);
     if(!base){root.append(make('p','This pet is not in the loaded value catalog.'));return}
-    root.append(make('p','Saved spreadsheet values — not a direct provider feed. Combined estimates use the saved Elvebredd scale. Demand /10 comes from your old spreadsheet, not an official live Elvebredd rating.'));
+    root.append(make('p','Saved spreadsheet values — not a direct provider feed. Combined estimates use the saved Elvebredd scale. Demand uses your selected source. Missing ratings are unknown.'));
     const official=document.createElement('div');official.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:10px 0';
     for(const [label,url] of [['Elvebredd calculator','https://elvebredd.com/adopt-me-calculator'],['Elvebredd value history','https://elvebredd.com/value-updates'],['AMVGG values','https://amvgg.com/values/pets']]){const link=make('a',label);link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.style.cssText='color:var(--accent);font-size:.8em;text-decoration:underline';official.append(link)}root.append(official);
+    root.append(make('p','Demand source: '+demandSourceLabel()));
     const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;margin:12px 0;font-size:.82em;text-align:left';
     const addRow=(cells,header=false,selected=false)=>{const tr=document.createElement('tr');if(selected)tr.style.background='var(--card-bg)';for(const t of cells){const c=make(header?'th':'td',t);c.style.cssText='padding:8px 5px;border-bottom:1px solid var(--border)';tr.append(c)}table.append(tr)};
-    addRow(['Variant','Elve (saved)','AMVGG (saved)','Combined','Sheet demand /10'],true);
+    addRow(['Variant','Elve (saved)','AMVGG (saved)','Combined','Demand /10'],true);
     for(const [type,label] of [['reg','Normal'],['neon','Neon'],['mega','Mega']])for(const [f,r,suffix] of [[false,false,''],[true,false,' F'],[false,true,' R'],[true,true,' FR']]){
         const pet={...base,type,f_st:f,r_st:r};
         addRow([label+suffix,fmt(exactPetValue(pet,'value')),fmt(exactPetValue(pet,'baseless')),fmt(exactPetValue(pet,'combined')),fmt(exactDemand(pet))],false,(petData.type||'reg')===type&&!!petData.f_st===f&&!!petData.r_st===r);
@@ -1846,7 +1851,7 @@ async function openGraph(petData) {
         await Promise.all([fetchHistory(),catalogHistoryWrite]);
         if(token!==graphOpenToken||document.getElementById('graphOverlay').style.display==='none')return;
         renderPetMarketData(petData);
-        const {variant,points,demandMax}=mod.buildSeries(petData,mode,HISTORY_DATA,mod.readObservations());
+        const {variant,points,demandMax}=mod.buildSeries(petData,mode,HISTORY_DATA,mod.readObservations(),PROVIDER_HISTORY,selectedDemandSource);
         title.textContent=String(petData.n).toUpperCase()+' · '+variant+' · '+sourceLabel;
         const values=points.filter(p=>p.value!==null);
         const demands=points.filter(p=>p.demand!==null);
@@ -1870,7 +1875,7 @@ async function openGraph(petData) {
         empty.style.display='none';canvas.style.display='';
         const dataset=[];
         if(values.length)dataset.push({label:sourceLabel+' value (saved records)',data:points.map(p=>p.value),yAxisID:'value',borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.1)',borderWidth:3,pointRadius:values.length===1?5:2,fill:false,tension:.15,spanGaps:false});
-        if(demands.length)dataset.push({label:mode==='baseless'?'Saved AMVGG demand stars':'Spreadsheet demand (0–10)',data:points.map(p=>p.demand),yAxisID:'demand',borderColor:'#fbbf24',borderWidth:2,pointRadius:demands.length===1?5:2,fill:false,tension:.15,spanGaps:false});
+        if(demands.length)dataset.push({label:selectedDemandSource==='amvgg'?'AMVGG stars':selectedDemandSource==='elve'?'Elvebredd demand (0–10)':'AMTV / spreadsheet demand (0–10)',data:points.map(p=>p.demand),yAxisID:'demand',borderColor:'#fbbf24',borderWidth:2,pointRadius:demands.length===1?5:2,fill:false,tension:.15,spanGaps:false});
         petChart=new Chart(canvas.getContext('2d'),{type:'line',data:{labels:points.map(p=>new Date(p.t).toLocaleString()),datasets:dataset},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{value:{type:'linear',display:values.length>0,position:'left',grid:{color:'#334155'},ticks:{color:'#94a3b8'},beginAtZero:false},demand:{type:'linear',display:demands.length>0,position:'right',min:0,max:demandMax,grid:{drawOnChartArea:false},ticks:{color:'#fbbf24'}},x:{grid:{display:false},ticks:{color:'#94a3b8',maxTicksLimit:8}}},plugins:{legend:{labels:{color:'white'}},tooltip:{callbacks:{afterTitle:items=>points[items[0]?.dataIndex]?.origin||''}}}}});
     }catch(e){if(token===graphOpenToken){empty.style.display='block';empty.textContent='Unable to load history: '+e.message;console.error(e)}}
 }
@@ -2290,6 +2295,7 @@ function validateCatalogCsv(csv){
         function saveTrade() {
             const simplifiedState = {
                 mode: state.mode,
+                demandSource: selectedDemandSource,
                 A: state.A.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
                 B: state.B.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
                 inv: state.inv.map(p => ({ n: p.n, type: p.type, f_st: p.f_st, r_st: p.r_st, uid: p.uid })),
@@ -2365,6 +2371,11 @@ function validateCatalogCsv(csv){
             catalogHistoryWrite=catalogHistoryWrite.then(async()=>{const mod=await import('./src/v2/pet-history.mjs');mod.recordObservation(pets,checkedAt,factor)}).catch(e=>console.warn('History snapshot not saved',e));
             return catalogHistoryWrite;
         }
+        let selectedDemandSource=(()=>{try{const x=JSON.parse(localStorage.getItem('tradeData')||'{}').demandSource;return ['amtv','amvgg','elve'].includes(x)?x:'amtv'}catch{return 'amtv'}})();
+        function demandScore(v,max=10){if(v===null||v===undefined||v==='')return 0;const n=Number(v);return Number.isFinite(n)&&n>0&&n<=max?n*10/max:0}
+        function applyDemandSource(p){for(const [k,a,e] of [['d','aDemandN','elve_d'],['nd','aDemandNe','elve_nd'],['md','aDemandM','elve_md']]){if(!Object.hasOwn(p,'_sheet_'+k))p['_sheet_'+k]=p[k];p[k]=selectedDemandSource==='amvgg'?demandScore(p[a],3):selectedDemandSource==='elve'?demandScore(p[e]):demandScore(p['_sheet_'+k])}return p}
+        function demandSourceLabel(){return selectedDemandSource==='amvgg'?'AMVGG stars (normalized /10)':selectedDemandSource==='elve'?'Elvebredd (when supplied)':'AMTV / existing spreadsheet demand'}
+        function setDemandSource(source){if(!['amtv','amvgg','elve'].includes(source))return;selectedDemandSource=source;ALL_PETS.forEach(applyDemandSource);const by=new Map(ALL_PETS.map(p=>[p.n,p]));for(const k of ['A','B','inv'])state[k]=state[k].map(p=>{const b=by.get(p.n);return b?{...p,...b,type:p.type,f_st:p.f_st,r_st:p.r_st,uid:p.uid}:applyDemandSource(p)});syncSourceButtons();buildDynamicHTT();render();saveTrade();if(currentTab==='lists')switchListsTab(_listsSubTab);if(document.getElementById('invOverlay')?.style.display==='flex')renderInventory()}
         async function loadPetData(refresh=false) {
             if(catalogRefreshBusy)return;
             catalogRefreshBusy=true;
@@ -2429,6 +2440,9 @@ function validateCatalogCsv(csv){
                     am_f_v:  row.am_f_v  || 0,
                     am_r_v:  row.am_r_v  || 0,
                     amfr_v:  row.amfr_v  || 0,
+                    elve_d: row.elve_d??null,
+                    elve_nd: row.elve_nd??null,
+                    elve_md: row.elve_md??null,
                     aDemandN: parseDemandStars(row.a_demand_n),
                     aDemandNe: parseDemandStars(row.a_demand_ne),
                     aDemandM: parseDemandStars(row.a_demand_m),
@@ -2443,7 +2457,7 @@ function validateCatalogCsv(csv){
                 const amvggFields=['av','af_v','ar_v','afrl_v','an_v','an_f_v','an_r_v','anfr_v','am_v','am_f_v','am_r_v','amfr_v'];
                 const coverage=(rows,fields)=>rows.reduce((n,p)=>n+fields.filter(k=>Number(p[k])>0).length,0);
                 if(refresh&&ALL_PETS.length&&[valueFields,amvggFields].some(fields=>coverage(nextPets,fields)<coverage(ALL_PETS,fields)*.8))throw Error("Value coverage dropped; keeping last good catalog");
-                ALL_PETS=nextPets;catalogLastCsv=csvText;
+                ALL_PETS=nextPets.map(applyDemandSource);catalogLastCsv=csvText;
                 recomputeCombinedFactor();
                 if(!fromCache&&!fromFallback){try{localStorage.setItem('calc_master_csv_cache',csvText)}catch{}}
                 catalogStatus=fromFallback?'fallback':fromCache?'cached':'checked';if(!fromCache&&!fromFallback){catalogCheckedAt=Date.now();void recordCatalogHistory();}startLastUpdatedTicker();
@@ -3119,6 +3133,7 @@ function updateCatalogBadge() {
             for(const [id,mode] of [['btnValue','value'],['btnBaseless','baseless'],['btnCombined','combined']]){const el=document.getElementById(id);if(el){el.classList.toggle('active',state.mode===mode);el.setAttribute('aria-pressed',String(state.mode===mode))}}
             for(const id of ['calcValueSource','listValueSource']){const select=document.getElementById(id);if(select)select.value=state.mode;}
             const vb=document.getElementById('btnValue');if(vb)vb.textContent=state.mode==='combined'?'Combined':'Value';if(vb&&state.mode==='combined'){vb.classList.add('active');vb.setAttribute('aria-pressed','true')}
+            const ds=document.getElementById('calcDemandSource');if(ds)ds.value=selectedDemandSource;const dn=document.getElementById('calcDemandNote');if(dn)dn.textContent='Demand: '+demandSourceLabel()+' · missing ratings remain unknown.';
             const note=document.getElementById('calcSourceNote');if(note)note.textContent=state.mode==='combined'?(combinedFactor===null?'Combined · insufficient matching anchors':'Combined · saved sheet estimate'):state.mode==='baseless'?'AMVGG · saved spreadsheet data':'Elvebredd · saved spreadsheet data';
         }
         function refreshCalcCatalog(){void loadPetData(ALL_PETS.length>0);}
