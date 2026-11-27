@@ -935,6 +935,18 @@
         button.calc-legacy-add{background:transparent;width:100%;font-family:inherit}
         .calc-legacy-add:disabled{opacity:.4;cursor:not-allowed}
         #lastUpdatedText{white-space:normal}
+        #scoutInner .scout-v2-panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;padding:14px}
+        #scoutInner h2,#scoutInner h3{margin:0 0 10px;font-size:1.05em}
+        #scoutInner p{font-size:.83em;line-height:1.5;margin:6px 0}
+        #scoutInner .scout-v2-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+        #scoutInner label{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:.8em;color:var(--subtext);margin:6px 0}
+        #scoutInner input:not([type=checkbox]),#scoutInner select,#scoutInner textarea{max-width:100%;min-width:0;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:7px;font:inherit}
+        #scoutInner input[type=number]{width:85px}#scoutInner textarea{width:100%;resize:vertical}
+        #scoutInner .scout-v2-offer{border-top:1px solid var(--border);padding:12px 0}
+        #scoutInner .scout-v2-muted{color:var(--subtext)}
+        #scoutInner a.nav-btn{text-decoration:none;display:inline-block}
+        #scoutInner summary{cursor:pointer;font-weight:800}
+
     </style>
 </head>
 <body>
@@ -1026,6 +1038,9 @@
   <button class="vlist-type-btn" id="vVarR"    onclick="setVListVariant('value','r')">R</button>
   <button class="vlist-type-btn" id="vVarFR"   onclick="setVListVariant('value','fr')">FR</button>
 </div>
+<select id="listValueSource" aria-label="Value source" onchange="setMode(this.value)" style="background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px">
+    <option value="value">Elvebredd</option><option value="baseless">AMVGG</option><option value="combined">Combined estimate</option>
+</select>
 <input class="vlist-search" id="valueListSearch" placeholder="Search pets..." oninput="renderValueList()">
                 <div style="display:flex;align-items:center;gap:6px;background:#0f172a;border:1.5px solid var(--accent);border-radius:8px;padding:4px 10px">
                   <span style="font-size:0.72em;color:var(--accent);font-weight:900">🔍</span>
@@ -1253,8 +1268,8 @@
                     <div class="settings-section-title">Account &amp; tools</div>
                     <nav class="calc-quick" aria-label="Account and tools" style="margin-top:10px">
                         <a href="./account.html">Account</a>
-                        <a href="./market-preview.html">Market data</a>
-                        <a href="./tracker.html">Trade tracker</a>
+                        <button type="button" onclick="closeSettings();switchTab('lists');switchListsTab('value')">Market data</button>
+                        <button type="button" onclick="closeSettings();switchTab('scout')">Trade tracker</button>
                         <button type="button" onclick="window.openCompanionSetup()">Desktop companion</button>
                     </nav>
                 </div>
@@ -3503,7 +3518,7 @@ function updateCatalogBadge() {
         function exactDemand(p){const v=Number(p[p.type==='neon'?'nd':p.type==='mega'?'md':'d']);return Number.isFinite(v)&&v>0&&v<=10?v:null}
         function syncSourceButtons(){
             for(const [id,mode] of [['btnValue','value'],['btnBaseless','baseless'],['btnCombined','combined']]){const el=document.getElementById(id);if(el){el.classList.toggle('active',state.mode===mode);el.setAttribute('aria-pressed',String(state.mode===mode))}}
-            const select=document.getElementById('calcValueSource');if(select)select.value=state.mode;
+            for(const id of ['calcValueSource','listValueSource']){const select=document.getElementById(id);if(select)select.value=state.mode;}
             const vb=document.getElementById('btnValue');if(vb)vb.textContent=state.mode==='combined'?'Combined':'Value';if(vb&&state.mode==='combined'){vb.classList.add('active');vb.setAttribute('aria-pressed','true')}
             const note=document.getElementById('calcSourceNote');if(note)note.textContent=state.mode==='combined'?(combinedFactor===null?'Combined · insufficient matching anchors':'Combined · estimated Elve scale'):state.mode==='baseless'?'AMVGG · sheet data':'Elvebredd · sheet data';
         }
@@ -5717,7 +5732,7 @@ if (advisorShowMega) {
             if (dPanel) dPanel.style.display = sub === 'demand' ? '' : 'none';
             if (vBtn) { vBtn.style.background = sub==='value'?'white':'transparent'; vBtn.style.color = sub==='value'?'#111':'var(--subtext)'; }
             if (dBtn) { dBtn.style.background = sub==='demand'?'white':'transparent'; dBtn.style.color = sub==='demand'?'#111':'var(--subtext)'; }
-            if (sub === 'value'  && ALL_PETS.length > 0) renderValueList();
+            if (sub === 'value'  && ALL_PETS.length > 0) {syncSourceButtons();renderValueList();}
             if (sub === 'demand' && ALL_PETS.length > 0) renderDemandList();
         }
 
@@ -5747,7 +5762,35 @@ if (advisorShowMega) {
                 switchTab('lists'); switchListsTab('demand'); return;
             }
             if (tab === 'trades') { renderTradeBoard(); startTBTimers(); }
-            if (tab === 'scout')  { renderScoutTab(); }
+            if (tab === 'scout') { openIntegratedScout(); }
+        }
+
+        // Integrated tracker uses the existing Trade Scout tab and calculator state.
+        async function openIntegratedScout(){
+            const root=document.getElementById('scoutInner');
+            if(!root)return;
+            try{
+                const mod=await import('./src/v2/integrated-scout.mjs');
+                const toPet=p=>({name:p.n,type:p.type||'reg',fly:p.f_st===true,ride:p.r_st===true});
+                mod.mountScout(root,{
+                    inventory:()=>state.inv.map(p=>({...toPet(p),id:String(p.uid),locked:lockedPets.has(p.n)})),
+                    pending:()=>tbPendingLoad().flatMap(t=>Array.isArray(t.offerPets)?t.offerPets.map(toPet):[]),
+                    blocked:()=>new Set(scoutLoadBlocklist().filter(x=>typeof x==='string').map(x=>x.toLowerCase())),
+                    lookup:(p,source)=>{
+                        const base=ALL_PETS.find(x=>x.n.toLowerCase().trim()===p.name.toLowerCase().trim());
+                        if(!base)return null;
+                        const pet={...base,type:p.type,f_st:p.fly,r_st:p.ride};
+                        return {value:exactPetValue(pet,source==='amvgg'?'baseless':'value'),unit:source==='amvgg'?'amvgg-sheet':'elve-sheet',demand:exactDemand(pet),stale:true};
+                    },
+                    open:t=>{
+                        const hydrate=p=>safeLegacyPet({n:p.name,type:p.type,f_st:p.fly,r_st:p.ride,uid:Math.random()},false);
+                        const a=t.requesting.map(hydrate),b=t.offering.map(hydrate);
+                        if([...a,...b].some(p=>!p)){alert('Some pets are missing from the loaded catalog. Trade not changed.');return}
+                        if((state.A.length||state.B.length)&&!confirm('Replace the current calculator trade with this offer?'))return;
+                        pushState();state.A=a;state.B=b;setMode(t.source==='amvgg'?'baseless':'value');switchTab('calc');render();saveTrade();
+                    }
+                });
+            }catch(e){root.textContent='Trade Scout could not load: '+e.message}
         }
 
         // ── TRADE SCOUT TAB ──────────────────────────────────────────────────
@@ -7578,11 +7621,7 @@ function setVListVariant(list, variant) {
 }
 
         // Get demand for a pet based on type
-        function getPetListDemand(p, type) {
-            if (type === 'neon')  return parseFloat(p.nd || p.d) || 0;
-            if (type === 'mega')  return parseFloat(p.md || p.d) || 0;
-            return parseFloat(p.d) || 0;
-        }
+        function getPetListDemand(p,type){return exactDemand({...p,type:type==='normal'?'reg':type})??0;}
 
         function getTypeLabel(type) {
             if (type === 'neon') return 'NFR';
@@ -9180,5 +9219,8 @@ if (verdict && verdict.label !== '?') {
         <div class="actions"><a class="primary" id="companionDownload" href="./desktop/Calc-Trade-Companion.py" download>Download app</a><button type="button" id="companionInventory">Export my inventory</button><button type="button" id="companionInstalled">Already installed</button><button type="button" id="companionClose">Cancel</button></div>
     </dialog>
     <script type="module" src="./src/v2/companion-setup.mjs"></script>
+    <script>
+        if(location.hash==='#scout'||location.hash==='#lists')switchTab(location.hash.slice(1));
+    </script>
 </body>
 </html>
