@@ -12,5 +12,5 @@ function exportInventory(){
 }
 $('companionDownload').onclick=()=>{try{const p=trackerSettings({minProfit:Number($('companionProfit').value),maxDemandLoss:Number($('companionLoss').value)});localStorage.setItem('calc_tracker_settings',JSON.stringify(p));$('companionNote').textContent='Download the Python application, export inventory, and run the application. Live feed is not configured.'}catch(e){$('companionNote').textContent=e.message;return false}};
 $('companionInventory').onclick=()=>{try{exportInventory()}catch(e){$('companionNote').textContent=e.message}};
-$('companionInstalled').onclick=()=>{try{const p=trackerSettings({minProfit:Number($('companionProfit').value),maxDemandLoss:Number($('companionLoss').value)});localStorage.setItem('calc_tracker_settings',JSON.stringify(p));location.href='./tracker.html'}catch(e){$('companionNote').textContent=e.message}};
+$('companionInstalled').onclick=()=>{try{const p=trackerSettings({minProfit:Number($('companionProfit').value),maxDemandLoss:Number($('companionLoss').value)});localStorage.setItem('calc_tracker_settings',JSON.stringify(p));setup.close();window.switchTab('scout')}catch(e){$('companionNote').textContent=e.message}};
 $('companionClose').onclick=()=>setup.close();
