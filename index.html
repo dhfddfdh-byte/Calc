@@ -963,9 +963,15 @@
                 <h2 id="graphTitle" style="color: white; font-weight: 900;">PET HISTORY</h2>
                 <button class="nav-btn" onclick="closeGraph()">Close</button>
             </div>
-            <div class="graph-body">
-                <canvas id="petChart"></canvas>
+            <div style="display:flex;gap:8px;padding:10px 20px;border-bottom:1px solid var(--border)">
+                <button class="nav-btn" id="petHistoryTab" onclick="switchPetHistoryTab('history')">Value History</button>
+                <button class="nav-btn" id="petMarketTab" onclick="switchPetHistoryTab('market')">Market Data</button>
             </div>
+            <div class="graph-body" id="petHistoryChartPanel">
+                <canvas id="petChart"></canvas>
+                <p id="petHistoryEmpty" style="display:none;color:var(--subtext);text-align:center;padding:20px"></p>
+            </div>
+            <div id="petMarketPanel" style="display:none;padding:20px;background:var(--panel);overflow:auto;max-height:60vh"></div>
             <div style="padding: 20px; background: #0f172a; border-top: 1px solid var(--border); color: #cbd5e1; line-height: 1.6;" id="trendAnalysis"></div>
         </div>
     </div>
@@ -1268,7 +1274,6 @@
                     <div class="settings-section-title">Account &amp; tools</div>
                     <nav class="calc-quick" aria-label="Account and tools" style="margin-top:10px">
                         <a href="./account.html">Account</a>
-                        <button type="button" onclick="closeSettings();switchTab('lists');switchListsTab('value')">Market data</button>
                         <button type="button" onclick="closeSettings();switchTab('scout')">Trade tracker</button>
                         <button type="button" onclick="window.openCompanionSetup()">Desktop companion</button>
                     </nav>
@@ -1814,8 +1819,52 @@
         // Opens the price/demand history graph for a single pet.
         // Plots value and demand over time using Chart.js line charts.
         // Triggered by Shift+right-click on any pet card anywhere in the app.
-        async function openGraph(petData) {
+        let graphOpenToken=0;
+function switchPetHistoryTab(tab){
+    const market=tab==='market';
+    document.getElementById('petMarketPanel').style.display=market?'block':'none';
+    document.getElementById('petHistoryChartPanel').style.display=market?'none':'';
+    document.getElementById('trendAnalysis').style.display=market?'none':'';
+    for(const [id,on] of [['petHistoryTab',!market],['petMarketTab',market]]){
+        const b=document.getElementById(id);b.style.background=on?'var(--accent)':'';b.setAttribute('aria-pressed',String(on));
+    }
+    if(!market&&petChart)petChart.resize();
+}
+function renderPetMarketData(petData){
+    const root=document.getElementById('petMarketPanel');root.replaceChildren();
+    const base=ALL_PETS.find(p=>p.n===petData.n)||ALL_PETS.find(p=>p.n.toLowerCase().trim()===String(petData.n).toLowerCase().trim());
+    const make=(tag,text)=>{const e=document.createElement(tag);e.textContent=text;return e};
+    const fmt=x=>Number.isFinite(x)&&x>0?x.toLocaleString(undefined,{maximumFractionDigits:4}):'N/A';
+    const heading=make('h3',petData.n+' — market data');heading.style.marginBottom='10px';root.append(heading);
+    if(!base){root.append(make('p','This pet is not in the loaded value catalog.'));return}
+    root.append(make('p','Source: your existing Google Sheets catalog. Provider update times are not verified. Combined estimates use Elvebredd units.'));
+    const table=document.createElement('table');table.style.cssText='width:100%;border-collapse:collapse;margin:12px 0;font-size:.82em;text-align:left';
+    const addRow=(cells,header=false,selected=false)=>{const tr=document.createElement('tr');if(selected)tr.style.background='var(--card-bg)';for(const t of cells){const c=make(header?'th':'td',t);c.style.cssText='padding:8px 5px;border-bottom:1px solid var(--border)';tr.append(c)}table.append(tr)};
+    addRow(['Variant','Elvebredd','AMVGG','Combined','Demand /10'],true);
+    for(const [type,label] of [['reg','Normal'],['neon','Neon'],['mega','Mega']])for(const [f,r,suffix] of [[false,false,''],[true,false,' F'],[false,true,' R'],[true,true,' FR']]){
+        const pet={...base,type,f_st:f,r_st:r};
+        addRow([label+suffix,fmt(exactPetValue(pet,'value')),fmt(exactPetValue(pet,'baseless')),fmt(exactPetValue(pet,'combined')),fmt(exactDemand(pet))],false,(petData.type||'reg')===type&&!!petData.f_st===f&&!!petData.r_st===r);
+    }
+    root.append(table);
+    const star=base[(petData.type==='neon'?'aDemandNe':petData.type==='mega'?'aDemandM':'aDemandN')];
+    root.append(make('p','AMVGG demand for this growth stage: '+(star==null?'Not available':star+'/3 stars')));
+    if(base.vt)root.append(make('p','Value trend: '+base.vt));if(base.dt)root.append(make('p','Demand trend: '+base.dt));
+    const records=HISTORY_DATA.filter(p=>String(p.name||p['pet name']||'').toLowerCase().trim()===base.n.toLowerCase().trim());
+    const latest=Math.max(0,...records.map(p=>new Date(p.date||p.timestamp||p.time||'').getTime()).filter(Number.isFinite));
+    root.append(make('p','History: '+records.length+' recorded snapshots'+(latest?' · latest '+new Date(latest).toLocaleString():'')+'.'));
+}
+async function openGraph(petData) {
+    const token=++graphOpenToken;
+    document.getElementById('graphTitle').textContent=String(petData.n).toUpperCase();
+    document.getElementById('graphOverlay').style.display='flex';
+    if(petChart){petChart.destroy();petChart=null}
+    document.getElementById('trendAnalysis').replaceChildren();
+    document.getElementById('petChart').style.display='none';
+    const empty=document.getElementById('petHistoryEmpty');empty.style.display='block';empty.textContent='Loading history…';
+    renderPetMarketData(petData);switchPetHistoryTab('history');
     await fetchHistory();
+    if(token!==graphOpenToken||document.getElementById('graphOverlay').style.display==='none')return;
+    renderPetMarketData(petData);
     
     // Extract name and type from the petData object
     const name = petData.n;
@@ -1848,7 +1897,7 @@
     });
     
     if (petHistory.length < 2) {
-        alert(`Not enough historical data for ${name}.\n\nFound ${petHistory.length} record(s).`);
+        empty.textContent='Not enough historical data for '+name+'. Open Market Data to view available values.';
         return;
     }
     
@@ -1868,6 +1917,8 @@
     document.getElementById('graphTitle').innerText = versionText + name.toUpperCase();
     document.getElementById('graphOverlay').style.display = 'flex';
     
+    if(typeof Chart==='undefined'){empty.textContent='History chart unavailable. Market Data is still available.';return;}
+    empty.style.display='none';document.getElementById('petChart').style.display='';
     const ctx = document.getElementById('petChart').getContext('2d');
     if (petChart) petChart.destroy();
     
